@@ -3,6 +3,7 @@ import { readFile, writeFile, unlink } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 import { normalizeSite, CORE_SECTION_TYPES } from "./site-model.js";
+import { explainOpenAIError } from "./openai-error.js";
 
 const root = dirname(fileURLToPath(import.meta.url));
 const port = Number(process.env.PORT || 3000);
@@ -62,7 +63,12 @@ async function generate(body) {
       headers: { Authorization: `Bearer ${apiKey()}`, "Content-Type": "application/json" },
       body: JSON.stringify({ model, store: false, input: [{ role: "system", content: `You help users draft websites. Output only valid JSON. ${instruction}` }, { role: "user", content: prompt }], text: { format: { type: "json_object" } }, max_output_tokens: 2500 })
     });
-    if (!response.ok) { console.error("OpenAI request failed:", response.status); return { status: 502, error: `AI service returned ${response.status}. Check your API key, model, and account access.` }; }
+    if (!response.ok) {
+      const failure = await response.json().catch(() => ({}));
+      const code = failure?.error?.code || failure?.error?.type || "unknown";
+      console.error("OpenAI request failed:", response.status, code);
+      return { status: response.status === 429 ? 429 : 502, error: explainOpenAIError(response.status, failure) };
+    }
     const payload = await response.json();
     if (payload.status === "incomplete") return { status: 502, error: "AI stopped before finishing. Try a shorter description." };
     const draft = JSON.parse(extractText(payload));

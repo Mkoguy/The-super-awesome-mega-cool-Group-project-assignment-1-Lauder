@@ -62,4 +62,6 @@ node server.mjs
 
 The default model is `gpt-5-mini`. To choose a different text model, set `OPENAI_MODEL`. A key saved in Settings takes precedence over the environment variable. AI requests are sent from the local Node server; the key is never included in downloaded sites or browser code. Generating a draft sends your description and relevant current site content to OpenAI. Review AI text before publishing.
 
+If AI returns 429, check the message in the builder. It distinguishes a temporary request rate limit from API credit, usage, and spending limits when OpenAI supplies an error code. A saved key does not by itself provide API credits. Check [API Billing](https://platform.openai.com/settings/organization/billing/overview) and [API Limits](https://platform.openai.com/settings/organization/limits) for the organization and project associated with your key.
+
 The server binds to `127.0.0.1` and has no login or hosted storage. It is intended for local development. To host a builder for multiple users, add authentication, rate limiting, persistent storage, and production configuration first.
