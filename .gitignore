@@ -1,0 +1,6 @@
+.idea/
+*.iml
+*.zip
+.env
+.websiteforge-settings.json
+node_modules/

@@ -1,0 +1,9 @@
+{
+  "format": "websiteforge-plugin",
+  "version": 1,
+  "id": "websiteforge.light-mode",
+  "name": "Light mode",
+  "author": "WebsiteForge",
+  "description": "Switch the WebsiteForge workspace to a bright theme. Your exported website keeps its own colors.",
+  "features": ["workspace-light-mode"]
+}

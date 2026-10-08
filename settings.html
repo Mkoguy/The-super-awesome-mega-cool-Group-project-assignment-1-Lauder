@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Settings · WebsiteForge</title>
+    <link rel="stylesheet" href="styles.css" />
+    <script type="module" src="settings.js"></script>
+  </head>
+  <body>
+    <main class="settings-shell">
+      <header class="settings-header">
+        <div class="header-brand"><span class="brand-icon" aria-hidden="true">W</span><div><strong>WebsiteForge</strong><small>Settings</small></div></div>
+        <a class="button ghost" href="index.html">← Back to builder</a>
+      </header>
+      <section class="settings-card" aria-labelledby="api-key-heading">
+        <span class="eyebrow">AI TOOLS</span>
+        <h1 id="api-key-heading">OpenAI API key</h1>
+        <p>Save a key for AI writing tools. Start WebsiteForge with <code>node server.mjs</code> and open this page through its local server. The key stays on that server and is never included in project backups or exported websites.</p>
+        <p id="key-state" role="status">Checking key status…</p>
+        <form id="api-key-form" autocomplete="off">
+          <div class="control-group">
+            <label for="api-key">New API key</label>
+            <input id="api-key" name="apiKey" type="password" inputmode="text" autocomplete="off" spellcheck="false" placeholder="Paste your API key" required />
+          </div>
+          <div class="settings-actions">
+            <button class="button primary" type="submit">Save key</button>
+            <button class="button ghost" type="button" id="remove-key">Remove saved key</button>
+          </div>
+        </form>
+        <p id="settings-status" class="settings-status" role="status"></p>
+        <p class="settings-note">The key is stored in <code>.websiteforge-settings.json</code>, which is excluded from Git. You can also set <code>OPENAI_API_KEY</code> in the server environment.</p>
+      </section>
+    </main>
+  </body>
+</html>

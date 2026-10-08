@@ -1,0 +1,46 @@
+{
+  "format": "websiteforge-plugin",
+  "version": 1,
+  "id": "websiteforge.artist-essentials",
+  "name": "Artist essentials",
+  "author": "WebsiteForge",
+  "description": "Reusable sections and a theme for artist portfolios.",
+  "sections": [
+    {
+      "id": "faq",
+      "name": "Frequently asked questions",
+      "description": "Answer common questions in an expandable list.",
+      "layout": "faq",
+      "defaults": {
+        "eyebrow": "GOOD TO KNOW",
+        "title": "Frequently asked questions",
+        "body": "A few details to help you get started.",
+        "items": [
+          { "title": "How do commissions work?", "body": "Tell me about your idea and I will reply with availability and next steps." },
+          { "title": "Where can I see your latest work?", "body": "Browse the gallery above or follow my updates online." }
+        ]
+      }
+    },
+    {
+      "id": "quotes",
+      "name": "Kind words",
+      "description": "A simple quote wall for real feedback you have permission to share.",
+      "layout": "quote",
+      "defaults": {
+        "eyebrow": "KIND WORDS",
+        "title": "What people are saying",
+        "body": "Add real quotes from your community here.",
+        "items": [
+          { "title": "Add a name", "body": "Replace this placeholder with a quote you have permission to publish." }
+        ]
+      }
+    }
+  ],
+  "themes": [
+    {
+      "id": "midnight",
+      "name": "Midnight studio",
+      "colors": { "accent": "#f47b20", "paper": "#202125", "ink": "#f7f4ef", "muted": "#c8c1b9" }
+    }
+  ]
+}

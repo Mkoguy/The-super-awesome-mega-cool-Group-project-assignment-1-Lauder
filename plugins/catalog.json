@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "packs": [
+    {
+      "id": "websiteforge.artist-essentials",
+      "name": "Artist essentials",
+      "description": "FAQ and testimonial layouts, plus a midnight color theme.",
+      "manifest": "/plugins/artist-essentials.json"
+    },
+    {
+      "id": "websiteforge.light-mode",
+      "name": "Light mode",
+      "description": "An optional bright workspace theme for the WebsiteForge editor.",
+      "manifest": "/plugins/light-mode.json"
+    }
+  ]
+}
