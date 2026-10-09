@@ -1,0 +1,5 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="WebsiteForge" type="NodeJSConfigurationType" path-to-js-file="$PROJECT_DIR$/server.mjs" working-dir="$PROJECT_DIR$">
+    <method v="2" />
+  </configuration>
+</component>

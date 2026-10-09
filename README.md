@@ -5,8 +5,14 @@ WebsiteForge is a browser-based website builder for artists and makers. It inclu
 ## Run
 
 1. Install Node.js 20 or newer.
-2. In this folder, run `node server.mjs`. If npm is installed, you can also run the `start` script from `package.json` in WebStorm.
+2. In this folder, run `node server.mjs`. If npm is installed, `npm start` does the same thing.
 3. Open `http://localhost:3000`.
+
+### Run after cloning in WebStorm
+
+Open the cloned repository folder in WebStorm and select the shared **WebsiteForge** run configuration, then click **Run**. This configuration starts `server.mjs` with the project folder as its working directory. Open `http://localhost:3000` after the Run console says the server is ready. If WebStorm asks for a Node.js interpreter, select a local Node.js 20+ installation. Do not run `index.html` with WebStorm's built-in preview server; that server does not provide WebsiteForge's `/api/settings` and `/api/ai` routes.
+
+No environment variables are required to start the builder. `OPENAI_API_KEY` is optional and only enables the AI writing tools. Each person who clones the repository can enter their own key on the **Settings** page; the key is saved locally and is intentionally excluded from Git. Do not commit an API key or copy someone else's settings file into the repository.
 
 Manual editing, local saving, and exports work without an API key. Project changes are saved in your browser. **Save project** downloads a JSON backup; **Export website** downloads a standalone `index.html` that can be hosted anywhere.
 
