@@ -3,6 +3,7 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "build:offline": "node tools/build-offline.mjs",
     "start": "node server.mjs",
     "test": "node --test test/*.test.mjs"
   }

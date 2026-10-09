@@ -2,7 +2,13 @@
 
 WebsiteForge is a browser-based website builder for artists and makers. It includes editable sections, five starting templates, detailed design controls, desktop/mobile previews, project import/export, community plugin packs, and an optional OpenAI writing assistant.
 
-## Run
+## Run without Node.js
+
+Open [`offline.html`](offline.html) directly in a browser. You can double-click it after cloning or use WebStorm's **Open in Browser** action. The editor, templates, built-in plugins, project backups, and HTML exports work without installing anything. AI writing is unavailable in this mode because it needs a server to protect the API key.
+
+WebStorm may still show its own “Node.js is required” banner. The offline builder does not use Node.js; open `offline.html` in a browser even if that banner appears.
+
+## Run with AI tools
 
 1. Install Node.js 20 or newer.
 2. In this folder, run `node server.mjs`. If npm is installed, `npm start` does the same thing.
@@ -15,6 +21,8 @@ If WebStorm shows **“Node.js is required for WebStorm to work correctly”**, 
 Open the cloned repository folder in WebStorm and select the shared **WebsiteForge** run configuration, then click **Run**. This configuration starts `server.mjs` with the project folder as its working directory. Open `http://localhost:3000` after the Run console says the server is ready. Do not run `index.html` with WebStorm's built-in preview server; that server does not provide WebsiteForge's `/api/settings` and `/api/ai` routes.
 
 No environment variables are required to start the builder. `OPENAI_API_KEY` is optional and only enables the AI writing tools. Each person who clones the repository can enter their own key on the **Settings** page; the key is saved locally and is intentionally excluded from Git. Do not commit an API key or copy someone else's settings file into the repository.
+
+After changing the builder's HTML, CSS, JavaScript, or built-in plugins, maintainers can regenerate the committed offline file with `node tools/build-offline.mjs`.
 
 Manual editing, local saving, and exports work without an API key. Project changes are saved in your browser. **Save project** downloads a JSON backup; **Export website** downloads a standalone `index.html` that can be hosted anywhere.
 

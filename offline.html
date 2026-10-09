@@ -1,0 +1,608 @@
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="WebsiteForge helps artists and makers build their own websites." />
+    <title>WebsiteForge · AI website builder</title>
+    <style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+:root{font-family:Inter,Arial,sans-serif;color:#f4f4f5;background:#161719;font-size:14px}*{box-sizing:border-box}body{margin:0}button,input,select,textarea{font:inherit}button{cursor:pointer}button:disabled{cursor:not-allowed;opacity:.45}a{color:inherit;text-decoration:none}:focus-visible{outline:3px solid #ff9a39;outline-offset:2px}[hidden]{display:none!important}.visually-hidden{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+.app-header{min-height:72px;padding:12px 25px;display:flex;align-items:center;gap:22px;background:#1f2023;border-bottom:1px solid #35363a}.header-brand{display:flex;align-items:center;gap:11px;min-width:215px}.brand-icon{display:grid;place-items:center;width:38px;height:38px;clip-path:polygon(50% 0%,62% 24%,78% 8%,77% 39%,100% 45%,79% 60%,88% 88%,59% 78%,50% 100%,39% 77%,12% 88%,22% 59%,0 45%,24% 37%,22% 9%,40% 24%);background:#f47b20;color:#fff;font-size:18px;font-weight:800}.header-brand strong,.header-brand small{display:block}.header-brand strong{font-size:20px;font-weight:800;letter-spacing:-.05em}.header-brand small{margin-top:3px;color:#9d9da2;font-size:10px;letter-spacing:.13em;text-transform:uppercase}.header-center{display:flex;align-items:center;gap:7px;color:#aaaab0;font-size:11px;white-space:nowrap}.status-dot{width:6px;height:6px;border-radius:50%;background:#67b77d}.header-actions{display:flex;align-items:center;justify-content:flex-end;gap:8px;margin-left:auto}.text-link{color:#c6c6c9;font-size:12px;font-weight:700;white-space:nowrap;margin-right:8px}.text-link:hover{color:#ff932d}.button{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:36px;padding:8px 12px;border:1px solid #48494e;border-radius:6px;background:#2d2e32;color:#f0f0f1;font-size:11px;font-weight:700;white-space:nowrap}.button:hover{background:#3d3e42}.button.primary{border-color:#ed7418;background:#ed7418;color:#141414}.button.primary:hover{background:#ff8d2e}.button.ghost{background:transparent}.button.subtle{background:#38393d}.button.danger{color:#ff8a72}.button.wide{width:100%;margin-top:8px}.button.small{min-height:30px;font-size:10px}
+.workspace{display:grid;grid-template-columns:292px minmax(0,1fr) 282px;min-height:calc(100vh - 72px)}.sidebar,.inspector{background:#232428;min-width:0}.sidebar{border-right:1px solid #3b3c40;display:flex;flex-direction:column}.sidebar-heading{padding:27px 24px 18px}.eyebrow{color:#f88b29;font-size:10px;font-weight:800;letter-spacing:.17em;text-transform:uppercase}.sidebar-heading h1{margin:12px 0 10px;font-size:27px;line-height:1.13;font-weight:800;letter-spacing:-.05em}.sidebar-heading p,.inspector-header p{margin:0;color:#a6a6ab;font-size:12px;line-height:1.55}.tab-list{display:flex;padding:0 16px;border-bottom:1px solid #3b3c40}.tab{flex:1;padding:13px 3px;border:0;border-bottom:2px solid transparent;background:transparent;color:#aaaab0;font-size:11px;font-weight:700}.tab.active{border-color:#f47b20;color:#ffa34c}.sparkle{color:#ff9b3b}.tab-panel{padding:20px 22px;flex:1}.control-group{display:grid;gap:7px;margin-bottom:16px}.control-group label{font-size:11px;font-weight:800;color:#dedee0}.control-group input,.control-group textarea,.control-group select,#add-section{width:100%;border:1px solid #4a4b50;border-radius:6px;background:#2c2d31;color:#f5f5f5;padding:10px 11px;font-size:12px;outline:none}.control-group input:focus,.control-group textarea:focus,.control-group select:focus,#add-section:focus{border-color:#f47b20;box-shadow:0 0 0 3px #f47b2033}.control-group textarea{resize:vertical;line-height:1.5}.template-row{display:flex;gap:6px}.template-row select{min-width:0}.helper{margin:7px 0 0;color:#9d9da2;font-size:10px;line-height:1.5}.sidebar-divider{height:1px;background:#3b3c40;margin:20px 0}.section-title{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}.section-title h2{margin:0;font-size:12px}.count{padding:3px 7px;border-radius:20px;background:#4d3425;color:#ff9b42;font-size:10px;font-weight:800}.section-list{display:grid;gap:7px;margin-bottom:12px}.section-row{display:flex;align-items:center;border:1px solid #44454a;border-radius:6px;overflow:hidden;background:#2b2c30}.section-row.selected{border-color:#ed7418;background:#413126}.section-choose{flex:1;min-width:0;border:0;background:transparent;padding:11px;text-align:left;color:#ececee;font-size:11px;font-weight:700}.move-button{width:26px;height:31px;border:0;background:transparent;color:#b0b0b5}.move-button:hover{color:#ff9b42}.sidebar-foot{padding:15px 22px;border-top:1px solid #3b3c40;color:#a6a6ab;font-size:10px}.footer-star{color:#f47b20;font-size:16px;margin-right:4px}.theme-list{display:grid;gap:8px}.theme-choice{display:flex;align-items:center;gap:10px;padding:10px;border:1px solid #45464a;border-radius:6px;background:#2c2d31;color:#eee;text-align:left;font-size:11px;font-weight:700}.theme-choice.selected{border-color:#f47b20;background:#423125}.theme-swatch{width:20px;height:20px;border-radius:5px}.color-control{display:flex;align-items:center;gap:10px}.color-control input{width:47px;height:37px;padding:3px}.color-control span{color:#aaa;font-size:11px}.ai-intro{margin-bottom:18px;padding:18px;background:#352d27;border:1px solid #654126;border-radius:8px}.ai-icon{color:#ff942e;font-size:24px}.ai-intro h2{margin:7px 0;font-size:21px;font-weight:800}.ai-intro p{margin:0;color:#c2b8b1;font-size:11px;line-height:1.5}.ai-status{min-height:28px;margin-top:12px;color:#ffa34c}
+.stage{min-width:0;background:#17181a}.stage-toolbar{min-height:70px;padding:12px 22px;display:flex;align-items:center;justify-content:space-between;gap:12px;border-bottom:1px solid #38393d}.stage-toolbar>div:first-child{display:grid;gap:4px}.stage-toolbar strong{font-size:14px}.stage-controls{display:flex;align-items:center;gap:10px}.viewport-switch{display:flex;padding:3px;border:1px solid #46474b;border-radius:6px;background:#28292d}.icon-button{width:31px;height:28px;border:0;border-radius:4px;background:transparent;color:#aaa;font-size:17px}.icon-button.active{background:#50331e;color:#ff9d40}.canvas-area{display:flex;justify-content:center;align-items:flex-start;min-height:calc(100vh - 185px);padding:32px 35px;overflow:auto}.canvas-frame{width:100%;max-width:1120px;box-shadow:0 13px 40px #0008;background:white;transition:width .25s}.canvas-frame.mobile{width:390px;max-width:100%}.site-preview{overflow:hidden}.site-preview .built-section{cursor:pointer}.site-preview .built-section:hover{outline:2px solid #ff9b42;outline-offset:-2px}.site-preview .built-section.canvas-selected{outline:3px solid #f47b20;outline-offset:-3px}.canvas-tip{padding:0 22px 20px;color:#aaa;text-align:center;font-size:11px}.inspector{border-left:1px solid #3b3c40;padding:26px 20px}.inspector-header{padding-bottom:19px;border-bottom:1px solid #3b3c40;margin-bottom:18px}.inspector-header h2{margin:10px 0 6px;font-size:23px;font-weight:800}.inspector-actions{display:flex;gap:7px;margin-top:13px}.inspector-actions .button{flex:1}.item-editor{margin:18px 0;padding:12px;border:1px solid #4b4c51;border-radius:8px}.item-editor legend{padding:0 5px;color:#ffa34c;font-size:11px;font-weight:800}.toast{position:fixed;z-index:10;bottom:22px;right:22px;max-width:320px;padding:13px 17px;border-radius:8px;background:#f47b20;color:#191919;box-shadow:0 8px 24px #0005;font-size:12px;font-weight:700}
+@media(max-width:1100px){.workspace{grid-template-columns:260px minmax(0,1fr)}.inspector{grid-column:1/-1;border-left:0;border-top:1px solid #3b3c40}.inspector #inspector-form{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 18px}.header-center{display:none}}@media(max-width:760px){.app-header{height:auto;min-height:70px;flex-wrap:wrap;padding:14px}.header-brand{min-width:0}.header-actions{width:100%;justify-content:flex-start;overflow-x:auto}.workspace{display:block}.sidebar{border-right:0;border-bottom:1px solid #3b3c40}.stage-toolbar{height:auto;min-height:66px;padding:12px}.canvas-area{min-height:0;padding:18px}.inspector #inspector-form{display:block}}
+.palette-grid{display:grid;grid-template-columns:1fr 1fr;gap:0 12px}.palette-grid input[type=color]{height:40px;padding:3px}.control-group input[type=range]{padding:0;height:22px;accent-color:#f47b20;background:transparent;border:0;box-shadow:none}.control-group output{float:right;color:#f7a259;font-size:10px}.plugin-list{display:grid;gap:10px}.plugin-card{padding:12px;border:1px solid #4a4b50;border-radius:7px;background:#2c2d31}.plugin-card strong{display:block;font-size:12px}.plugin-card p{margin:5px 0 10px;color:#aaaab0;font-size:10px;line-height:1.5}.plugin-actions{display:flex;flex-wrap:wrap;gap:6px}.plugin-actions .button{min-height:28px;white-space:normal;text-align:left;font-size:10px}.tab-list .tab{min-width:0}.tab-panel .helper a{color:#ffa34c;text-decoration:underline}
+.header-context-actions{display:flex;align-items:center;gap:8px}.settings-shell{max-width:760px;min-height:100vh;margin:auto;padding:28px}.settings-header{display:flex;align-items:center;justify-content:space-between;gap:18px;padding-bottom:28px;border-bottom:1px solid #414247}.settings-header h1{margin:0;font-size:26px}.settings-card{margin-top:28px;padding:28px;border:1px solid #414247;border-radius:12px;background:#232428}.settings-card h2{margin:0 0 8px;font-size:22px}.settings-card p{color:#b0b0b5;line-height:1.6}.settings-card .control-group{margin-top:22px}.settings-card .control-group input{font-size:14px}.settings-actions{display:flex;flex-wrap:wrap;gap:9px}.settings-status{min-height:24px;margin-top:16px;color:#ffa34c}.settings-note{font-size:12px}.settings-note code{color:#f4a562}
+body.workspace-light{background:#f4f3ef;color:#22252a}body.workspace-light .app-header,body.workspace-light .sidebar,body.workspace-light .inspector{background:#fff;color:#22252a;border-color:#d9d9d5}body.workspace-light .stage{background:#eae9e4}body.workspace-light .stage-toolbar{border-color:#d0d0cc}body.workspace-light .header-brand small,body.workspace-light .header-center,body.workspace-light .sidebar-heading p,body.workspace-light .inspector-header p,body.workspace-light .helper,body.workspace-light .canvas-tip,body.workspace-light .sidebar-foot{color:#62656a}body.workspace-light .button{background:#f7f7f4;border-color:#c6c8c9;color:#25282d}body.workspace-light .button:hover{background:#e9e9e4}body.workspace-light .button.primary{background:#da6813;border-color:#da6813;color:#fff}body.workspace-light .button.primary:hover{background:#bd560b}body.workspace-light .button.danger{color:#a63022}body.workspace-light .section-row,body.workspace-light .theme-choice,body.workspace-light .plugin-card,body.workspace-light .control-group input,body.workspace-light .control-group select,body.workspace-light .control-group textarea,body.workspace-light #add-section,body.workspace-light .viewport-switch{background:#f8f8f5;border-color:#c9cbca;color:#25282d}body.workspace-light .section-row.selected,body.workspace-light .theme-choice.selected{background:#fff0e3;border-color:#d66c1b}body.workspace-light .section-choose,body.workspace-light .move-button,body.workspace-light .control-group label,body.workspace-light .theme-choice{color:#25282d}body.workspace-light .tab,body.workspace-light .plugin-card p{color:#62656a}body.workspace-light .tab.active{color:#b95308;border-color:#d66c1b}body.workspace-light .sidebar-divider,body.workspace-light .inspector-header,body.workspace-light .tab-list,body.workspace-light .sidebar-foot{border-color:#d9d9d5;background-color:transparent}body.workspace-light .sidebar-divider{background:#d9d9d5}body.workspace-light .ai-intro{background:#fff0e3;border-color:#ebc4a4}body.workspace-light .ai-intro p{color:#68584a}body.workspace-light .count{background:#fff0e3;color:#a94906}body.workspace-light .icon-button.active{background:#fff0e3;color:#a94906}body.workspace-light .item-editor{border-color:#d9d9d5}body.workspace-light .text-link{color:#4f5358}body.workspace-light .settings-card{background:#fff;border-color:#d9d9d5}body.workspace-light .settings-header{border-color:#d9d9d5}body.workspace-light .settings-card p{color:#62656a}
+@media(max-width:760px){.header-context-actions{flex-wrap:wrap}.settings-shell{padding:18px}.settings-card{padding:20px}}
+.template-dialog{width:min(920px,calc(100vw - 28px));max-height:90vh;padding:24px;border:1px solid #515258;border-radius:14px;background:#242529;color:#f4f4f5;box-shadow:0 24px 80px #0009}.template-dialog::backdrop{background:#000a}.template-dialog-header{display:flex;justify-content:space-between;align-items:start;gap:16px;margin-bottom:22px}.template-dialog-header h2{margin:8px 0;font-size:27px}.template-dialog-header p{margin:0;color:#b0b0b5}.template-gallery{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:15px}.template-card{display:grid;gap:7px;padding:9px;border:1px solid #4b4c51;border-radius:10px;background:#303136;color:#f4f4f5;text-align:left}.template-card:hover,.template-card:focus-visible{border-color:#f47b20}.template-card strong{font-size:13px}.template-card small{color:#b0b0b5;line-height:1.4}.template-miniature{display:block;position:relative;aspect-ratio:3/4;overflow:hidden;border-radius:5px;background:#fff8f1}.template-miniature span{position:absolute;display:block}.mini-nav{top:0;left:0;right:0;height:13%;background:#fff;border-bottom:1px solid #ddd}.mini-heading{top:24%;left:10%;width:45%;height:18%;background:#2b2b2e;border-radius:2px}.mini-copy{top:46%;left:10%;width:42%;height:5%;background:#b8b8b5;border-radius:2px}.mini-accent{top:24%;right:9%;width:33%;height:32%;background:#ee8d3b;border-radius:45% 45% 4px 4px}.mini-row{bottom:14%;left:9%;right:9%;height:15%;background:repeating-linear-gradient(90deg,#eed5bd 0 30%,transparent 30% 34%)}.template-card-events .mini-accent{background:#7da194;border-radius:50%}.template-card-shop .mini-accent{background:#b58ba8;border-radius:4px}.template-card-commissions .mini-accent{background:#a9b5ca;border-radius:45% 10% 45% 10%}.template-card-links .mini-accent{display:none}.template-card-links .mini-heading{left:24%;width:52%;top:19%;height:11%}.template-card-links .mini-copy{left:31%;width:38%;top:34%}.template-card-links .mini-row{left:20%;right:20%;bottom:14%;height:37%;background:repeating-linear-gradient(0deg,#e8d9ce 0 20%,transparent 20% 27%)}body.workspace-light .template-dialog{background:#fff;color:#25282d;border-color:#d9d9d5}body.workspace-light .template-dialog-header p,body.workspace-light .template-card small{color:#62656a}body.workspace-light .template-card{background:#f8f8f5;color:#25282d;border-color:#c9cbca}
+
+    </style>
+
+  </head>
+  <body>
+    <div class="app-shell">
+      <header class="app-header">
+        <div class="header-brand"><span class="brand-icon" aria-hidden="true">W</span><div><strong>WebsiteForge</strong><small id="header-context">Build workspace</small></div></div>
+        <div class="header-center"><span class="status-dot"></span><span id="save-status">Saved on this device</span></div>
+        <div class="header-actions">
+          <div class="header-context-actions" data-header-for="build">
+            <button type="button" class="button ghost" id="import-button">Import project</button>
+            <button type="button" class="button ghost" id="export-json-button">Save project</button>
+            <button type="button" class="button primary" id="export-html-button">Export website <span aria-hidden="true">↗</span></button>
+          </div>
+          <div class="header-context-actions" data-header-for="design" hidden>
+            <button type="button" class="button ghost" id="design-preview-button">Preview site</button>
+            <button type="button" class="button primary" id="design-export-button">Export website <span aria-hidden="true">↗</span></button>
+          </div>
+          <div class="header-context-actions" data-header-for="plugins" hidden>
+            <button type="button" class="button ghost" id="plugin-browse-button">Browse packs</button>
+          </div>
+          <div class="header-context-actions" data-header-for="ai" hidden>
+            <a class="button ghost" href="settings.html">AI settings</a>
+          </div>
+          <a class="button ghost" href="settings.html" aria-label="WebsiteForge settings">Settings</a>
+          <input id="import-file" type="file" accept="application/json,.json" hidden />
+        </div>
+      </header>
+      <div class="workspace">
+        <aside class="sidebar" aria-label="Builder tools">
+          <div class="sidebar-heading"><span class="eyebrow">YOUR WORKSPACE</span><h1>Build your corner of the internet.</h1><p>Pick a starting point, shape every section, and make it yours.</p></div>
+          <div class="tab-list" role="tablist" aria-label="Builder panels">
+            <button class="tab active" type="button" role="tab" aria-selected="true" data-tab="build">Build</button>
+            <button class="tab" type="button" role="tab" aria-selected="false" data-tab="design">Design</button>
+            <button class="tab" type="button" role="tab" aria-selected="false" data-tab="plugins">Plugins</button>
+            <button class="tab" type="button" role="tab" aria-selected="false" data-tab="ai">AI tools <span class="sparkle">✦</span></button>
+          </div>
+          <section class="tab-panel active" id="panel-build" role="tabpanel">
+            <div class="control-group"><label for="site-name">Website name</label><input id="site-name" type="text" maxlength="70" placeholder="Your studio name" /></div>
+            <div class="control-group"><label for="site-tagline">Short tagline</label><input id="site-tagline" type="text" maxlength="120" placeholder="Artist & maker" /></div>
+            <div class="control-group"><label for="template-select">Starting template</label><div class="template-row"><select id="template-select"><option value="portfolio">Artist portfolio</option><option value="events">Event landing page</option><option value="shop">Creative shop</option><option value="commissions">Commissions & services</option><option value="links">Simple link hub</option></select><button type="button" class="button subtle" id="apply-template-button">Use</button></div><button type="button" class="button ghost wide" id="browse-template-button">Browse template gallery</button><p class="helper">Applying a template replaces the current page.</p></div>
+            <div class="sidebar-divider"></div>
+            <div class="section-title"><h2>Page sections</h2><span id="section-count" class="count">0</span></div>
+            <div id="section-list" class="section-list" aria-label="Reorder and select sections"></div>
+            <label for="add-section" class="visually-hidden">Add a section</label>
+            <select id="add-section"><option value="">+ Add a section</option><option value="hero">Hero</option><option value="intro">About</option><option value="gallery">Gallery</option><option value="features">Highlights</option><option value="events">Events</option><option value="links">Links</option><option value="cta">Call to action</option></select>
+          </section>
+          <section class="tab-panel" id="panel-design" role="tabpanel" hidden>
+            <div class="section-title"><h2>Color mood</h2></div><div id="theme-list" class="theme-list"></div><div class="sidebar-divider"></div>
+            <div class="control-group"><label for="font-select">Typography</label><select id="font-select"><option value="editorial">Editorial serif</option><option value="modern">Modern sans</option><option value="playful">Playful rounded</option></select></div>
+            <div class="section-title"><h2>Color palette</h2></div>
+            <div class="palette-grid">
+              <div class="control-group"><label for="custom-accent">Accent</label><input id="custom-accent" type="color" value="#ed7418" /></div>
+              <div class="control-group"><label for="paper-color">Background</label><input id="paper-color" type="color" value="#fff8f1" /></div>
+              <div class="control-group"><label for="ink-color">Text</label><input id="ink-color" type="color" value="#27272b" /></div>
+              <div class="control-group"><label for="muted-color">Secondary text</label><input id="muted-color" type="color" value="#66666c" /></div>
+            </div>
+            <div class="sidebar-divider"></div>
+            <div class="section-title"><h2>Layout controls</h2></div>
+            <div class="control-group"><label for="content-width">Content width <output id="content-width-value"></output></label><input id="content-width" type="range" min="760" max="1600" step="20" /></div>
+            <div class="control-group"><label for="section-spacing">Section spacing <output id="section-spacing-value"></output></label><input id="section-spacing" type="range" min="35" max="160" step="5" /></div>
+            <div class="control-group"><label for="corner-radius">Corner radius <output id="corner-radius-value"></output></label><input id="corner-radius" type="range" min="0" max="40" step="2" /></div>
+            <div class="control-group"><label for="heading-scale">Heading size <output id="heading-scale-value"></output></label><input id="heading-scale" type="range" min="0.7" max="1.5" step="0.05" /></div>
+            <div class="control-group"><label for="button-style">Button style</label><select id="button-style"><option value="solid">Solid</option><option value="outline">Outline</option><option value="pill">Pill</option></select></div>
+            <p class="helper">All settings carry into your exported website.</p>
+          </section>
+          <section class="tab-panel" id="panel-plugins" role="tabpanel" hidden>
+            <div class="ai-intro"><span class="ai-icon" aria-hidden="true">✚</span><h2>Community plugins</h2><p>Add sections and themes made by other WebsiteForge creators. Packs are shareable JSON files; no plugin code runs in your browser.</p></div>
+            <div class="section-title"><h2>Discover packs</h2></div>
+            <div id="plugin-catalog" class="plugin-list"></div>
+            <div class="sidebar-divider"></div>
+            <div class="section-title"><h2>Install a shared pack</h2></div>
+            <div class="control-group"><label for="plugin-url">HTTPS manifest URL</label><input id="plugin-url" type="url" placeholder="https://example.com/my-pack.json" /></div>
+            <button type="button" class="button subtle wide" id="install-url-button">Install from URL</button>
+            <button type="button" class="button ghost wide" id="install-file-button">Install from JSON file</button>
+            <input id="plugin-file" type="file" accept="application/json,.json" hidden />
+            <div class="sidebar-divider"></div>
+            <div class="section-title"><h2>Installed packs</h2><span id="plugin-count" class="count">0</span></div>
+            <div id="plugin-installed" class="plugin-list"></div>
+            <p id="plugin-status" class="helper" role="status"></p>
+            <p class="helper"><a href="plugins/artist-essentials.json" target="_blank" rel="noopener">View an example pack ↗</a> · Community submissions can be added to the project catalog.</p>
+          </section>
+          <section class="tab-panel" id="panel-ai" role="tabpanel" hidden>
+            <div class="ai-intro"><span class="ai-icon" aria-hidden="true">✦</span><h2>Make it with AI</h2><p>Describe your work and let AI draft a page. You can edit every result before exporting.</p></div>
+            <div class="control-group"><label for="ai-prompt">What should your site say?</label><textarea id="ai-prompt" rows="6" maxlength="2000" placeholder="I'm a ceramic artist making playful, hand-built pieces. I want a warm portfolio with a gallery, a short bio, and a way to contact me."></textarea></div>
+            <button type="button" class="button primary wide" id="generate-site-button">✦ Generate a website</button>
+            <button type="button" class="button ghost wide" id="rewrite-section-button">✦ Rewrite selected section</button>
+            <p id="ai-status" class="helper ai-status" role="status">AI tools need the local server and an OpenAI API key. Add your key in <a href="settings.html">Settings</a>. Manual editing works anytime.</p><p class="helper">Generating a page sends your prompt and current site content to OpenAI. Review the draft before publishing.</p>
+          </section>
+          <div class="sidebar-foot"><span class="footer-star">✳</span> Made for artists, makers & dreamers.</div>
+        </aside>
+        <main class="stage" aria-label="Website preview workspace">
+          <div class="stage-toolbar"><div><span class="eyebrow">LIVE CANVAS</span><strong id="canvas-title">Your website</strong></div><div class="stage-controls"><div class="viewport-switch" aria-label="Preview width"><button type="button" class="icon-button active" id="desktop-button" aria-label="Desktop preview" title="Desktop preview">▣</button><button type="button" class="icon-button" id="mobile-button" aria-label="Mobile preview" title="Mobile preview">▯</button></div><button type="button" class="button ghost" id="preview-button">Preview</button></div></div>
+          <div class="canvas-area"><div id="canvas-frame" class="canvas-frame"><div id="site-preview" class="site-preview"></div></div></div>
+          <div class="canvas-tip">Select a section on the canvas to edit it. Your changes save automatically.</div>
+        </main>
+        <aside class="inspector" aria-label="Selected section editor"><div class="inspector-header"><span class="eyebrow">SECTION EDITOR</span><h2 id="inspector-title">Select a section</h2><p id="inspector-description">Choose a section from the canvas or the list to edit its content.</p></div><form id="inspector-form" autocomplete="off"></form><div class="inspector-actions" id="inspector-actions" hidden><button type="button" class="button ghost" id="duplicate-section-button">Duplicate</button><button type="button" class="button danger" id="delete-section-button">Delete</button></div></aside>
+      </div>
+    </div>
+    <dialog id="template-dialog" class="template-dialog" aria-labelledby="template-dialog-title">
+      <div class="template-dialog-header"><div><span class="eyebrow">STARTING POINTS</span><h2 id="template-dialog-title">Choose a template</h2><p>Five simple layouts you can edit from top to bottom.</p></div><button type="button" class="button ghost" id="close-template-dialog">Close</button></div>
+      <div id="template-gallery" class="template-gallery"></div>
+    </dialog>
+    <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+    <script>
+(() => {
+globalThis.websiteForgeBuiltins = {"catalog":{"version":1,"packs":[{"id":"websiteforge.artist-essentials","name":"Artist essentials","description":"FAQ and testimonial layouts, plus a midnight color theme.","manifest":"/plugins/artist-essentials.json"},{"id":"websiteforge.light-mode","name":"Light mode","description":"An optional bright workspace theme for the WebsiteForge editor.","manifest":"/plugins/light-mode.json"}]},"manifests":{"/plugins/artist-essentials.json":{"format":"websiteforge-plugin","version":1,"id":"websiteforge.artist-essentials","name":"Artist essentials","author":"WebsiteForge","description":"Reusable sections and a theme for artist portfolios.","sections":[{"id":"faq","name":"Frequently asked questions","description":"Answer common questions in an expandable list.","layout":"faq","defaults":{"eyebrow":"GOOD TO KNOW","title":"Frequently asked questions","body":"A few details to help you get started.","items":[{"title":"How do commissions work?","body":"Tell me about your idea and I will reply with availability and next steps."},{"title":"Where can I see your latest work?","body":"Browse the gallery above or follow my updates online."}]}},{"id":"quotes","name":"Kind words","description":"A simple quote wall for real feedback you have permission to share.","layout":"quote","defaults":{"eyebrow":"KIND WORDS","title":"What people are saying","body":"Add real quotes from your community here.","items":[{"title":"Add a name","body":"Replace this placeholder with a quote you have permission to publish."}]}}],"themes":[{"id":"midnight","name":"Midnight studio","colors":{"accent":"#f47b20","paper":"#202125","ink":"#f7f4ef","muted":"#c8c1b9"}}]},"/plugins/light-mode.json":{"format":"websiteforge-plugin","version":1,"id":"websiteforge.light-mode","name":"Light mode","author":"WebsiteForge","description":"Switch the WebsiteForge workspace to a bright theme. Your exported website keeps its own colors.","features":["workspace-light-mode"]}}};
+const CORE_SECTION_TYPES = ["hero", "intro", "gallery", "features", "events", "links", "cta"];
+const SECTION_TYPES = [...CORE_SECTION_TYPES, "plugin"];
+const SECTION_LABELS = { hero: "Hero", intro: "About", gallery: "Gallery", features: "Highlights", events: "Events", links: "Links", cta: "Call to action", plugin: "Plugin section" };
+const THEMES = {
+  forge: { label: "Forge orange", accent: "#ed7418", paper: "#fff8f1", ink: "#27272b", muted: "#66666c" },
+  clay: { label: "Warm clay", accent: "#bd5e47", paper: "#faf5ef", ink: "#2f302d", muted: "#6f7268" },
+  moss: { label: "Moss & cream", accent: "#4b735f", paper: "#f5f5ec", ink: "#26382f", muted: "#687669" },
+  lilac: { label: "Soft lilac", accent: "#8063aa", paper: "#f8f4fb", ink: "#332e40", muted: "#77717e" },
+  ocean: { label: "Coastal blue", accent: "#407d9b", paper: "#f1f7f8", ink: "#263b43", muted: "#6a7b80" }
+};
+
+const limits = { name: 70, tagline: 120, eyebrow: 80, title: 130, body: 700, buttonText: 40, buttonUrl: 300, imageUrl: 500, itemTitle: 70, itemBody: 180 };
+const trim = (value, length) => typeof value === "string" ? value.trim().slice(0, length) : "";
+const color = (value, fallback = "") => /^#[0-9a-fA-F]{6}$/.test(value) ? value : fallback;
+const number = (value, fallback, min, max) => Number.isFinite(Number(value)) ? Math.max(min, Math.min(max, Number(value))) : fallback;
+const choice = (value, allowed, fallback) => allowed.includes(value) ? value : fallback;
+const makeId = () => globalThis.crypto?.randomUUID?.() || `section-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+const DEFAULT_DESIGN = Object.freeze({ contentWidth: 1180, sectionSpacing: 90, cornerRadius: 4, headingScale: 1, buttonStyle: "solid" });
+
+function makeSection(type = "intro", overrides = {}) {
+  const examples = {
+    hero: { eyebrow: "A CREATIVE WORLD OF MY OWN", title: "Art made to feel like home.", body: "Thoughtful work, small moments, and a little bit of magic. Welcome to my corner of the internet.", buttonText: "Explore my work", buttonUrl: "#gallery" },
+    intro: { eyebrow: "HELLO THERE", title: "I make things with heart.", body: "I'm an artist who loves turning everyday inspiration into something you can hold, share, or remember." },
+    gallery: { eyebrow: "SELECTED WORK", title: "A little look around", body: "A collection of recent favorites from my studio.", items: [{ title: "Color studies", body: "A playful exploration of shape and color." }, { title: "New beginnings", body: "Little ideas grown into something bigger." }, { title: "Everyday wonder", body: "Small details worth noticing." }] },
+    features: { eyebrow: "WHAT I CREATE", title: "Made with intention", body: "From first sketch to final detail, every piece has its own story.", items: [{ title: "Original artwork", body: "One-of-a-kind pieces made in my studio." }, { title: "Thoughtful details", body: "A little care in every corner." }, { title: "For your space", body: "Art to live with and love." }] },
+    events: { eyebrow: "FIND ME OUT THERE", title: "Upcoming events", body: "Come say hello in person. I would love to meet you.", items: [{ title: "Spring Art Market", body: "May 18 · Downtown Arts Hall" }, { title: "Makers Weekend", body: "June 8 · Riverfront Pavilion" }] },
+    links: { eyebrow: "FIND ME ONLINE", title: "Explore more", body: "Choose where you would like to go next.", items: [{ title: "Portfolio", body: "Selected work and projects.", linkUrl: "#gallery" }, { title: "Email", body: "Start a conversation.", linkUrl: "mailto:hello@example.com" }] },
+    cta: { eyebrow: "LET'S CONNECT", title: "Let's make something beautiful.", body: "Have an idea, a question, or just want to say hi? My inbox is open.", buttonText: "Get in touch", buttonUrl: "mailto:hello@example.com" }
+  };
+  return { id: makeId(), type, eyebrow: "", title: "", body: "", buttonText: "", buttonUrl: "", imageUrl: "", items: [], layout: "cards", pluginName: "", background: "", textColor: "", alignment: "left", spacing: "normal", ...examples[type], ...overrides };
+}
+
+function template(name = "portfolio") {
+  const common = { version: 2, theme: "forge", accent: THEMES.forge.accent, palette: { paper: THEMES.forge.paper, ink: THEMES.forge.ink, muted: THEMES.forge.muted }, design: { ...DEFAULT_DESIGN }, font: "modern" };
+  if (name === "events") return { ...common, name: "The Artist Gathering", tagline: "A place for creative people to meet", sections: [makeSection("hero", { eyebrow: "YOU'RE INVITED", title: "A weekend made for makers.", body: "Meet artists, discover beautiful things, and leave with a little more inspiration.", buttonText: "See the schedule", buttonUrl: "#events" }), makeSection("intro", { title: "Come as you are.", body: "A welcoming space for artists and art lovers to connect, learn, and celebrate the joy of making." }), makeSection("events"), makeSection("cta", { title: "Save your spot.", body: "We can't wait to see you there.", buttonText: "Email the organizers", buttonUrl: "mailto:hello@example.com" })] };
+  if (name === "shop") return { ...common, name: "Little Cove Studio", tagline: "Art and objects for everyday joy", sections: [makeSection("hero", { eyebrow: "HANDMADE WITH HEART", title: "Little pieces of joy for your everyday.", body: "Original art and handmade goods from a small, happy studio.", buttonText: "Browse the collection", buttonUrl: "#gallery" }), makeSection("gallery", { title: "From the studio" }), makeSection("features", { title: "Why handmade?" }), makeSection("cta", { title: "Want first dibs?", body: "Say hello and ask about the next collection.", buttonText: "Email the studio", buttonUrl: "mailto:hello@example.com" })] };
+  if (name === "commissions") return { ...common, name: "Your Creative Studio", tagline: "Custom work made with care", sections: [makeSection("hero", { eyebrow: "CUSTOM WORK", title: "Let's make something for you.", body: "Explore the kinds of creative work I offer and get in touch to discuss an idea.", buttonText: "See services", buttonUrl: "#services" }), makeSection("features", { id: "services", eyebrow: "SERVICES", title: "Ways to work together", body: "Choose a starting point and ask about availability.", items: [{ title: "Custom artwork", body: "A personal piece shaped around your idea." }, { title: "Creative collaboration", body: "Visual work for a project or small business." }, { title: "Studio consultation", body: "A conversation to explore the right approach." }] }), makeSection("intro", { title: "How it works", body: "Share your idea, timeline, and budget. I will reply with availability and next steps." }), makeSection("cta", { title: "Start a conversation", body: "Tell me what you have in mind.", buttonText: "Email the studio", buttonUrl: "mailto:hello@example.com" })] };
+  if (name === "links") return { ...common, name: "Your Name", tagline: "Find my work around the web", sections: [makeSection("hero", { eyebrow: "HELLO", title: "A little home for all my links.", body: "I'm a maker sharing projects, updates, and places to connect.", buttonText: "Get in touch", buttonUrl: "mailto:hello@example.com" }), makeSection("links", { eyebrow: "EXPLORE", title: "Where to find me", body: "Replace these examples with your own destinations.", items: [{ title: "Portfolio", body: "See selected work and recent projects.", linkUrl: "https://example.com" }, { title: "Shop", body: "Browse available pieces and new releases.", linkUrl: "https://example.com" }, { title: "Updates", body: "Follow along with what I am making next.", linkUrl: "https://example.com" }] }), makeSection("cta", { title: "Let's stay in touch", body: "Have a question or collaboration in mind?", buttonText: "Send an email", buttonUrl: "mailto:hello@example.com" })] };
+  return { ...common, name: "Mira Studio", tagline: "Illustration, color & little wonders", sections: [makeSection("hero"), makeSection("intro"), makeSection("gallery"), makeSection("events"), makeSection("cta")] };
+}
+
+function safeUrl(value, image = false) {
+  const url = trim(value, 500);
+  if (image) return /^https:\/\//i.test(url) ? url : "";
+  return /^(https?:\/\/|mailto:|#)/i.test(url) ? url : "#";
+}
+const escapeHtml = (value) => String(value ?? "").replace(/[&<>"']/g, character => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[character]);
+
+function normalizeSite(input) {
+  if (!input || typeof input !== "object" || !Array.isArray(input.sections)) throw new Error("This is not a WebsiteForge project.");
+  const theme = THEMES[input.theme] ? input.theme : "forge";
+  const accent = color(input.accent, THEMES[theme].accent);
+  const palette = { paper: color(input.palette?.paper, THEMES[theme].paper), ink: color(input.palette?.ink, THEMES[theme].ink), muted: color(input.palette?.muted, THEMES[theme].muted) };
+  const design = { contentWidth: number(input.design?.contentWidth, 1180, 760, 1600), sectionSpacing: number(input.design?.sectionSpacing, 90, 35, 160), cornerRadius: number(input.design?.cornerRadius, 4, 0, 40), headingScale: number(input.design?.headingScale, 1, .7, 1.5), buttonStyle: choice(input.design?.buttonStyle, ["solid", "outline", "pill"], "solid") };
+  const sections = input.sections.slice(0, 14).filter(section => section && SECTION_TYPES.includes(section.type)).map(section => ({
+    id: /^[a-zA-Z0-9_-]{1,80}$/.test(section.id) ? section.id : makeId(), type: section.type,
+    eyebrow: trim(section.eyebrow, limits.eyebrow), title: trim(section.title, limits.title), body: trim(section.body, limits.body),
+    buttonText: trim(section.buttonText, limits.buttonText), buttonUrl: trim(section.buttonUrl, limits.buttonUrl) ? safeUrl(section.buttonUrl) : "", imageUrl: safeUrl(section.imageUrl, true),
+    layout: choice(section.layout, ["cards", "faq", "quote", "banner"], "cards"), pluginName: trim(section.pluginName, 70),
+    background: color(section.background), textColor: color(section.textColor), alignment: choice(section.alignment, ["left", "center"], "left"), spacing: choice(section.spacing, ["compact", "normal", "roomy"], "normal"),
+    items: (Array.isArray(section.items) ? section.items : []).slice(0, 6).map(item => ({ title: trim(item?.title, limits.itemTitle), body: trim(item?.body, limits.itemBody), imageUrl: safeUrl(item?.imageUrl, true), linkUrl: trim(item?.linkUrl, limits.buttonUrl) ? safeUrl(item.linkUrl) : "" }))
+  }));
+  if (!sections.length) throw new Error("A project needs at least one section.");
+  return { version: 2, name: trim(input.name, limits.name) || "My Artist Site", tagline: trim(input.tagline, limits.tagline), theme, accent, palette, design, font: ["editorial", "modern", "playful"].includes(input.font) ? input.font : "modern", sections };
+}
+
+const mark = section => `<p class="site-eyebrow">${escapeHtml(section.eyebrow)}</p>`;
+const heading = (section, tag = "h2") => `<${tag}>${escapeHtml(section.title)}</${tag}>`;
+const body = section => `<p class="site-body">${escapeHtml(section.body)}</p>`;
+const button = section => section.buttonText ? `<a class="site-button" href="${escapeHtml(safeUrl(section.buttonUrl))}">${escapeHtml(section.buttonText)} <span aria-hidden="true">↗</span></a>` : "";
+const picture = (url, index) => url ? `<img src="${escapeHtml(safeUrl(url, true))}" alt="Artwork ${index + 1}" loading="lazy">` : `<span class="art-shape art-shape-${index % 4}" aria-hidden="true"></span>`;
+
+function renderSection(section, editable = false) {
+  const label = section.type === "plugin" ? section.pluginName || SECTION_LABELS.plugin : SECTION_LABELS[section.type];
+  const attrs = editable ? ` data-section-id="${escapeHtml(section.id)}" tabindex="0" role="button" aria-label="Edit ${escapeHtml(label)} section"` : ` id="${escapeHtml(section.type === "gallery" ? "gallery" : section.type === "events" ? "events" : section.id)}"`;
+  const classes = `built-section section-${section.type} align-${choice(section.alignment, ["left", "center"], "left")} spacing-${choice(section.spacing, ["compact", "normal", "roomy"], "normal")}`;
+  const style = `${section.background ? `background:${color(section.background)};` : ""}${section.textColor ? `color:${color(section.textColor)};--site-muted:${color(section.textColor)};` : ""}`;
+  let content = "";
+  if (section.type === "hero") content = `<div class="site-content"><div>${mark(section)}${heading(section, "h1")}${body(section)}${button(section)}</div><div class="hero-art">${picture(section.imageUrl, 0)}<span class="art-label">ARTIST / MAKER / DREAMER</span></div></div>`;
+  if (section.type === "intro") content = `<div class="intro-grid"><div>${mark(section)}${heading(section)}</div><div>${body(section)}<span class="intro-scribble" aria-hidden="true">✳</span></div></div>`;
+  if (["gallery", "features", "events"].includes(section.type)) content = `<div class="site-section-heading">${mark(section)}${heading(section)}${body(section)}</div><div class="card-grid ${section.type === "events" ? "event-grid" : ""}">${section.items.map((item, index) => `<article class="site-card">${section.type === "gallery" ? `<div class="card-art">${picture(item.imageUrl, index)}</div>` : `<span class="card-number">${String(index + 1).padStart(2, "0")}</span>`}<h3>${escapeHtml(item.title)}</h3><p>${escapeHtml(item.body)}</p></article>`).join("")}</div>`;
+  if (section.type === "links") content = `<div class="site-section-heading">${mark(section)}${heading(section)}${body(section)}</div><div class="link-grid">${section.items.map(item => `<a class="link-card" href="${escapeHtml(safeUrl(item.linkUrl))}"><strong>${escapeHtml(item.title)}</strong><span>${escapeHtml(item.body)}</span><b aria-hidden="true">↗</b></a>`).join("")}</div>`;
+  if (section.type === "cta") content = `<div class="cta-content">${mark(section)}${heading(section)}${body(section)}${button(section)}</div><span class="cta-star" aria-hidden="true">✳</span>`;
+  if (section.type === "plugin") {
+    const items = section.items || [];
+    if (section.layout === "faq") content = `<div class="site-section-heading">${mark(section)}${heading(section)}${body(section)}</div><div class="plugin-faq">${items.map(item => `<details><summary>${escapeHtml(item.title)}</summary><p>${escapeHtml(item.body)}</p></details>`).join("")}</div>`;
+    else if (section.layout === "quote") content = `<div class="site-section-heading">${mark(section)}${heading(section)}${body(section)}</div><div class="plugin-quotes">${items.map(item => `<blockquote><p>“${escapeHtml(item.body)}”</p><cite>${escapeHtml(item.title)}</cite></blockquote>`).join("")}</div>`;
+    else if (section.layout === "banner") content = `<div class="site-content"><div>${mark(section)}${heading(section)}${body(section)}${button(section)}</div><div class="hero-art">${picture(section.imageUrl, 0)}</div></div>`;
+    else content = `<div class="site-section-heading">${mark(section)}${heading(section)}${body(section)}</div><div class="card-grid">${items.map((item, index) => `<article class="site-card">${item.imageUrl ? `<div class="card-art">${picture(item.imageUrl, index)}</div>` : `<span class="card-number">${String(index + 1).padStart(2, "0")}</span>`}<h3>${escapeHtml(item.title)}</h3><p>${escapeHtml(item.body)}</p></article>`).join("")}</div>${button(section)}`;
+  }
+  return `<section class="${classes}" style="${style}"${attrs}>${content}</section>`;
+}
+
+function renderSite(site, editable = false) {
+  const theme = THEMES[site.theme] || THEMES.clay;
+  const palette = site.palette || theme;
+  const design = site.design || DEFAULT_DESIGN;
+  const style = `--site-accent:${color(site.accent, theme.accent)};--site-paper:${color(palette.paper, theme.paper)};--site-ink:${color(palette.ink, theme.ink)};--site-muted:${color(palette.muted, theme.muted)};--content-width:${number(design.contentWidth, 1180, 760, 1600)}px;--section-space:${number(design.sectionSpacing, 90, 35, 160)}px;--corner-radius:${number(design.cornerRadius, 4, 0, 40)}px;--heading-scale:${number(design.headingScale, 1, .7, 1.5)}`;
+  const nav = site.sections.filter(section => ["gallery", "events", "intro", "links"].includes(section.type)).slice(0, 3).map(section => `<a href="#${escapeHtml(section.type === "gallery" ? "gallery" : section.type === "events" ? "events" : section.id)}">${escapeHtml(SECTION_LABELS[section.type])}</a>`).join("");
+  return `<div class="built-site font-${site.font} button-${choice(design.buttonStyle, ["solid", "outline", "pill"], "solid")}" style="${style}"><header class="site-nav"><div class="site-brand"><span aria-hidden="true">✳</span><strong>${escapeHtml(site.name)}</strong></div><nav>${nav}</nav><span class="nav-tagline">${escapeHtml(site.tagline)}</span></header>${site.sections.map(section => renderSection(section, editable)).join("")}<footer class="site-footer"><strong>${escapeHtml(site.name)}</strong><span>${escapeHtml(site.tagline)}</span><small>Made with care ✳</small></footer></div>`;
+}
+
+const SITE_CSS = `
+.built-site{--site-accent:#bd5e47;--site-paper:#faf5ef;--site-ink:#2f302d;--site-muted:#6f7268;background:var(--site-paper);color:var(--site-ink);font-family:Arial,Helvetica,sans-serif;line-height:1.55;min-height:100%;overflow:hidden}.built-site *{box-sizing:border-box}.built-site a{color:inherit;text-decoration:none}.built-site h1,.built-site h2,.built-site h3,.built-site p{margin-top:0}.built-site.font-editorial h1,.built-site.font-editorial h2,.built-site.font-editorial h3{font-family:Georgia,'Times New Roman',serif;font-weight:500}.built-site.font-playful h1,.built-site.font-playful h2,.built-site.font-playful h3{font-family:'Trebuchet MS',Arial,sans-serif;letter-spacing:-.03em}.site-nav{min-height:82px;padding:20px 6%;display:flex;align-items:center;gap:28px;border-bottom:1px solid color-mix(in srgb,var(--site-ink) 12%,transparent)}.site-brand{display:flex;align-items:center;gap:9px;font-size:17px;white-space:nowrap}.site-brand span{color:var(--site-accent);font-size:28px;line-height:1}.site-nav nav{display:flex;gap:25px;margin-left:auto;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.08em}.site-nav nav a:hover{color:var(--site-accent)}.nav-tagline{display:none;color:var(--site-muted);font-size:12px}.built-section{padding:90px 8%;position:relative;scroll-margin-top:20px}.site-eyebrow{font-size:11px;font-weight:800;letter-spacing:.2em;text-transform:uppercase;color:var(--site-accent);margin-bottom:20px}.built-section h1{font-size:clamp(44px,6vw,92px);line-height:1.05;letter-spacing:-.055em;margin-bottom:26px}.built-section h2{font-size:clamp(34px,4vw,62px);line-height:1.13;letter-spacing:-.045em;margin-bottom:20px}.built-section h3{font-size:24px;line-height:1.2;margin-bottom:10px}.site-body{color:var(--site-muted);font-size:16px;max-width:580px;line-height:1.8}.site-button{display:inline-flex;align-items:center;gap:24px;background:var(--site-accent);color:white!important;padding:15px 21px;border-radius:3px;font-size:13px;font-weight:700;margin-top:17px}.site-button:hover{filter:brightness(.92)}.section-hero{padding-top:95px;padding-bottom:95px}.site-content{display:grid;grid-template-columns:1.05fr .95fr;gap:8%;align-items:center}.hero-art{height:445px;position:relative;border-radius:48% 48% 4px 4px;background:color-mix(in srgb,var(--site-accent) 20%,white);display:flex;align-items:center;justify-content:center;overflow:hidden}.hero-art img{width:100%;height:100%;object-fit:cover}.art-shape{display:block;width:58%;height:68%;background:var(--site-accent);opacity:.72;box-shadow:35px 25px 0 color-mix(in srgb,var(--site-accent) 35%,white);transform:rotate(-13deg);border-radius:45% 50% 40% 48%}.art-shape-1{border-radius:12% 68% 28% 63%;transform:rotate(19deg)}.art-shape-2{border-radius:60% 15% 67% 20%;transform:rotate(-22deg)}.art-shape-3{border-radius:20% 45% 15% 70%;transform:rotate(8deg)}.art-label{position:absolute;bottom:24px;right:20px;background:var(--site-paper);font-size:9px;font-weight:800;letter-spacing:.18em;padding:10px 12px}.section-intro{background:white}.intro-grid{display:grid;grid-template-columns:1fr 1fr;gap:13%;align-items:start}.intro-scribble{display:block;color:var(--site-accent);font-size:100px;line-height:1;margin-top:30px}.site-section-heading{max-width:680px;margin:0 auto 44px;text-align:center}.site-section-heading .site-body{margin-inline:auto}.card-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:19px}.site-card{min-width:0}.card-art{height:240px;background:color-mix(in srgb,var(--site-accent) 14%,white);display:flex;align-items:center;justify-content:center;overflow:hidden;margin-bottom:19px}.card-art img{height:100%;width:100%;object-fit:cover}.card-art .art-shape{width:45%;height:58%}.site-card h3{font-size:21px;margin-bottom:7px}.site-card p{color:var(--site-muted);font-size:13px;line-height:1.65}.card-number{display:inline-block;color:var(--site-accent);font-size:12px;letter-spacing:.14em;border-top:1px solid var(--site-accent);padding-top:14px;width:100%;margin-bottom:22px}.section-features,.section-events{background:white}.event-grid{grid-template-columns:repeat(2,1fr)}.event-grid .site-card{border:1px solid color-mix(in srgb,var(--site-ink) 13%,transparent);padding:26px}.section-cta{background:var(--site-accent);color:white;display:flex;justify-content:space-between;align-items:center;gap:20px}.section-cta .site-eyebrow,.section-cta .site-body{color:white;opacity:.82}.section-cta .site-button{background:white;color:var(--site-accent)!important}.cta-star{font-size:170px;line-height:1;opacity:.22}.site-footer{padding:38px 8%;display:flex;align-items:center;gap:15px;font-size:12px}.site-footer strong{font-size:16px}.site-footer span{color:var(--site-muted)}.site-footer small{margin-left:auto;color:var(--site-muted)}
+@media(max-width:800px){.site-nav{min-height:65px;padding:16px 6%}.site-nav nav{gap:12px}.built-section{padding:65px 6%}.site-content{grid-template-columns:1fr;gap:45px}.hero-art{height:310px}.intro-grid{grid-template-columns:1fr;gap:12px}.intro-scribble{font-size:70px}.card-grid{grid-template-columns:1fr 1fr}.card-art{height:190px}.cta-star{display:none}}
+@media(max-width:540px){.site-nav nav{display:none}.nav-tagline{display:block;margin-left:auto}.built-section{padding:55px 6%}.built-section h1{font-size:48px}.built-section h2{font-size:37px}.hero-art{height:290px}.card-grid,.event-grid{grid-template-columns:1fr}.card-art{height:240px}.site-footer{flex-wrap:wrap}.site-footer small{margin-left:0}}
+.built-site .site-nav,.built-site .site-footer{padding-inline:max(6%,calc((100% - var(--content-width))/2))}.built-site .built-section{padding:var(--section-space) max(6%,calc((100% - var(--content-width))/2))}.built-site .spacing-compact{padding-block:calc(var(--section-space) * .6)}.built-site .spacing-roomy{padding-block:calc(var(--section-space) * 1.4)}.built-site .built-section h1{font-size:clamp(34px,calc(6vw * var(--heading-scale)),130px)}.built-site .built-section h2{font-size:clamp(28px,calc(4vw * var(--heading-scale)),92px)}.built-site .hero-art,.built-site .card-art,.built-site .site-card,.built-site .site-button{border-radius:var(--corner-radius)}.built-site .align-center{text-align:center}.built-site .align-center .site-body{margin-inline:auto}.built-site .align-center .site-content>div:first-child{margin-inline:auto}.built-site.button-outline .site-button{background:transparent;border:2px solid var(--site-accent);color:var(--site-accent)!important}.built-site.button-pill .site-button{border-radius:999px}.built-site .section-cta.button-outline .site-button{border-color:white;color:white!important}.plugin-faq{max-width:760px;margin:auto}.plugin-faq details{border-bottom:1px solid color-mix(in srgb,var(--site-ink) 18%,transparent);padding:20px 0}.plugin-faq summary{cursor:pointer;font-size:18px;font-weight:700}.plugin-faq details p{color:var(--site-muted);line-height:1.7;margin:14px 0 0}.plugin-quotes{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:20px}.plugin-quotes blockquote{margin:0;padding:28px;border:1px solid color-mix(in srgb,var(--site-ink) 15%,transparent);border-radius:var(--corner-radius);background:color-mix(in srgb,var(--site-accent) 7%,white)}.plugin-quotes blockquote p{font-size:18px;line-height:1.5}.plugin-quotes cite{color:var(--site-accent);font-size:12px;font-style:normal;font-weight:700}.section-plugin .site-content{min-height:320px}.section-plugin .site-button{margin-top:24px}@media(max-width:540px){.built-site .built-section{padding-inline:6%}.built-site .built-section h1{font-size:clamp(34px,calc(11vw * var(--heading-scale)),65px)}.built-site .built-section h2{font-size:clamp(28px,calc(8vw * var(--heading-scale)),48px)}}
+.built-site .section-intro,.built-site .section-features,.built-site .section-events{background:color-mix(in srgb,var(--site-paper) 92%,var(--site-ink) 8%)}.built-site .plugin-quotes blockquote{background:color-mix(in srgb,var(--site-accent) 7%,var(--site-paper))}.built-site.button-outline .section-cta .site-button{border-color:white;color:white!important}
+.built-site .link-grid{display:grid;gap:14px;max-width:760px;margin:auto}.built-site .link-card{display:grid;grid-template-columns:1fr auto;gap:4px 16px;padding:20px 24px;border:1px solid color-mix(in srgb,var(--site-ink) 20%,transparent);border-radius:var(--corner-radius);background:color-mix(in srgb,var(--site-paper) 85%,white)}.built-site .link-card:hover{border-color:var(--site-accent);transform:translateY(-2px)}.built-site .link-card strong{font-size:18px}.built-site .link-card span{grid-column:1;color:var(--site-muted);font-size:13px}.built-site .link-card b{grid-column:2;grid-row:1/3;align-self:center;color:var(--site-accent);font-size:20px}
+`;
+
+function exportDocument(site) {
+  return `<!doctype html>\n<html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="description" content="${escapeHtml(site.tagline)}"><title>${escapeHtml(site.name)}</title><style>body{margin:0}${SITE_CSS}</style></head><body>${renderSite(site)}</body></html>`;
+}
+
+
+const text = (value, max) => typeof value === "string" ? value.trim().slice(0, max) : "";
+const slug = value => typeof value === "string" && /^[a-z0-9][a-z0-9._-]{2,79}$/.test(value);
+const hex = value => typeof value === "string" && /^#[0-9a-fA-F]{6}$/.test(value);
+const layouts = ["cards", "faq", "quote", "banner"];
+const builtInFeatures = ["workspace-light-mode"];
+
+function normalizePluginPack(input) {
+  if (!input || input.format !== "websiteforge-plugin" || input.version !== 1 || !slug(input.id)) throw new Error("This is not a WebsiteForge plugin pack.");
+  const name = text(input.name, 70);
+  if (!name) throw new Error("A plugin pack needs a name.");
+  const rawSections = Array.isArray(input.sections) ? input.sections : [];
+  const rawThemes = Array.isArray(input.themes) ? input.themes : [];
+  const rawFeatures = Array.isArray(input.features) ? input.features : [];
+  if (!rawSections.length && !rawThemes.length && !rawFeatures.length) throw new Error("A plugin pack needs at least one section, theme, or feature.");
+  if (rawSections.length > 10 || rawThemes.length > 10) throw new Error("A plugin pack can have up to 10 sections and 10 themes.");
+  if (rawFeatures.length > 3 || rawFeatures.some(feature => !builtInFeatures.includes(feature)) || new Set(rawFeatures).size !== rawFeatures.length) throw new Error("Unknown or duplicate plugin feature.");
+  if (rawFeatures.length && input.id !== "websiteforge.light-mode") throw new Error("Workspace features are reserved for built-in packs.");
+  const seen = new Set();
+  const sections = rawSections.map(entry => {
+    if (!entry || !slug(entry.id) || seen.has(entry.id) || !layouts.includes(entry.layout)) throw new Error("Invalid or duplicate plugin section.");
+    seen.add(entry.id);
+    const label = text(entry.name, 70);
+    if (!label) throw new Error("Every plugin section needs a name.");
+    const raw = entry.defaults && typeof entry.defaults === "object" ? entry.defaults : {};
+    const defaults = normalizeSite({ name: "Plugin preview", sections: [{ ...raw, id: "plugin-preview", type: "plugin", layout: entry.layout, pluginName: label }] }).sections[0];
+    delete defaults.id;
+    return { id: entry.id, name: label, description: text(entry.description, 180), layout: entry.layout, defaults };
+  });
+  const themes = rawThemes.map(entry => {
+    if (!entry || !slug(entry.id) || seen.has(entry.id)) throw new Error("Invalid or duplicate plugin theme.");
+    seen.add(entry.id);
+    const label = text(entry.name, 70);
+    const colors = entry.colors;
+    if (!label || !colors || ![colors.accent, colors.paper, colors.ink, colors.muted].every(hex)) throw new Error("Plugin themes need a name and four hex colors.");
+    return { id: entry.id, name: label, colors: { accent: colors.accent, paper: colors.paper, ink: colors.ink, muted: colors.muted } };
+  });
+  const homepage = typeof input.homepage === "string" && /^https:\/\//i.test(input.homepage) ? input.homepage.slice(0, 500) : "";
+  return { format: "websiteforge-plugin", version: 1, id: input.id, name, author: text(input.author, 70), description: text(input.description, 240), homepage, sections, themes, features: rawFeatures };
+}
+
+function createPluginSection(definition) {
+  return makeSection("plugin", { ...structuredClone(definition.defaults), layout: definition.layout, pluginName: definition.name });
+}
+
+
+const siteStyles = document.createElement("style"); siteStyles.textContent = SITE_CSS; document.head.append(siteStyles);
+
+const $ = selector => document.querySelector(selector);
+const storageKey = "websiteforge-project-v1";
+const pluginStorageKey = "websiteforge-plugins-v1";
+const workspaceModeKey = "websiteforge-workspace-mode-v1";
+const bundledCatalog = globalThis.websiteForgeBuiltins || null;
+let site;
+try { site = normalizeSite(JSON.parse(localStorage.getItem(storageKey))); }
+catch { site = template(); }
+let installed = [];
+try { installed = JSON.parse(localStorage.getItem(pluginStorageKey) || "[]").map(normalizePluginPack).slice(0, 20); }
+catch { installed = []; }
+let lightModeEnabled = false;
+try { lightModeEnabled = localStorage.getItem(workspaceModeKey) === "light"; }
+catch { /* Browser storage may be unavailable for local files. */ }
+let selectedId = site.sections[0]?.id;
+let activeTab = "build";
+let toastTimer;
+
+function save() {
+  try { localStorage.setItem(storageKey, JSON.stringify(site)); $("#save-status").textContent = "Saved on this device"; }
+  catch { $("#save-status").textContent = "Could not save on this device"; }
+}
+function toast(message) {
+  const element = $("#toast");
+  element.textContent = message;
+  element.hidden = false;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => element.hidden = true, 3600);
+}
+function download(name, content, type) {
+  const link = document.createElement("a");
+  link.href = URL.createObjectURL(new Blob([content], { type }));
+  link.download = name;
+  link.click();
+  setTimeout(() => URL.revokeObjectURL(link.href), 1000);
+}
+function selected() { return site.sections.find(section => section.id === selectedId); }
+const templateChoices = [
+  ["portfolio", "Artist portfolio", "Work, story, gallery, and contact."],
+  ["events", "Event landing page", "Welcome, schedule, and RSVP details."],
+  ["shop", "Creative shop", "Products, benefits, and a way to connect."],
+  ["commissions", "Commissions & services", "Offerings, process, and inquiries."],
+  ["links", "Simple link hub", "A compact home for your destinations."]
+];
+function applyTemplate(name) {
+  if (!confirm("Replace the current page with this template?")) return;
+  site = template(name); selectedId = site.sections[0].id; $("#template-select").value = name;
+  $("#template-dialog").close(); update(); toast("Template applied.");
+}
+function renderTemplateGallery() {
+  const gallery = $("#template-gallery"); gallery.replaceChildren();
+  for (const [id, name, description] of templateChoices) {
+    const card = document.createElement("button"); card.type = "button"; card.className = `template-card template-card-${id}`;
+    const preview = document.createElement("span"); preview.className = "template-miniature"; preview.setAttribute("aria-hidden", "true");
+    preview.innerHTML = '<span class="mini-nav"></span><span class="mini-heading"></span><span class="mini-copy"></span><span class="mini-accent"></span><span class="mini-row"></span>';
+    const title = document.createElement("strong"); title.textContent = name;
+    const detail = document.createElement("small"); detail.textContent = description;
+    card.append(preview, title, detail); card.addEventListener("click", () => applyTemplate(id)); gallery.append(card);
+  }
+}
+function applyWorkspaceMode() {
+  const installedLightMode = installed.some(pack => pack.id === "websiteforge.light-mode" && pack.features.includes("workspace-light-mode"));
+  document.body.classList.toggle("workspace-light", installedLightMode && lightModeEnabled);
+}
+function setTab(name) {
+  activeTab = name;
+  $("#header-context").textContent = ({ build: "Build workspace", design: "Design studio", plugins: "Plugin library", ai: "AI tools" })[name] || "Build workspace";
+  document.querySelectorAll("[data-header-for]").forEach(group => group.hidden = group.dataset.headerFor !== name);
+  document.querySelectorAll(".tab").forEach(tab => {
+    const current = tab.dataset.tab === name;
+    tab.classList.toggle("active", current);
+    tab.setAttribute("aria-selected", String(current));
+  });
+  document.querySelectorAll(".tab-panel").forEach(panel => {
+    const current = panel.id === `panel-${name}`;
+    panel.hidden = !current;
+    panel.classList.toggle("active", current);
+  });
+}
+function renderList() {
+  const list = $("#section-list");
+  list.replaceChildren();
+  site.sections.forEach((section, index) => {
+    const row = document.createElement("div"); row.className = `section-row ${section.id === selectedId ? "selected" : ""}`;
+    const choose = document.createElement("button"); choose.type = "button"; choose.className = "section-choose";
+    choose.textContent = `${String(index + 1).padStart(2, "0")}  ${section.type === "plugin" ? section.pluginName : SECTION_LABELS[section.type]}`;
+    choose.addEventListener("click", () => select(section.id));
+    const up = document.createElement("button"); up.type = "button"; up.className = "move-button"; up.textContent = "↑"; up.title = "Move up"; up.disabled = index === 0;
+    up.addEventListener("click", () => move(index, -1));
+    const down = document.createElement("button"); down.type = "button"; down.className = "move-button"; down.textContent = "↓"; down.title = "Move down"; down.disabled = index === site.sections.length - 1;
+    down.addEventListener("click", () => move(index, 1));
+    row.append(choose, up, down); list.append(row);
+  });
+  $("#section-count").textContent = String(site.sections.length);
+}
+function move(index, direction) {
+  const [item] = site.sections.splice(index, 1);
+  site.sections.splice(index + direction, 0, item);
+  update();
+}
+function field(label, key, value, options = {}) {
+  const wrap = document.createElement("div"); wrap.className = "control-group";
+  const labelElement = document.createElement("label"); labelElement.textContent = label;
+  const input = document.createElement(options.multiline ? "textarea" : "input");
+  input.id = `edit-${key}${options.itemIndex === undefined ? "" : `-${options.itemIndex}`}`; input.name = key; input.value = value || "";
+  if (options.multiline) input.rows = 4; else input.type = options.type || "text";
+  input.maxLength = options.max || 700;
+  labelElement.htmlFor = input.id;
+  input.addEventListener("input", () => {
+    const section = selected(); if (!section) return;
+    if (options.itemIndex !== undefined) section.items[options.itemIndex][key] = input.value;
+    else section[key] = input.value;
+    save(); renderCanvas();
+  });
+  wrap.append(labelElement, input); return wrap;
+}
+function choiceField(label, key, value, options) {
+  const wrap = document.createElement("div"); wrap.className = "control-group";
+  const select = document.createElement("select"); select.id = `edit-${key}`;
+  options.forEach(([id, name]) => { const option = document.createElement("option"); option.value = id; option.textContent = name; select.append(option); });
+  select.value = value;
+  const labelElement = document.createElement("label"); labelElement.htmlFor = select.id; labelElement.textContent = label;
+  select.addEventListener("change", () => { const section = selected(); if (!section) return; section[key] = select.value; save(); if (key === "layout") renderInspector(); renderCanvas(); });
+  wrap.append(labelElement, select); return wrap;
+}
+function renderInspector() {
+  const section = selected(); const form = $("#inspector-form"); form.replaceChildren();
+  $("#inspector-actions").hidden = !section;
+  if (!section) { $("#inspector-title").textContent = "Select a section"; $("#inspector-description").textContent = "Choose a section from the canvas or list to edit its content."; return; }
+  $("#inspector-title").textContent = section.type === "plugin" ? section.pluginName : SECTION_LABELS[section.type];
+  $("#inspector-description").textContent = "Changes appear in your preview immediately.";
+  form.append(field("Small heading", "eyebrow", section.eyebrow, { max: 80 }), field("Title", "title", section.title, { max: 130 }), field("Description", "body", section.body, { multiline: true, max: 700 }));
+  if (["hero", "cta", "plugin"].includes(section.type)) form.append(field("Button label", "buttonText", section.buttonText, { max: 40 }), field("Button link", "buttonUrl", section.buttonUrl, { max: 300 }));
+  if (section.type === "hero" || section.type === "plugin" && section.layout === "banner") form.append(field("Image URL (HTTPS)", "imageUrl", section.imageUrl, { max: 500 }));
+  if (section.type === "plugin") form.append(choiceField("Plugin layout", "layout", section.layout, [["cards", "Cards"], ["faq", "FAQ"], ["quote", "Quotes"], ["banner", "Banner"]]));
+  if (["gallery", "features", "events", "links", "plugin"].includes(section.type) && !(section.type === "plugin" && section.layout === "banner")) {
+    section.items.forEach((item, index) => {
+      const group = document.createElement("fieldset"); group.className = "item-editor";
+      const legend = document.createElement("legend"); legend.textContent = `Item ${index + 1}`; group.append(legend);
+      group.append(field("Title", "title", item.title, { itemIndex: index, max: 70 }), field("Description", "body", item.body, { itemIndex: index, max: 180 }));
+      if (section.type === "gallery" || section.type === "plugin" && section.layout === "cards") group.append(field("Image URL (HTTPS)", "imageUrl", item.imageUrl, { itemIndex: index, max: 500 }));
+      if (section.type === "links") group.append(field("Destination URL", "linkUrl", item.linkUrl, { itemIndex: index, max: 300 }));
+      const remove = document.createElement("button"); remove.type = "button"; remove.className = "button ghost small"; remove.textContent = "Remove item";
+      remove.addEventListener("click", () => { section.items.splice(index, 1); update(); }); group.append(remove); form.append(group);
+    });
+    if (section.items.length < 6) {
+      const add = document.createElement("button"); add.type = "button"; add.className = "button subtle wide"; add.textContent = "+ Add item";
+      add.addEventListener("click", () => { section.items.push({ title: "New item", body: "Describe it here.", imageUrl: "", linkUrl: "" }); update(); }); form.append(add);
+    }
+  }
+  form.append(choiceField("Text alignment", "alignment", section.alignment, [["left", "Left"], ["center", "Center"]]), choiceField("Vertical spacing", "spacing", section.spacing, [["compact", "Compact"], ["normal", "Normal"], ["roomy", "Roomy"]]), field("Background override (hex, optional)", "background", section.background, { max: 7 }), field("Text color override (hex, optional)", "textColor", section.textColor, { max: 7 }));
+}
+function renderCanvas() {
+  $("#site-preview").innerHTML = renderSite(site, true);
+  document.querySelectorAll("[data-section-id]").forEach(element => {
+    element.classList.toggle("canvas-selected", element.dataset.sectionId === selectedId);
+    element.addEventListener("click", event => { if (event.target.closest("a")) event.preventDefault(); if (event.target.closest("details")) return; select(element.dataset.sectionId); });
+    element.addEventListener("keydown", event => { if (event.target === element && (event.key === "Enter" || event.key === " ")) { event.preventDefault(); select(element.dataset.sectionId); } });
+  });
+  $("#canvas-title").textContent = site.name;
+}
+function renderThemes() {
+  const list = $("#theme-list"); list.replaceChildren();
+  Object.entries(THEMES).forEach(([key, theme]) => {
+    const exact = site.theme === key && site.accent === theme.accent && Object.entries(site.palette).every(([part, value]) => theme[part] === value);
+    const button = document.createElement("button"); button.type = "button"; button.className = `theme-choice ${exact ? "selected" : ""}`;
+    button.innerHTML = `<span class="theme-swatch" style="background:${theme.accent}"></span><span>${theme.label}</span>`;
+    button.addEventListener("click", () => { site.theme = key; site.accent = theme.accent; site.palette = { paper: theme.paper, ink: theme.ink, muted: theme.muted }; update(); }); list.append(button);
+  });
+}
+function pluginStatus(message) { $("#plugin-status").textContent = message; }
+function savePlugins() {
+  try { localStorage.setItem(pluginStorageKey, JSON.stringify(installed)); }
+  catch { pluginStatus("Could not save plugin packs on this device."); }
+}
+function pluginCard(name, description) {
+  const card = document.createElement("div"); card.className = "plugin-card";
+  const title = document.createElement("strong"); title.textContent = name;
+  const copy = document.createElement("p"); copy.textContent = description;
+  card.append(title, copy); return card;
+}
+function renderPlugins() {
+  const list = $("#plugin-installed"); list.replaceChildren();
+  $("#plugin-count").textContent = String(installed.length);
+  if (!installed.length) { const empty = document.createElement("p"); empty.className = "helper"; empty.textContent = "No packs installed yet."; list.append(empty); return; }
+  installed.forEach(pack => {
+    const card = pluginCard(pack.name, `${pack.author ? `by ${pack.author} · ` : ""}${pack.description}`);
+    const actions = document.createElement("div"); actions.className = "plugin-actions";
+    pack.sections.forEach(definition => {
+      const add = document.createElement("button"); add.type = "button"; add.className = "button subtle"; add.textContent = `+ ${definition.name}`;
+      add.addEventListener("click", () => { if (site.sections.length >= 14) { toast("A site can have up to 14 sections."); return; } const section = createPluginSection(definition); site.sections.push(section); selectedId = section.id; update(); setTab("build"); toast(`${definition.name} added.`); }); actions.append(add);
+    });
+    pack.themes.forEach(theme => {
+      const apply = document.createElement("button"); apply.type = "button"; apply.className = "button subtle"; apply.textContent = `Use ${theme.name}`;
+      apply.addEventListener("click", () => { site.accent = theme.colors.accent; site.palette = { paper: theme.colors.paper, ink: theme.colors.ink, muted: theme.colors.muted }; update(); pluginStatus(`${theme.name} applied to this website.`); }); actions.append(apply);
+    });
+    if (pack.features.includes("workspace-light-mode")) {
+      const toggle = document.createElement("button"); toggle.type = "button"; toggle.className = "button subtle";
+      toggle.textContent = lightModeEnabled ? "Use dark workspace" : "Enable light mode";
+      toggle.addEventListener("click", () => { lightModeEnabled = !lightModeEnabled; localStorage.setItem(workspaceModeKey, lightModeEnabled ? "light" : "dark"); applyWorkspaceMode(); renderPlugins(); pluginStatus(lightModeEnabled ? "Light mode is on for this editor." : "Dark mode is on for this editor."); });
+      actions.append(toggle);
+    }
+    const exportButton = document.createElement("button"); exportButton.type = "button"; exportButton.className = "button ghost"; exportButton.textContent = "Share JSON";
+    exportButton.addEventListener("click", () => download(`${pack.id}.json`, JSON.stringify(pack, null, 2), "application/json")); actions.append(exportButton);
+    const remove = document.createElement("button"); remove.type = "button"; remove.className = "button danger"; remove.textContent = "Uninstall";
+    remove.addEventListener("click", () => { installed = installed.filter(item => item.id !== pack.id); savePlugins(); applyWorkspaceMode(); renderPlugins(); pluginStatus(`${pack.name} uninstalled. Existing sections stay on this website.`); }); actions.append(remove);
+    card.append(actions); list.append(card);
+  });
+}
+function installPack(raw) {
+  const pack = normalizePluginPack(raw);
+  if (installed.length >= 20 && !installed.some(item => item.id === pack.id)) throw new Error("You can install up to 20 packs.");
+  installed = [...installed.filter(item => item.id !== pack.id), pack];
+  savePlugins(); applyWorkspaceMode(); renderPlugins(); pluginStatus(`${pack.name} installed. Choose its options below.`);
+}
+async function fetchPack(rawUrl) {
+  const url = new URL(rawUrl, location.href);
+  if (!(url.protocol === "https:" || url.origin === location.origin && url.protocol === "http:")) throw new Error("Use an HTTPS URL for shared packs.");
+  if (url.username || url.password) throw new Error("Plugin URLs cannot include credentials.");
+  const response = await fetch(url, { credentials: "omit", mode: "cors" });
+  if (!response.ok) throw new Error(`Could not download pack (${response.status}).`);
+  const content = await response.text();
+  if (content.length > 100000) throw new Error("Plugin pack is too large.");
+  return JSON.parse(content);
+}
+async function renderCatalog() {
+  const list = $("#plugin-catalog"); list.replaceChildren();
+  try {
+    let catalog = bundledCatalog?.catalog;
+    if (!catalog) {
+      const response = await fetch("/plugins/catalog.json");
+      if (!response.ok) throw new Error("Could not load catalog.");
+      catalog = await response.json();
+    }
+    for (const entry of catalog.packs || []) {
+      if (typeof entry.name !== "string" || typeof entry.manifest !== "string") continue;
+      const card = pluginCard(entry.name, String(entry.description || ""));
+      const install = document.createElement("button"); install.type = "button"; install.className = "button subtle";
+      install.textContent = "Install pack";
+      install.addEventListener("click", async () => { install.disabled = true; try { installPack(bundledCatalog?.manifests[entry.manifest] || await fetchPack(entry.manifest)); } catch (error) { pluginStatus(error.message || "Could not install pack."); } finally { install.disabled = false; } });
+      card.append(install); list.append(card);
+    }
+  } catch { const note = document.createElement("p"); note.className = "helper"; note.textContent = "Catalog unavailable. You can still install a JSON file or URL."; list.append(note); }
+}
+async function checkAiAvailability() {
+  try {
+    if (location.protocol === "file:") throw new Error("Static page");
+    const response = await fetch("/api/settings");
+    if (!response.ok || !response.headers.get("Content-Type")?.includes("application/json")) throw new Error("No API server");
+  } catch {
+    document.querySelectorAll('a[href="settings.html"]').forEach(link => link.hidden = true);
+    $("#generate-site-button").disabled = true;
+    $("#rewrite-section-button").disabled = true;
+    $("#ai-status").textContent = "AI writing requires the optional local server and your API key. The builder works without Node.js.";
+  }
+}
+function update() {
+  save(); $("#site-name").value = site.name; $("#site-tagline").value = site.tagline;
+  $("#font-select").value = site.font; $("#custom-accent").value = site.accent;
+  [["paper-color", "paper"], ["ink-color", "ink"], ["muted-color", "muted"]].forEach(([id, key]) => $("#" + id).value = site.palette[key]);
+  [["content-width", "contentWidth", "px"], ["section-spacing", "sectionSpacing", "px"], ["corner-radius", "cornerRadius", "px"], ["heading-scale", "headingScale", "×"]].forEach(([id, key, unit]) => { $("#" + id).value = site.design[key]; $("#" + id + "-value").textContent = `${site.design[key]}${unit}`; });
+  $("#button-style").value = site.design.buttonStyle;
+  renderList(); renderThemes(); renderInspector(); renderCanvas(); renderPlugins();
+}
+function select(id) { selectedId = id; renderList(); renderInspector(); renderCanvas(); }
+async function ai(action) {
+  const prompt = $("#ai-prompt").value.trim();
+  if (!prompt) { $("#ai-status").textContent = "Describe what you want AI to write first."; $("#ai-prompt").focus(); return; }
+  if (action === "rewrite" && !selected()) return;
+  const button = $(action === "site" ? "#generate-site-button" : "#rewrite-section-button");
+  button.disabled = true; $("#ai-status").textContent = "Writing your draft…";
+  try {
+    const response = await fetch("/api/ai", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action, prompt, site, selectedId }) });
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.error || "AI request failed.");
+    if (action === "site") { site = normalizeSite({ ...data.site, theme: site.theme, accent: site.accent, palette: site.palette, design: site.design, font: site.font }); selectedId = site.sections[0].id; }
+    else { const index = site.sections.findIndex(section => section.id === selectedId); if (index < 0) throw new Error("Select a section first."); site.sections[index] = normalizeSite({ ...site, sections: [{ ...site.sections[index], ...data.section, id: selectedId, type: site.sections[index].type }] }).sections[0]; }
+    update(); $("#ai-status").textContent = "Draft ready. Review and edit it before publishing."; toast("AI draft added to your site.");
+  } catch (error) { $("#ai-status").textContent = error.message || "AI request failed."; }
+  finally { button.disabled = false; }
+}
+
+document.querySelectorAll(".tab").forEach(tab => tab.addEventListener("click", () => setTab(tab.dataset.tab)));
+$("#site-name").addEventListener("input", event => { site.name = event.target.value; save(); renderCanvas(); });
+$("#site-tagline").addEventListener("input", event => { site.tagline = event.target.value; save(); renderCanvas(); });
+$("#font-select").addEventListener("change", event => { site.font = event.target.value; update(); });
+$("#custom-accent").addEventListener("input", event => { site.accent = event.target.value; save(); renderCanvas(); renderThemes(); });
+[["paper-color", "paper"], ["ink-color", "ink"], ["muted-color", "muted"]].forEach(([id, key]) => $("#" + id).addEventListener("input", event => { site.palette[key] = event.target.value; save(); renderCanvas(); renderThemes(); }));
+[["content-width", "contentWidth", "px"], ["section-spacing", "sectionSpacing", "px"], ["corner-radius", "cornerRadius", "px"], ["heading-scale", "headingScale", "×"]].forEach(([id, key, unit]) => $("#" + id).addEventListener("input", event => { site.design[key] = Number(event.target.value); $("#" + id + "-value").textContent = `${site.design[key]}${unit}`; save(); renderCanvas(); }));
+$("#button-style").addEventListener("change", event => { site.design.buttonStyle = event.target.value; save(); renderCanvas(); });
+$("#apply-template-button").addEventListener("click", () => applyTemplate($("#template-select").value));
+$("#browse-template-button").addEventListener("click", () => $("#template-dialog").showModal());
+$("#close-template-dialog").addEventListener("click", () => $("#template-dialog").close());
+$("#add-section").addEventListener("change", event => { if (!SECTION_TYPES.includes(event.target.value)) return; if (site.sections.length >= 14) { toast("A site can have up to 14 sections."); event.target.value = ""; return; } const section = makeSection(event.target.value); site.sections.push(section); selectedId = section.id; event.target.value = ""; update(); });
+$("#duplicate-section-button").addEventListener("click", () => { const section = selected(); if (!section) return; if (site.sections.length >= 14) { toast("A site can have up to 14 sections."); return; } const { id, ...content } = structuredClone(section); const copy = makeSection(section.type, content); site.sections.splice(site.sections.indexOf(section) + 1, 0, copy); selectedId = copy.id; update(); });
+$("#delete-section-button").addEventListener("click", () => { if (site.sections.length === 1) { toast("Keep at least one section."); return; } site.sections = site.sections.filter(section => section.id !== selectedId); selectedId = site.sections[0].id; update(); });
+$("#desktop-button").addEventListener("click", () => { $("#canvas-frame").classList.remove("mobile"); $("#desktop-button").classList.add("active"); $("#mobile-button").classList.remove("active"); });
+$("#mobile-button").addEventListener("click", () => { $("#canvas-frame").classList.add("mobile"); $("#mobile-button").classList.add("active"); $("#desktop-button").classList.remove("active"); });
+$("#preview-button").addEventListener("click", () => { const url = URL.createObjectURL(new Blob([exportDocument(normalizeSite(site))], { type: "text/html" })); window.open(url, "_blank", "noopener"); setTimeout(() => URL.revokeObjectURL(url), 60000); });
+$("#design-preview-button").addEventListener("click", () => $("#preview-button").click());
+$("#design-export-button").addEventListener("click", () => $("#export-html-button").click());
+$("#plugin-browse-button").addEventListener("click", () => $("#plugin-catalog").scrollIntoView({ behavior: "smooth", block: "start" }));
+$("#export-html-button").addEventListener("click", () => download("index.html", exportDocument(normalizeSite(site)), "text/html"));
+$("#export-json-button").addEventListener("click", () => download("websiteforge-project.json", JSON.stringify(normalizeSite(site), null, 2), "application/json"));
+$("#import-button").addEventListener("click", () => $("#import-file").click());
+$("#import-file").addEventListener("change", async event => { const file = event.target.files[0]; if (!file) return; try { const loaded = normalizeSite(JSON.parse(await file.text())); site = loaded; selectedId = site.sections[0].id; update(); toast("Project imported."); } catch (error) { toast(error.message || "Could not import project."); } event.target.value = ""; });
+$("#install-url-button").addEventListener("click", async () => { const button = $("#install-url-button"); button.disabled = true; try { installPack(await fetchPack($("#plugin-url").value.trim())); } catch (error) { pluginStatus(error.message || "Could not install pack. The host may need to allow browser access."); } finally { button.disabled = false; } });
+$("#install-file-button").addEventListener("click", () => $("#plugin-file").click());
+$("#plugin-file").addEventListener("change", async event => { const file = event.target.files[0]; if (!file) return; try { if (file.size > 100000) throw new Error("Plugin pack is too large."); installPack(JSON.parse(await file.text())); } catch (error) { pluginStatus(error.message || "Could not install pack."); } event.target.value = ""; });
+$("#generate-site-button").addEventListener("click", () => ai("site"));
+$("#rewrite-section-button").addEventListener("click", () => ai("rewrite"));
+renderTemplateGallery(); applyWorkspaceMode(); setTab(activeTab); update(); renderCatalog(); checkAiAvailability();
+
+})();
+    </script>
+  </body>
+</html>

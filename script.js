@@ -7,13 +7,16 @@ const $ = selector => document.querySelector(selector);
 const storageKey = "websiteforge-project-v1";
 const pluginStorageKey = "websiteforge-plugins-v1";
 const workspaceModeKey = "websiteforge-workspace-mode-v1";
+const bundledCatalog = globalThis.websiteForgeBuiltins || null;
 let site;
 try { site = normalizeSite(JSON.parse(localStorage.getItem(storageKey))); }
 catch { site = template(); }
 let installed = [];
 try { installed = JSON.parse(localStorage.getItem(pluginStorageKey) || "[]").map(normalizePluginPack).slice(0, 20); }
 catch { installed = []; }
-let lightModeEnabled = localStorage.getItem(workspaceModeKey) === "light";
+let lightModeEnabled = false;
+try { lightModeEnabled = localStorage.getItem(workspaceModeKey) === "light"; }
+catch { /* Browser storage may be unavailable for local files. */ }
 let selectedId = site.sections[0]?.id;
 let activeTab = "build";
 let toastTimer;
@@ -228,18 +231,33 @@ async function fetchPack(rawUrl) {
 async function renderCatalog() {
   const list = $("#plugin-catalog"); list.replaceChildren();
   try {
-    const response = await fetch("/plugins/catalog.json");
-    if (!response.ok) throw new Error("Could not load catalog.");
-    const catalog = await response.json();
+    let catalog = bundledCatalog?.catalog;
+    if (!catalog) {
+      const response = await fetch("/plugins/catalog.json");
+      if (!response.ok) throw new Error("Could not load catalog.");
+      catalog = await response.json();
+    }
     for (const entry of catalog.packs || []) {
       if (typeof entry.name !== "string" || typeof entry.manifest !== "string") continue;
       const card = pluginCard(entry.name, String(entry.description || ""));
       const install = document.createElement("button"); install.type = "button"; install.className = "button subtle";
       install.textContent = "Install pack";
-      install.addEventListener("click", async () => { install.disabled = true; try { installPack(await fetchPack(entry.manifest)); } catch (error) { pluginStatus(error.message || "Could not install pack."); } finally { install.disabled = false; } });
+      install.addEventListener("click", async () => { install.disabled = true; try { installPack(bundledCatalog?.manifests[entry.manifest] || await fetchPack(entry.manifest)); } catch (error) { pluginStatus(error.message || "Could not install pack."); } finally { install.disabled = false; } });
       card.append(install); list.append(card);
     }
   } catch { const note = document.createElement("p"); note.className = "helper"; note.textContent = "Catalog unavailable. You can still install a JSON file or URL."; list.append(note); }
+}
+async function checkAiAvailability() {
+  try {
+    if (location.protocol === "file:") throw new Error("Static page");
+    const response = await fetch("/api/settings");
+    if (!response.ok || !response.headers.get("Content-Type")?.includes("application/json")) throw new Error("No API server");
+  } catch {
+    document.querySelectorAll('a[href="settings.html"]').forEach(link => link.hidden = true);
+    $("#generate-site-button").disabled = true;
+    $("#rewrite-section-button").disabled = true;
+    $("#ai-status").textContent = "AI writing requires the optional local server and your API key. The builder works without Node.js.";
+  }
 }
 function update() {
   save(); $("#site-name").value = site.name; $("#site-tagline").value = site.tagline;
@@ -296,4 +314,4 @@ $("#install-file-button").addEventListener("click", () => $("#plugin-file").clic
 $("#plugin-file").addEventListener("change", async event => { const file = event.target.files[0]; if (!file) return; try { if (file.size > 100000) throw new Error("Plugin pack is too large."); installPack(JSON.parse(await file.text())); } catch (error) { pluginStatus(error.message || "Could not install pack."); } event.target.value = ""; });
 $("#generate-site-button").addEventListener("click", () => ai("site"));
 $("#rewrite-section-button").addEventListener("click", () => ai("rewrite"));
-renderTemplateGallery(); applyWorkspaceMode(); setTab(activeTab); update(); renderCatalog();
+renderTemplateGallery(); applyWorkspaceMode(); setTab(activeTab); update(); renderCatalog(); checkAiAvailability();
