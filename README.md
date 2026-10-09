@@ -10,7 +10,9 @@ WebsiteForge is a browser-based website builder for artists and makers. It inclu
 
 ### Run after cloning in WebStorm
 
-Open the cloned repository folder in WebStorm and select the shared **WebsiteForge** run configuration, then click **Run**. This configuration starts `server.mjs` with the project folder as its working directory. Open `http://localhost:3000` after the Run console says the server is ready. If WebStorm asks for a Node.js interpreter, select a local Node.js 20+ installation. Do not run `index.html` with WebStorm's built-in preview server; that server does not provide WebsiteForge's `/api/settings` and `/api/ai` routes.
+If WebStorm shows **“Node.js is required for WebStorm to work correctly”**, click **Download Node.js** and install a supported version (Node.js 22 or 24), or click **Configure Node.js** to select an existing installation. This is a one-time setup on each computer; cloning a Git repository does not install Node.js. See [WebStorm's local Node.js runtime instructions](https://www.jetbrains.com/help/webstorm/developing-node-js-applications.html#local-node-runtime) if WebStorm cannot detect an installed version.
+
+Open the cloned repository folder in WebStorm and select the shared **WebsiteForge** run configuration, then click **Run**. This configuration starts `server.mjs` with the project folder as its working directory. Open `http://localhost:3000` after the Run console says the server is ready. Do not run `index.html` with WebStorm's built-in preview server; that server does not provide WebsiteForge's `/api/settings` and `/api/ai` routes.
 
 No environment variables are required to start the builder. `OPENAI_API_KEY` is optional and only enables the AI writing tools. Each person who clones the repository can enter their own key on the **Settings** page; the key is saved locally and is intentionally excluded from Git. Do not commit an API key or copy someone else's settings file into the repository.
 
