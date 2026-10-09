@@ -5,7 +5,7 @@ import { fileURLToPath } from "node:url";
 const root = dirname(dirname(fileURLToPath(import.meta.url)));
 const read = name => readFile(join(root, name), "utf8");
 const [html, css, siteModel, pluginModel, editor, catalog] = await Promise.all([
-  read("index.html"), read("styles.css"), read("site-model.js"),
+  read("builder.template.html"), read("styles.css"), read("site-model.js"),
   read("plugin-model.js"), read("script.js"), read("plugins/catalog.json")
 ]);
 
@@ -23,5 +23,5 @@ const output = html
   .replace('    <script type="module" src="script.js"></script>', "")
   .replace("  </body>", `    <script>\n(() => {\n${javascript}\n})();\n    </script>\n  </body>`);
 if (output === html || /src="script\.js"|href="styles\.css"/.test(output)) throw new Error("Could not inline builder assets.");
-await writeFile(join(root, "offline.html"), output);
-console.log("Built offline.html");
+await Promise.all(["index.html", "offline.html"].map(name => writeFile(join(root, name), output)));
+console.log("Built index.html and offline.html");

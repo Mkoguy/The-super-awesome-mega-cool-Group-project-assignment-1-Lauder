@@ -36,8 +36,10 @@ function download(name, content, type) {
   const link = document.createElement("a");
   link.href = URL.createObjectURL(new Blob([content], { type }));
   link.download = name;
+  document.body.append(link);
   link.click();
-  setTimeout(() => URL.revokeObjectURL(link.href), 1000);
+  link.remove();
+  setTimeout(() => URL.revokeObjectURL(link.href), 60000);
 }
 function selected() { return site.sections.find(section => section.id === selectedId); }
 const templateChoices = [
@@ -50,7 +52,8 @@ const templateChoices = [
 function applyTemplate(name) {
   if (!confirm("Replace the current page with this template?")) return;
   site = template(name); selectedId = site.sections[0].id; $("#template-select").value = name;
-  $("#template-dialog").close(); update(); toast("Template applied.");
+  if ($("#template-dialog").open) $("#template-dialog").close();
+  update(); toast("Template applied.");
 }
 function renderTemplateGallery() {
   const gallery = $("#template-gallery"); gallery.replaceChildren();
@@ -109,6 +112,7 @@ function field(label, key, value, options = {}) {
   const input = document.createElement(options.multiline ? "textarea" : "input");
   input.id = `edit-${key}${options.itemIndex === undefined ? "" : `-${options.itemIndex}`}`; input.name = key; input.value = value || "";
   if (options.multiline) input.rows = 4; else input.type = options.type || "text";
+  if (options.placeholder) input.placeholder = options.placeholder;
   input.maxLength = options.max || 700;
   labelElement.htmlFor = input.id;
   input.addEventListener("input", () => {
@@ -135,7 +139,7 @@ function renderInspector() {
   $("#inspector-title").textContent = section.type === "plugin" ? section.pluginName : SECTION_LABELS[section.type];
   $("#inspector-description").textContent = "Changes appear in your preview immediately.";
   form.append(field("Small heading", "eyebrow", section.eyebrow, { max: 80 }), field("Title", "title", section.title, { max: 130 }), field("Description", "body", section.body, { multiline: true, max: 700 }));
-  if (["hero", "cta", "plugin"].includes(section.type)) form.append(field("Button label", "buttonText", section.buttonText, { max: 40 }), field("Button link", "buttonUrl", section.buttonUrl, { max: 300 }));
+  if (["hero", "cta", "plugin"].includes(section.type)) form.append(field("Button label", "buttonText", section.buttonText, { max: 40 }), field("Button link", "buttonUrl", section.buttonUrl, { max: 300, placeholder: "https://youtube.com/... or youtube.com/..." }));
   if (section.type === "hero" || section.type === "plugin" && section.layout === "banner") form.append(field("Image URL (HTTPS)", "imageUrl", section.imageUrl, { max: 500 }));
   if (section.type === "plugin") form.append(choiceField("Plugin layout", "layout", section.layout, [["cards", "Cards"], ["faq", "FAQ"], ["quote", "Quotes"], ["banner", "Banner"]]));
   if (["gallery", "features", "events", "links", "plugin"].includes(section.type) && !(section.type === "plugin" && section.layout === "banner")) {
@@ -144,7 +148,7 @@ function renderInspector() {
       const legend = document.createElement("legend"); legend.textContent = `Item ${index + 1}`; group.append(legend);
       group.append(field("Title", "title", item.title, { itemIndex: index, max: 70 }), field("Description", "body", item.body, { itemIndex: index, max: 180 }));
       if (section.type === "gallery" || section.type === "plugin" && section.layout === "cards") group.append(field("Image URL (HTTPS)", "imageUrl", item.imageUrl, { itemIndex: index, max: 500 }));
-      if (section.type === "links") group.append(field("Destination URL", "linkUrl", item.linkUrl, { itemIndex: index, max: 300 }));
+      if (section.type === "links") group.append(field("Destination URL", "linkUrl", item.linkUrl, { itemIndex: index, max: 300, placeholder: "https://example.com or example.com" }));
       const remove = document.createElement("button"); remove.type = "button"; remove.className = "button ghost small"; remove.textContent = "Remove item";
       remove.addEventListener("click", () => { section.items.splice(index, 1); update(); }); group.append(remove); form.append(group);
     });
@@ -157,9 +161,12 @@ function renderInspector() {
 }
 function renderCanvas() {
   $("#site-preview").innerHTML = renderSite(site, true);
+  document.querySelectorAll("#site-preview a").forEach(link => {
+    if (/^https?:\/\//i.test(link.getAttribute("href") || "")) { link.target = "_blank"; link.rel = "noopener noreferrer"; }
+  });
   document.querySelectorAll("[data-section-id]").forEach(element => {
     element.classList.toggle("canvas-selected", element.dataset.sectionId === selectedId);
-    element.addEventListener("click", event => { if (event.target.closest("a")) event.preventDefault(); if (event.target.closest("details")) return; select(element.dataset.sectionId); });
+    element.addEventListener("click", event => { if (event.target.closest("a") || event.target.closest("details")) return; select(element.dataset.sectionId); });
     element.addEventListener("keydown", event => { if (event.target === element && (event.key === "Enter" || event.key === " ")) { event.preventDefault(); select(element.dataset.sectionId); } });
   });
   $("#canvas-title").textContent = site.name;
@@ -202,7 +209,7 @@ function renderPlugins() {
     if (pack.features.includes("workspace-light-mode")) {
       const toggle = document.createElement("button"); toggle.type = "button"; toggle.className = "button subtle";
       toggle.textContent = lightModeEnabled ? "Use dark workspace" : "Enable light mode";
-      toggle.addEventListener("click", () => { lightModeEnabled = !lightModeEnabled; localStorage.setItem(workspaceModeKey, lightModeEnabled ? "light" : "dark"); applyWorkspaceMode(); renderPlugins(); pluginStatus(lightModeEnabled ? "Light mode is on for this editor." : "Dark mode is on for this editor."); });
+      toggle.addEventListener("click", () => { lightModeEnabled = !lightModeEnabled; try { localStorage.setItem(workspaceModeKey, lightModeEnabled ? "light" : "dark"); } catch { /* Keep the choice for this session. */ } applyWorkspaceMode(); renderPlugins(); pluginStatus(lightModeEnabled ? "Light mode is on for this editor." : "Dark mode is on for this editor."); });
       actions.append(toggle);
     }
     const exportButton = document.createElement("button"); exportButton.type = "button"; exportButton.className = "button ghost"; exportButton.textContent = "Share JSON";
@@ -305,6 +312,12 @@ $("#preview-button").addEventListener("click", () => { const url = URL.createObj
 $("#design-preview-button").addEventListener("click", () => $("#preview-button").click());
 $("#design-export-button").addEventListener("click", () => $("#export-html-button").click());
 $("#plugin-browse-button").addEventListener("click", () => $("#plugin-catalog").scrollIntoView({ behavior: "smooth", block: "start" }));
+$("#example-pack-button").addEventListener("click", async () => {
+  try {
+    const example = bundledCatalog?.manifests["/plugins/artist-essentials.json"] || await fetchPack("/plugins/artist-essentials.json");
+    download("artist-essentials.json", JSON.stringify(example, null, 2), "application/json");
+  } catch { pluginStatus("Could not load the example pack."); }
+});
 $("#export-html-button").addEventListener("click", () => download("index.html", exportDocument(normalizeSite(site)), "text/html"));
 $("#export-json-button").addEventListener("click", () => download("websiteforge-project.json", JSON.stringify(normalizeSite(site), null, 2), "application/json"));
 $("#import-button").addEventListener("click", () => $("#import-file").click());

@@ -4,9 +4,9 @@ WebsiteForge is a browser-based website builder for artists and makers. It inclu
 
 ## Run without Node.js
 
-Open [`offline.html`](offline.html) directly in a browser. You can double-click it after cloning or use WebStorm's **Open in Browser** action. The editor, templates, built-in plugins, project backups, and HTML exports work without installing anything. AI writing is unavailable in this mode because it needs a server to protect the API key.
+Open [`index.html`](index.html) or [`offline.html`](offline.html) directly in a browser. You can double-click either file after cloning or use WebStorm's **Open in Browser** action. The editor, templates, built-in plugins, project backups, and HTML exports work without installing anything. AI writing is unavailable in this mode because it needs a server to protect the API key.
 
-WebStorm may still show its own “Node.js is required” banner. The offline builder does not use Node.js; open `offline.html` in a browser even if that banner appears.
+WebStorm may still show its own “Node.js is required” banner. The browser-only builder does not use Node.js; open `index.html` in a browser even if that banner appears.
 
 ## Run with AI tools
 
@@ -22,7 +22,7 @@ Open the cloned repository folder in WebStorm and select the shared **WebsiteFor
 
 No environment variables are required to start the builder. `OPENAI_API_KEY` is optional and only enables the AI writing tools. Each person who clones the repository can enter their own key on the **Settings** page; the key is saved locally and is intentionally excluded from Git. Do not commit an API key or copy someone else's settings file into the repository.
 
-After changing the builder's HTML, CSS, JavaScript, or built-in plugins, maintainers can regenerate the committed offline file with `node tools/build-offline.mjs`.
+After changing `builder.template.html`, CSS, JavaScript, or built-in plugins, maintainers can regenerate both browser-ready files with `node tools/build-offline.mjs`.
 
 Manual editing, local saving, and exports work without an API key. Project changes are saved in your browser. **Save project** downloads a JSON backup; **Export website** downloads a standalone `index.html` that can be hosted anywhere.
 

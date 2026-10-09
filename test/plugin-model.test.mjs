@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import { normalizePluginPack, createPluginSection } from "../plugin-model.js";
-import { exportDocument, normalizeSite, template } from "../site-model.js";
+import { exportDocument, normalizeSite, renderSite, template } from "../site-model.js";
 
 const sample = JSON.parse(await readFile(new URL("../plugins/artist-essentials.json", import.meta.url), "utf8"));
 const lightMode = JSON.parse(await readFile(new URL("../plugins/light-mode.json", import.meta.url), "utf8"));
@@ -65,4 +65,18 @@ test("light mode is an allowlisted editor feature", () => {
   assert.deepEqual(pack.features, ["workspace-light-mode"]);
   assert.throws(() => normalizePluginPack({ ...lightMode, id: "other.light-mode" }));
   assert.throws(() => normalizePluginPack({ ...lightMode, features: ["run-javascript"] }));
+});
+
+test("website links accept pasted domains and remain clickable in the editor and export", () => {
+  const site = template("links");
+  site.sections[0].buttonUrl = "youtube.com/@artist";
+  site.sections[1].items[0].linkUrl = "www.youtube.com/watch?v=example";
+  const normalized = normalizeSite(site);
+  assert.equal(normalized.sections[0].buttonUrl, "https://youtube.com/@artist");
+  assert.equal(normalized.sections[1].items[0].linkUrl, "https://www.youtube.com/watch?v=example");
+  assert.match(renderSite(normalized, true), /id="gallery"|id="[a-f0-9-]+" data-section-id=/);
+  assert.match(renderSite(normalized, true), /href="https:\/\/youtube.com\/@artist"/);
+  assert.match(exportDocument(normalized), /href="https:\/\/www.youtube.com\/watch\?v=example"/);
+  site.sections[0].buttonUrl = "javascript:alert(1)";
+  assert.equal(normalizeSite(site).sections[0].buttonUrl, "#");
 });

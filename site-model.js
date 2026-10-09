@@ -41,8 +41,15 @@ export function template(name = "portfolio") {
 
 function safeUrl(value, image = false) {
   const url = trim(value, 500);
-  if (image) return /^https:\/\//i.test(url) ? url : "";
-  return /^(https?:\/\/|mailto:|#)/i.test(url) ? url : "#";
+  const bareDomain = /^(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z]{2,63}(?::\d{1,5})?(?:[/?#][^\s]*)?$/i;
+  const destination = !image && bareDomain.test(url) ? `https://${url}` : url;
+  if (!image && /^#[a-zA-Z0-9_-]*$/.test(url)) return url;
+  try {
+    const parsed = new URL(destination);
+    if (image) return parsed.protocol === "https:" ? destination : "";
+    if (["http:", "https:", "mailto:"].includes(parsed.protocol)) return destination;
+  } catch { /* Invalid destinations are handled below. */ }
+  return image ? "" : "#";
 }
 export const escapeHtml = (value) => String(value ?? "").replace(/[&<>"']/g, character => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[character]);
 
@@ -72,7 +79,8 @@ const picture = (url, index) => url ? `<img src="${escapeHtml(safeUrl(url, true)
 
 export function renderSection(section, editable = false) {
   const label = section.type === "plugin" ? section.pluginName || SECTION_LABELS.plugin : SECTION_LABELS[section.type];
-  const attrs = editable ? ` data-section-id="${escapeHtml(section.id)}" tabindex="0" role="button" aria-label="Edit ${escapeHtml(label)} section"` : ` id="${escapeHtml(section.type === "gallery" ? "gallery" : section.type === "events" ? "events" : section.id)}"`;
+  const anchor = section.type === "gallery" ? "gallery" : section.type === "events" ? "events" : section.id;
+  const attrs = ` id="${escapeHtml(anchor)}"${editable ? ` data-section-id="${escapeHtml(section.id)}" tabindex="0" role="button" aria-label="Edit ${escapeHtml(label)} section"` : ""}`;
   const classes = `built-section section-${section.type} align-${choice(section.alignment, ["left", "center"], "left")} spacing-${choice(section.spacing, ["compact", "normal", "roomy"], "normal")}`;
   const style = `${section.background ? `background:${color(section.background)};` : ""}${section.textColor ? `color:${color(section.textColor)};--site-muted:${color(section.textColor)};` : ""}`;
   let content = "";

@@ -1,0 +1,114 @@
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="WebsiteForge helps artists and makers build their own websites." />
+    <title>WebsiteForge · AI website builder</title>
+    <link rel="stylesheet" href="styles.css" />
+    <script type="module" src="script.js"></script>
+  </head>
+  <body>
+    <div class="app-shell">
+      <header class="app-header">
+        <div class="header-brand"><span class="brand-icon" aria-hidden="true">W</span><div><strong>WebsiteForge</strong><small id="header-context">Build workspace</small></div></div>
+        <div class="header-center"><span class="status-dot"></span><span id="save-status">Saved on this device</span></div>
+        <div class="header-actions">
+          <div class="header-context-actions" data-header-for="build">
+            <button type="button" class="button ghost" id="import-button">Import project</button>
+            <button type="button" class="button ghost" id="export-json-button">Save project</button>
+            <button type="button" class="button primary" id="export-html-button">Export website <span aria-hidden="true">↗</span></button>
+          </div>
+          <div class="header-context-actions" data-header-for="design" hidden>
+            <button type="button" class="button ghost" id="design-preview-button">Preview site</button>
+            <button type="button" class="button primary" id="design-export-button">Export website <span aria-hidden="true">↗</span></button>
+          </div>
+          <div class="header-context-actions" data-header-for="plugins" hidden>
+            <button type="button" class="button ghost" id="plugin-browse-button">Browse packs</button>
+          </div>
+          <div class="header-context-actions" data-header-for="ai" hidden>
+            <a class="button ghost" href="settings.html">AI settings</a>
+          </div>
+          <a class="button ghost" href="settings.html" aria-label="WebsiteForge settings">Settings</a>
+          <input id="import-file" type="file" accept="application/json,.json" hidden />
+        </div>
+      </header>
+      <div class="workspace">
+        <aside class="sidebar" aria-label="Builder tools">
+          <div class="sidebar-heading"><span class="eyebrow">YOUR WORKSPACE</span><h1>Build your corner of the internet.</h1><p>Pick a starting point, shape every section, and make it yours.</p></div>
+          <div class="tab-list" role="tablist" aria-label="Builder panels">
+            <button class="tab active" type="button" role="tab" aria-selected="true" data-tab="build">Build</button>
+            <button class="tab" type="button" role="tab" aria-selected="false" data-tab="design">Design</button>
+            <button class="tab" type="button" role="tab" aria-selected="false" data-tab="plugins">Plugins</button>
+            <button class="tab" type="button" role="tab" aria-selected="false" data-tab="ai">AI tools <span class="sparkle">✦</span></button>
+          </div>
+          <section class="tab-panel active" id="panel-build" role="tabpanel">
+            <div class="control-group"><label for="site-name">Website name</label><input id="site-name" type="text" maxlength="70" placeholder="Your studio name" /></div>
+            <div class="control-group"><label for="site-tagline">Short tagline</label><input id="site-tagline" type="text" maxlength="120" placeholder="Artist & maker" /></div>
+            <div class="control-group"><label for="template-select">Starting template</label><div class="template-row"><select id="template-select"><option value="portfolio">Artist portfolio</option><option value="events">Event landing page</option><option value="shop">Creative shop</option><option value="commissions">Commissions & services</option><option value="links">Simple link hub</option></select><button type="button" class="button subtle" id="apply-template-button">Use</button></div><button type="button" class="button ghost wide" id="browse-template-button">Browse template gallery</button><p class="helper">Applying a template replaces the current page.</p></div>
+            <div class="sidebar-divider"></div>
+            <div class="section-title"><h2>Page sections</h2><span id="section-count" class="count">0</span></div>
+            <div id="section-list" class="section-list" aria-label="Reorder and select sections"></div>
+            <label for="add-section" class="visually-hidden">Add a section</label>
+            <select id="add-section"><option value="">+ Add a section</option><option value="hero">Hero</option><option value="intro">About</option><option value="gallery">Gallery</option><option value="features">Highlights</option><option value="events">Events</option><option value="links">Links</option><option value="cta">Call to action</option></select>
+          </section>
+          <section class="tab-panel" id="panel-design" role="tabpanel" hidden>
+            <div class="section-title"><h2>Color mood</h2></div><div id="theme-list" class="theme-list"></div><div class="sidebar-divider"></div>
+            <div class="control-group"><label for="font-select">Typography</label><select id="font-select"><option value="editorial">Editorial serif</option><option value="modern">Modern sans</option><option value="playful">Playful rounded</option></select></div>
+            <div class="section-title"><h2>Color palette</h2></div>
+            <div class="palette-grid">
+              <div class="control-group"><label for="custom-accent">Accent</label><input id="custom-accent" type="color" value="#ed7418" /></div>
+              <div class="control-group"><label for="paper-color">Background</label><input id="paper-color" type="color" value="#fff8f1" /></div>
+              <div class="control-group"><label for="ink-color">Text</label><input id="ink-color" type="color" value="#27272b" /></div>
+              <div class="control-group"><label for="muted-color">Secondary text</label><input id="muted-color" type="color" value="#66666c" /></div>
+            </div>
+            <div class="sidebar-divider"></div>
+            <div class="section-title"><h2>Layout controls</h2></div>
+            <div class="control-group"><label for="content-width">Content width <output id="content-width-value"></output></label><input id="content-width" type="range" min="760" max="1600" step="20" /></div>
+            <div class="control-group"><label for="section-spacing">Section spacing <output id="section-spacing-value"></output></label><input id="section-spacing" type="range" min="35" max="160" step="5" /></div>
+            <div class="control-group"><label for="corner-radius">Corner radius <output id="corner-radius-value"></output></label><input id="corner-radius" type="range" min="0" max="40" step="2" /></div>
+            <div class="control-group"><label for="heading-scale">Heading size <output id="heading-scale-value"></output></label><input id="heading-scale" type="range" min="0.7" max="1.5" step="0.05" /></div>
+            <div class="control-group"><label for="button-style">Button style</label><select id="button-style"><option value="solid">Solid</option><option value="outline">Outline</option><option value="pill">Pill</option></select></div>
+            <p class="helper">All settings carry into your exported website.</p>
+          </section>
+          <section class="tab-panel" id="panel-plugins" role="tabpanel" hidden>
+            <div class="ai-intro"><span class="ai-icon" aria-hidden="true">✚</span><h2>Community plugins</h2><p>Add sections and themes made by other WebsiteForge creators. Packs are shareable JSON files; no plugin code runs in your browser.</p></div>
+            <div class="section-title"><h2>Discover packs</h2></div>
+            <div id="plugin-catalog" class="plugin-list"></div>
+            <div class="sidebar-divider"></div>
+            <div class="section-title"><h2>Install a shared pack</h2></div>
+            <div class="control-group"><label for="plugin-url">HTTPS manifest URL</label><input id="plugin-url" type="url" placeholder="https://example.com/my-pack.json" /></div>
+            <button type="button" class="button subtle wide" id="install-url-button">Install from URL</button>
+            <button type="button" class="button ghost wide" id="install-file-button">Install from JSON file</button>
+            <input id="plugin-file" type="file" accept="application/json,.json" hidden />
+            <div class="sidebar-divider"></div>
+            <div class="section-title"><h2>Installed packs</h2><span id="plugin-count" class="count">0</span></div>
+            <div id="plugin-installed" class="plugin-list"></div>
+            <p id="plugin-status" class="helper" role="status"></p>
+            <p class="helper"><button type="button" class="text-link" id="example-pack-button">Download example pack ↗</button> · Community submissions can be added to the project catalog.</p>
+          </section>
+          <section class="tab-panel" id="panel-ai" role="tabpanel" hidden>
+            <div class="ai-intro"><span class="ai-icon" aria-hidden="true">✦</span><h2>Make it with AI</h2><p>Describe your work and let AI draft a page. You can edit every result before exporting.</p></div>
+            <div class="control-group"><label for="ai-prompt">What should your site say?</label><textarea id="ai-prompt" rows="6" maxlength="2000" placeholder="I'm a ceramic artist making playful, hand-built pieces. I want a warm portfolio with a gallery, a short bio, and a way to contact me."></textarea></div>
+            <button type="button" class="button primary wide" id="generate-site-button">✦ Generate a website</button>
+            <button type="button" class="button ghost wide" id="rewrite-section-button">✦ Rewrite selected section</button>
+            <p id="ai-status" class="helper ai-status" role="status">AI tools need the local server and an OpenAI API key. Add your key in <a href="settings.html">Settings</a>. Manual editing works anytime.</p><p class="helper">Generating a page sends your prompt and current site content to OpenAI. Review the draft before publishing.</p>
+          </section>
+          <div class="sidebar-foot"><span class="footer-star">✳</span> Made for artists, makers & dreamers.</div>
+        </aside>
+        <main class="stage" aria-label="Website preview workspace">
+          <div class="stage-toolbar"><div><span class="eyebrow">LIVE CANVAS</span><strong id="canvas-title">Your website</strong></div><div class="stage-controls"><div class="viewport-switch" aria-label="Preview width"><button type="button" class="icon-button active" id="desktop-button" aria-label="Desktop preview" title="Desktop preview">▣</button><button type="button" class="icon-button" id="mobile-button" aria-label="Mobile preview" title="Mobile preview">▯</button></div><button type="button" class="button ghost" id="preview-button">Preview</button></div></div>
+          <div class="canvas-area"><div id="canvas-frame" class="canvas-frame"><div id="site-preview" class="site-preview"></div></div></div>
+          <div class="canvas-tip">Select a section on the canvas to edit it. Your changes save automatically.</div>
+        </main>
+        <aside class="inspector" aria-label="Selected section editor"><div class="inspector-header"><span class="eyebrow">SECTION EDITOR</span><h2 id="inspector-title">Select a section</h2><p id="inspector-description">Choose a section from the canvas or the list to edit its content.</p></div><form id="inspector-form" autocomplete="off"></form><div class="inspector-actions" id="inspector-actions" hidden><button type="button" class="button ghost" id="duplicate-section-button">Duplicate</button><button type="button" class="button danger" id="delete-section-button">Delete</button></div></aside>
+      </div>
+    </div>
+    <dialog id="template-dialog" class="template-dialog" aria-labelledby="template-dialog-title">
+      <div class="template-dialog-header"><div><span class="eyebrow">STARTING POINTS</span><h2 id="template-dialog-title">Choose a template</h2><p>Five simple layouts you can edit from top to bottom.</p></div><button type="button" class="button ghost" id="close-template-dialog">Close</button></div>
+      <div id="template-gallery" class="template-gallery"></div>
+    </dialog>
+    <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+  </body>
+</html>

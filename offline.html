@@ -8,7 +8,7 @@
     <title>WebsiteForge · AI website builder</title>
     <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
-:root{font-family:Inter,Arial,sans-serif;color:#f4f4f5;background:#161719;font-size:14px}*{box-sizing:border-box}body{margin:0}button,input,select,textarea{font:inherit}button{cursor:pointer}button:disabled{cursor:not-allowed;opacity:.45}a{color:inherit;text-decoration:none}:focus-visible{outline:3px solid #ff9a39;outline-offset:2px}[hidden]{display:none!important}.visually-hidden{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+:root{font-family:Inter,Arial,sans-serif;color:#f4f4f5;background:#161719;font-size:14px}*{box-sizing:border-box}body{margin:0}button,input,select,textarea{font:inherit}button{cursor:pointer}button:disabled{cursor:not-allowed;opacity:.45}a{color:inherit;text-decoration:none}:focus-visible{outline:3px solid #ff9a39;outline-offset:2px}[hidden]{display:none!important}.visually-hidden{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}.text-link{border:0;background:none;color:inherit;padding:0;text-decoration:underline;text-underline-offset:2px}
 .app-header{min-height:72px;padding:12px 25px;display:flex;align-items:center;gap:22px;background:#1f2023;border-bottom:1px solid #35363a}.header-brand{display:flex;align-items:center;gap:11px;min-width:215px}.brand-icon{display:grid;place-items:center;width:38px;height:38px;clip-path:polygon(50% 0%,62% 24%,78% 8%,77% 39%,100% 45%,79% 60%,88% 88%,59% 78%,50% 100%,39% 77%,12% 88%,22% 59%,0 45%,24% 37%,22% 9%,40% 24%);background:#f47b20;color:#fff;font-size:18px;font-weight:800}.header-brand strong,.header-brand small{display:block}.header-brand strong{font-size:20px;font-weight:800;letter-spacing:-.05em}.header-brand small{margin-top:3px;color:#9d9da2;font-size:10px;letter-spacing:.13em;text-transform:uppercase}.header-center{display:flex;align-items:center;gap:7px;color:#aaaab0;font-size:11px;white-space:nowrap}.status-dot{width:6px;height:6px;border-radius:50%;background:#67b77d}.header-actions{display:flex;align-items:center;justify-content:flex-end;gap:8px;margin-left:auto}.text-link{color:#c6c6c9;font-size:12px;font-weight:700;white-space:nowrap;margin-right:8px}.text-link:hover{color:#ff932d}.button{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:36px;padding:8px 12px;border:1px solid #48494e;border-radius:6px;background:#2d2e32;color:#f0f0f1;font-size:11px;font-weight:700;white-space:nowrap}.button:hover{background:#3d3e42}.button.primary{border-color:#ed7418;background:#ed7418;color:#141414}.button.primary:hover{background:#ff8d2e}.button.ghost{background:transparent}.button.subtle{background:#38393d}.button.danger{color:#ff8a72}.button.wide{width:100%;margin-top:8px}.button.small{min-height:30px;font-size:10px}
 .workspace{display:grid;grid-template-columns:292px minmax(0,1fr) 282px;min-height:calc(100vh - 72px)}.sidebar,.inspector{background:#232428;min-width:0}.sidebar{border-right:1px solid #3b3c40;display:flex;flex-direction:column}.sidebar-heading{padding:27px 24px 18px}.eyebrow{color:#f88b29;font-size:10px;font-weight:800;letter-spacing:.17em;text-transform:uppercase}.sidebar-heading h1{margin:12px 0 10px;font-size:27px;line-height:1.13;font-weight:800;letter-spacing:-.05em}.sidebar-heading p,.inspector-header p{margin:0;color:#a6a6ab;font-size:12px;line-height:1.55}.tab-list{display:flex;padding:0 16px;border-bottom:1px solid #3b3c40}.tab{flex:1;padding:13px 3px;border:0;border-bottom:2px solid transparent;background:transparent;color:#aaaab0;font-size:11px;font-weight:700}.tab.active{border-color:#f47b20;color:#ffa34c}.sparkle{color:#ff9b3b}.tab-panel{padding:20px 22px;flex:1}.control-group{display:grid;gap:7px;margin-bottom:16px}.control-group label{font-size:11px;font-weight:800;color:#dedee0}.control-group input,.control-group textarea,.control-group select,#add-section{width:100%;border:1px solid #4a4b50;border-radius:6px;background:#2c2d31;color:#f5f5f5;padding:10px 11px;font-size:12px;outline:none}.control-group input:focus,.control-group textarea:focus,.control-group select:focus,#add-section:focus{border-color:#f47b20;box-shadow:0 0 0 3px #f47b2033}.control-group textarea{resize:vertical;line-height:1.5}.template-row{display:flex;gap:6px}.template-row select{min-width:0}.helper{margin:7px 0 0;color:#9d9da2;font-size:10px;line-height:1.5}.sidebar-divider{height:1px;background:#3b3c40;margin:20px 0}.section-title{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}.section-title h2{margin:0;font-size:12px}.count{padding:3px 7px;border-radius:20px;background:#4d3425;color:#ff9b42;font-size:10px;font-weight:800}.section-list{display:grid;gap:7px;margin-bottom:12px}.section-row{display:flex;align-items:center;border:1px solid #44454a;border-radius:6px;overflow:hidden;background:#2b2c30}.section-row.selected{border-color:#ed7418;background:#413126}.section-choose{flex:1;min-width:0;border:0;background:transparent;padding:11px;text-align:left;color:#ececee;font-size:11px;font-weight:700}.move-button{width:26px;height:31px;border:0;background:transparent;color:#b0b0b5}.move-button:hover{color:#ff9b42}.sidebar-foot{padding:15px 22px;border-top:1px solid #3b3c40;color:#a6a6ab;font-size:10px}.footer-star{color:#f47b20;font-size:16px;margin-right:4px}.theme-list{display:grid;gap:8px}.theme-choice{display:flex;align-items:center;gap:10px;padding:10px;border:1px solid #45464a;border-radius:6px;background:#2c2d31;color:#eee;text-align:left;font-size:11px;font-weight:700}.theme-choice.selected{border-color:#f47b20;background:#423125}.theme-swatch{width:20px;height:20px;border-radius:5px}.color-control{display:flex;align-items:center;gap:10px}.color-control input{width:47px;height:37px;padding:3px}.color-control span{color:#aaa;font-size:11px}.ai-intro{margin-bottom:18px;padding:18px;background:#352d27;border:1px solid #654126;border-radius:8px}.ai-icon{color:#ff942e;font-size:24px}.ai-intro h2{margin:7px 0;font-size:21px;font-weight:800}.ai-intro p{margin:0;color:#c2b8b1;font-size:11px;line-height:1.5}.ai-status{min-height:28px;margin-top:12px;color:#ffa34c}
 .stage{min-width:0;background:#17181a}.stage-toolbar{min-height:70px;padding:12px 22px;display:flex;align-items:center;justify-content:space-between;gap:12px;border-bottom:1px solid #38393d}.stage-toolbar>div:first-child{display:grid;gap:4px}.stage-toolbar strong{font-size:14px}.stage-controls{display:flex;align-items:center;gap:10px}.viewport-switch{display:flex;padding:3px;border:1px solid #46474b;border-radius:6px;background:#28292d}.icon-button{width:31px;height:28px;border:0;border-radius:4px;background:transparent;color:#aaa;font-size:17px}.icon-button.active{background:#50331e;color:#ff9d40}.canvas-area{display:flex;justify-content:center;align-items:flex-start;min-height:calc(100vh - 185px);padding:32px 35px;overflow:auto}.canvas-frame{width:100%;max-width:1120px;box-shadow:0 13px 40px #0008;background:white;transition:width .25s}.canvas-frame.mobile{width:390px;max-width:100%}.site-preview{overflow:hidden}.site-preview .built-section{cursor:pointer}.site-preview .built-section:hover{outline:2px solid #ff9b42;outline-offset:-2px}.site-preview .built-section.canvas-selected{outline:3px solid #f47b20;outline-offset:-3px}.canvas-tip{padding:0 22px 20px;color:#aaa;text-align:center;font-size:11px}.inspector{border-left:1px solid #3b3c40;padding:26px 20px}.inspector-header{padding-bottom:19px;border-bottom:1px solid #3b3c40;margin-bottom:18px}.inspector-header h2{margin:10px 0 6px;font-size:23px;font-weight:800}.inspector-actions{display:flex;gap:7px;margin-top:13px}.inspector-actions .button{flex:1}.item-editor{margin:18px 0;padding:12px;border:1px solid #4b4c51;border-radius:8px}.item-editor legend{padding:0 5px;color:#ffa34c;font-size:11px;font-weight:800}.toast{position:fixed;z-index:10;bottom:22px;right:22px;max-width:320px;padding:13px 17px;border-radius:8px;background:#f47b20;color:#191919;box-shadow:0 8px 24px #0005;font-size:12px;font-weight:700}
@@ -99,7 +99,7 @@ body.workspace-light{background:#f4f3ef;color:#22252a}body.workspace-light .app-
             <div class="section-title"><h2>Installed packs</h2><span id="plugin-count" class="count">0</span></div>
             <div id="plugin-installed" class="plugin-list"></div>
             <p id="plugin-status" class="helper" role="status"></p>
-            <p class="helper"><a href="plugins/artist-essentials.json" target="_blank" rel="noopener">View an example pack ↗</a> · Community submissions can be added to the project catalog.</p>
+            <p class="helper"><button type="button" class="text-link" id="example-pack-button">Download example pack ↗</button> · Community submissions can be added to the project catalog.</p>
           </section>
           <section class="tab-panel" id="panel-ai" role="tabpanel" hidden>
             <div class="ai-intro"><span class="ai-icon" aria-hidden="true">✦</span><h2>Make it with AI</h2><p>Describe your work and let AI draft a page. You can edit every result before exporting.</p></div>
@@ -169,8 +169,15 @@ function template(name = "portfolio") {
 
 function safeUrl(value, image = false) {
   const url = trim(value, 500);
-  if (image) return /^https:\/\//i.test(url) ? url : "";
-  return /^(https?:\/\/|mailto:|#)/i.test(url) ? url : "#";
+  const bareDomain = /^(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z]{2,63}(?::\d{1,5})?(?:[/?#][^\s]*)?$/i;
+  const destination = !image && bareDomain.test(url) ? `https://${url}` : url;
+  if (!image && /^#[a-zA-Z0-9_-]*$/.test(url)) return url;
+  try {
+    const parsed = new URL(destination);
+    if (image) return parsed.protocol === "https:" ? destination : "";
+    if (["http:", "https:", "mailto:"].includes(parsed.protocol)) return destination;
+  } catch { /* Invalid destinations are handled below. */ }
+  return image ? "" : "#";
 }
 const escapeHtml = (value) => String(value ?? "").replace(/[&<>"']/g, character => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[character]);
 
@@ -200,7 +207,8 @@ const picture = (url, index) => url ? `<img src="${escapeHtml(safeUrl(url, true)
 
 function renderSection(section, editable = false) {
   const label = section.type === "plugin" ? section.pluginName || SECTION_LABELS.plugin : SECTION_LABELS[section.type];
-  const attrs = editable ? ` data-section-id="${escapeHtml(section.id)}" tabindex="0" role="button" aria-label="Edit ${escapeHtml(label)} section"` : ` id="${escapeHtml(section.type === "gallery" ? "gallery" : section.type === "events" ? "events" : section.id)}"`;
+  const anchor = section.type === "gallery" ? "gallery" : section.type === "events" ? "events" : section.id;
+  const attrs = ` id="${escapeHtml(anchor)}"${editable ? ` data-section-id="${escapeHtml(section.id)}" tabindex="0" role="button" aria-label="Edit ${escapeHtml(label)} section"` : ""}`;
   const classes = `built-section section-${section.type} align-${choice(section.alignment, ["left", "center"], "left")} spacing-${choice(section.spacing, ["compact", "normal", "roomy"], "normal")}`;
   const style = `${section.background ? `background:${color(section.background)};` : ""}${section.textColor ? `color:${color(section.textColor)};--site-muted:${color(section.textColor)};` : ""}`;
   let content = "";
@@ -322,8 +330,10 @@ function download(name, content, type) {
   const link = document.createElement("a");
   link.href = URL.createObjectURL(new Blob([content], { type }));
   link.download = name;
+  document.body.append(link);
   link.click();
-  setTimeout(() => URL.revokeObjectURL(link.href), 1000);
+  link.remove();
+  setTimeout(() => URL.revokeObjectURL(link.href), 60000);
 }
 function selected() { return site.sections.find(section => section.id === selectedId); }
 const templateChoices = [
@@ -336,7 +346,8 @@ const templateChoices = [
 function applyTemplate(name) {
   if (!confirm("Replace the current page with this template?")) return;
   site = template(name); selectedId = site.sections[0].id; $("#template-select").value = name;
-  $("#template-dialog").close(); update(); toast("Template applied.");
+  if ($("#template-dialog").open) $("#template-dialog").close();
+  update(); toast("Template applied.");
 }
 function renderTemplateGallery() {
   const gallery = $("#template-gallery"); gallery.replaceChildren();
@@ -395,6 +406,7 @@ function field(label, key, value, options = {}) {
   const input = document.createElement(options.multiline ? "textarea" : "input");
   input.id = `edit-${key}${options.itemIndex === undefined ? "" : `-${options.itemIndex}`}`; input.name = key; input.value = value || "";
   if (options.multiline) input.rows = 4; else input.type = options.type || "text";
+  if (options.placeholder) input.placeholder = options.placeholder;
   input.maxLength = options.max || 700;
   labelElement.htmlFor = input.id;
   input.addEventListener("input", () => {
@@ -421,7 +433,7 @@ function renderInspector() {
   $("#inspector-title").textContent = section.type === "plugin" ? section.pluginName : SECTION_LABELS[section.type];
   $("#inspector-description").textContent = "Changes appear in your preview immediately.";
   form.append(field("Small heading", "eyebrow", section.eyebrow, { max: 80 }), field("Title", "title", section.title, { max: 130 }), field("Description", "body", section.body, { multiline: true, max: 700 }));
-  if (["hero", "cta", "plugin"].includes(section.type)) form.append(field("Button label", "buttonText", section.buttonText, { max: 40 }), field("Button link", "buttonUrl", section.buttonUrl, { max: 300 }));
+  if (["hero", "cta", "plugin"].includes(section.type)) form.append(field("Button label", "buttonText", section.buttonText, { max: 40 }), field("Button link", "buttonUrl", section.buttonUrl, { max: 300, placeholder: "https://youtube.com/... or youtube.com/..." }));
   if (section.type === "hero" || section.type === "plugin" && section.layout === "banner") form.append(field("Image URL (HTTPS)", "imageUrl", section.imageUrl, { max: 500 }));
   if (section.type === "plugin") form.append(choiceField("Plugin layout", "layout", section.layout, [["cards", "Cards"], ["faq", "FAQ"], ["quote", "Quotes"], ["banner", "Banner"]]));
   if (["gallery", "features", "events", "links", "plugin"].includes(section.type) && !(section.type === "plugin" && section.layout === "banner")) {
@@ -430,7 +442,7 @@ function renderInspector() {
       const legend = document.createElement("legend"); legend.textContent = `Item ${index + 1}`; group.append(legend);
       group.append(field("Title", "title", item.title, { itemIndex: index, max: 70 }), field("Description", "body", item.body, { itemIndex: index, max: 180 }));
       if (section.type === "gallery" || section.type === "plugin" && section.layout === "cards") group.append(field("Image URL (HTTPS)", "imageUrl", item.imageUrl, { itemIndex: index, max: 500 }));
-      if (section.type === "links") group.append(field("Destination URL", "linkUrl", item.linkUrl, { itemIndex: index, max: 300 }));
+      if (section.type === "links") group.append(field("Destination URL", "linkUrl", item.linkUrl, { itemIndex: index, max: 300, placeholder: "https://example.com or example.com" }));
       const remove = document.createElement("button"); remove.type = "button"; remove.className = "button ghost small"; remove.textContent = "Remove item";
       remove.addEventListener("click", () => { section.items.splice(index, 1); update(); }); group.append(remove); form.append(group);
     });
@@ -443,9 +455,12 @@ function renderInspector() {
 }
 function renderCanvas() {
   $("#site-preview").innerHTML = renderSite(site, true);
+  document.querySelectorAll("#site-preview a").forEach(link => {
+    if (/^https?:\/\//i.test(link.getAttribute("href") || "")) { link.target = "_blank"; link.rel = "noopener noreferrer"; }
+  });
   document.querySelectorAll("[data-section-id]").forEach(element => {
     element.classList.toggle("canvas-selected", element.dataset.sectionId === selectedId);
-    element.addEventListener("click", event => { if (event.target.closest("a")) event.preventDefault(); if (event.target.closest("details")) return; select(element.dataset.sectionId); });
+    element.addEventListener("click", event => { if (event.target.closest("a") || event.target.closest("details")) return; select(element.dataset.sectionId); });
     element.addEventListener("keydown", event => { if (event.target === element && (event.key === "Enter" || event.key === " ")) { event.preventDefault(); select(element.dataset.sectionId); } });
   });
   $("#canvas-title").textContent = site.name;
@@ -488,7 +503,7 @@ function renderPlugins() {
     if (pack.features.includes("workspace-light-mode")) {
       const toggle = document.createElement("button"); toggle.type = "button"; toggle.className = "button subtle";
       toggle.textContent = lightModeEnabled ? "Use dark workspace" : "Enable light mode";
-      toggle.addEventListener("click", () => { lightModeEnabled = !lightModeEnabled; localStorage.setItem(workspaceModeKey, lightModeEnabled ? "light" : "dark"); applyWorkspaceMode(); renderPlugins(); pluginStatus(lightModeEnabled ? "Light mode is on for this editor." : "Dark mode is on for this editor."); });
+      toggle.addEventListener("click", () => { lightModeEnabled = !lightModeEnabled; try { localStorage.setItem(workspaceModeKey, lightModeEnabled ? "light" : "dark"); } catch { /* Keep the choice for this session. */ } applyWorkspaceMode(); renderPlugins(); pluginStatus(lightModeEnabled ? "Light mode is on for this editor." : "Dark mode is on for this editor."); });
       actions.append(toggle);
     }
     const exportButton = document.createElement("button"); exportButton.type = "button"; exportButton.className = "button ghost"; exportButton.textContent = "Share JSON";
@@ -591,6 +606,12 @@ $("#preview-button").addEventListener("click", () => { const url = URL.createObj
 $("#design-preview-button").addEventListener("click", () => $("#preview-button").click());
 $("#design-export-button").addEventListener("click", () => $("#export-html-button").click());
 $("#plugin-browse-button").addEventListener("click", () => $("#plugin-catalog").scrollIntoView({ behavior: "smooth", block: "start" }));
+$("#example-pack-button").addEventListener("click", async () => {
+  try {
+    const example = bundledCatalog?.manifests["/plugins/artist-essentials.json"] || await fetchPack("/plugins/artist-essentials.json");
+    download("artist-essentials.json", JSON.stringify(example, null, 2), "application/json");
+  } catch { pluginStatus("Could not load the example pack."); }
+});
 $("#export-html-button").addEventListener("click", () => download("index.html", exportDocument(normalizeSite(site)), "text/html"));
 $("#export-json-button").addEventListener("click", () => download("websiteforge-project.json", JSON.stringify(normalizeSite(site), null, 2), "application/json"));
 $("#import-button").addEventListener("click", () => $("#import-file").click());
