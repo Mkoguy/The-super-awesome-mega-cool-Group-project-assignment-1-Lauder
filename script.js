@@ -1,14 +1,23 @@
 import { SECTION_LABELS, SECTION_TYPES, MAX_SECTIONS, SHAPE_TYPES, shapeSvgMarkup, THEMES, SITE_CSS, makeSection, normalizeSite, renderSite, template, exportDocument } from "./site-model.js";
 import { normalizePluginPack, createPluginSection } from "./plugin-model.js";
+import { SHORTCUT_DEFINITIONS, shortcutFromKeyboardEvent, normalizeShortcuts, defaultShortcuts } from "./shortcuts-model.js";
 
 const siteStyles = document.createElement("style"); siteStyles.textContent = SITE_CSS; document.head.append(siteStyles);
 
 const $ = selector => document.querySelector(selector);
-for (const id of ["addon-tool-tabs", "shape-tools", "text-tools", "image-tools", "template-tools"]) $("#panel-build").append($("#" + id));
+for (const id of ["addon-tool-tabs", "shape-tools", "text-tools", "image-tools", "template-tools"]) $("#canvas-toolbox").append($("#" + id));
 $("#addon-tool-tabs").setAttribute("aria-label", "Canvas tools");
+document.querySelectorAll(".drawer-section").forEach(section => section.name = "builder-drawer");
+$(".sidebar").insertBefore($(".inspector"), $(".sidebar-foot"));
+$(".inspector").hidden = true;
+const uploadToolButton = document.createElement("button");
+uploadToolButton.type = "button"; uploadToolButton.className = "button subtle wide"; uploadToolButton.textContent = "↑ Upload image";
+uploadToolButton.addEventListener("click", () => { selectedContent = null; selectedObjectId = ""; selectedShapeId = ""; $("#canvas-image-file").click(); });
+$("#add-image-object").after(uploadToolButton);
 const storageKey = "websiteforge-project-v1";
 const pluginStorageKey = "websiteforge-plugins-v1";
 const workspaceModeKey = "websiteforge-workspace-mode-v1";
+const shortcutStorageKey = "websiteforge-shortcuts-v1";
 const bundledCatalog = globalThis.websiteForgeBuiltins || null;
 let site;
 try { site = normalizeSite(JSON.parse(localStorage.getItem(storageKey))); }
@@ -26,11 +35,16 @@ let selectedContent = null;
 let activeAddonTool = "";
 let suppressPaletteClickUntil = 0;
 let activeTab = "build";
+let activeRail = "templates";
 let toastTimer;
 let zoom = 1;
 let history = [JSON.stringify(site)];
 let historyIndex = 0;
 let restoringHistory = false;
+let shortcuts;
+try { shortcuts = normalizeShortcuts(JSON.parse(localStorage.getItem(shortcutStorageKey))); }
+catch { shortcuts = defaultShortcuts(); }
+let copiedElement = null;
 
 function save() {
   const snapshot = JSON.stringify(site);
@@ -122,6 +136,25 @@ function setTab(name) {
     panel.classList.toggle("active", current);
   });
 }
+function setRailPanel(name) {
+  activeRail = name;
+  document.querySelectorAll(".rail-button").forEach(button => {
+    const active = button.dataset.rail === name;
+    button.classList.toggle("active", active);
+    button.setAttribute("aria-current", active ? "true" : "false");
+  });
+  const tab = ["design", "plugins", "ai"].includes(name) ? name : "build";
+  setTab(tab);
+  const editing = name === "edit";
+  $(".inspector").hidden = !editing;
+  if (editing) $("#panel-build").hidden = true;
+  const tool = ({ elements: "drawing-menu", text: "text-tool", uploads: "image-tool" })[name];
+  if (tool) { activeAddonTool = tool; renderAddonToolTabs(); }
+  const drawer = ({ templates: "drawer-templates", elements: "drawer-add", text: "drawer-add", uploads: "drawer-add", layers: "drawer-layers", pages: "drawer-pages", site: "drawer-site", design: "drawer-mood" })[name];
+  document.querySelectorAll(".drawer-section").forEach(section => section.open = section.id === drawer);
+  const sidebar = $(".sidebar");
+  sidebar.scrollTop = 0;
+}
 function renderList() {
   const list = $("#section-list");
   list.replaceChildren();
@@ -137,6 +170,26 @@ function renderList() {
     row.append(choose, up, down); list.append(row);
   });
   $("#section-count").textContent = String(site.sections.length);
+}
+function renderPageStrip() {
+  const list = $("#page-strip-list");
+  list.replaceChildren();
+  site.sections.forEach((section, index) => {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = `page-thumb-button ${section.id === selectedId ? "active" : ""}`;
+    button.setAttribute("aria-label", `Select ${SECTION_LABELS[section.type] || "section"} ${index + 1}`);
+    const preview = document.createElement("span"); preview.className = "page-thumb-preview";
+    preview.style.setProperty("--thumb-accent", section.background || site.accent);
+    const heading = document.createElement("strong"); heading.textContent = (section.title || SECTION_LABELS[section.type] || "Section").slice(0, 34);
+    const line = document.createElement("i"); const art = document.createElement("b");
+    preview.append(heading, line, art);
+    const caption = document.createElement("span"); caption.className = "page-thumb-caption"; caption.textContent = `${index + 1}. ${SECTION_LABELS[section.type] || "Section"}`;
+    button.append(preview, caption);
+    button.addEventListener("click", () => { select(section.id); $("#site-preview [data-section-id=\"" + section.id + "\"]")?.scrollIntoView({ block: "center", behavior: "smooth" }); });
+    list.append(button);
+  });
+  $("#page-strip-count").textContent = String(site.sections.length);
 }
 function move(index, direction) {
   const [item] = site.sections.splice(index, 1);
@@ -225,10 +278,10 @@ function renderLayerList() {
 }
 function selectContent(sectionId, key) {
   selectedId = sectionId; selectedContent = { sectionId, key }; selectedObjectId = ""; selectedShapeId = "";
-  renderList(); renderInspector(); renderCanvas();
+  setRailPanel("edit"); renderList(); renderInspector(); renderCanvas();
 }
-function selectCanvasObject(id) { selectedObjectId = id; selectedShapeId = ""; selectedContent = null; renderInspector(); renderCanvas(); renderCanvasObjectTools(); }
-function selectCanvasShape(id) { selectedShapeId = id; selectedObjectId = ""; selectedContent = null; renderInspector(); renderCanvas(); renderShapeTools(); }
+function selectCanvasObject(id) { selectedObjectId = id; selectedShapeId = ""; selectedContent = null; setRailPanel("edit"); renderInspector(); renderCanvas(); renderCanvasObjectTools(); }
+function selectCanvasShape(id) { selectedShapeId = id; selectedObjectId = ""; selectedContent = null; setRailPanel("edit"); renderInspector(); renderCanvas(); renderShapeTools(); }
 function startInlineEdit(element, sectionId, key) {
   selectedContent = { sectionId, key }; const ref = contentRef(); if (!ref) return;
   element.textContent = ref.target[ref.key] || "";
@@ -338,7 +391,7 @@ function renderCanvas() {
       event.stopPropagation();
       if (element.isContentEditable) return;
       event.preventDefault();
-      selectedId = sectionId; selectedContent = { sectionId, key }; selectedObjectId = ""; selectedShapeId = "";
+      selectedId = sectionId; selectedContent = { sectionId, key }; selectedObjectId = ""; selectedShapeId = ""; setRailPanel("edit");
       document.querySelectorAll(".content-selected").forEach(node => node.classList.remove("content-selected"));
       element.classList.add("content-selected");
       if (!element.querySelector(".content-resize-handle")) { const handle = document.createElement("span"); handle.className = "content-resize-handle"; element.append(handle); }
@@ -377,7 +430,7 @@ function renderCanvas() {
     element.addEventListener("pointerdown", event => {
       event.preventDefault(); event.stopPropagation();
       const shape = site.shapes.find(item => item.id === element.dataset.shapeId); if (!shape) return;
-      selectedShapeId = shape.id; selectedObjectId = ""; selectedContent = null;
+      selectedShapeId = shape.id; selectedObjectId = ""; selectedContent = null; setRailPanel("edit");
       document.querySelectorAll(".shape-resize-handle").forEach(existing => { if (existing.parentElement !== element) existing.remove(); });
       if (!element.querySelector(".shape-resize-handle")) element.insertAdjacentHTML("beforeend", '<rect class="shape-selection-box" x="1" y="1" width="98" height="98"/><rect class="shape-resize-handle" data-resize="n" x="35" y="-3" width="30" height="6" rx="3"/><rect class="shape-resize-handle" data-resize="e" x="97" y="35" width="6" height="30" rx="3"/><rect class="shape-resize-handle" data-resize="s" x="35" y="97" width="30" height="6" rx="3"/><rect class="shape-resize-handle" data-resize="w" x="-3" y="35" width="6" height="30" rx="3"/><circle class="shape-resize-handle" data-resize="nw" cx="3" cy="3" r="4"/><circle class="shape-resize-handle" data-resize="ne" cx="97" cy="3" r="4"/><circle class="shape-resize-handle" data-resize="se" cx="97" cy="97" r="5"/><circle class="shape-resize-handle" data-resize="sw" cx="3" cy="97" r="4"/>');
       const resizeDirection = event.target.closest(".shape-resize-handle")?.dataset.resize || "";
@@ -425,7 +478,7 @@ function renderCanvas() {
       const object = site.objects.find(item => item.id === element.dataset.objectId); if (!object) return;
       if (selectedObjectId !== object.id) {
         document.querySelectorAll(".canvas-object-selected").forEach(previous => { previous.classList.remove("canvas-object-selected"); previous.querySelectorAll(".object-selection-box,.object-resize-handle").forEach(handle => handle.remove()); });
-        selectedObjectId = object.id; selectedShapeId = ""; selectedContent = null;
+        selectedObjectId = object.id; selectedShapeId = ""; selectedContent = null; setRailPanel("edit");
         element.classList.add("canvas-object-selected");
         element.insertAdjacentHTML("beforeend", `<span class="object-selection-box"></span>${["n","e","s","w","nw","ne","se","sw"].map(direction => `<span class="object-resize-handle" data-resize="${direction}" aria-label="Resize ${direction}"></span>`).join("")}`);
         renderCanvasObjectTools(); renderInspector(); renderLayerList();
@@ -455,11 +508,11 @@ function renderCanvas() {
     });
   });
   $("#canvas-title").textContent = site.name;
-  renderSelectionToolbar(); renderLayerList();
+  renderSelectionToolbar(); renderLayerList(); renderPageStrip();
 }
 const shapeOptions=SHAPE_TYPES;
 const blendOptions=["normal","multiply","screen","overlay","darken","lighten","color-dodge","color-burn","hard-light","soft-light","difference","exclusion","hue","saturation","color","luminosity"];
-function addShape(type,x=50,y=50){const shape={id:globalThis.crypto?.randomUUID?.()||`shape-${Date.now()}`,type,x,y,size:120,width:120,height:120,color:site.accent,opacity:.8,blend:"normal",rotation:0,z:2};site.shapes.push(shape);selectedShapeId=shape.id;selectedObjectId="";selectedContent=null;save();renderCanvas();renderShapeTools();renderInspector();}
+function addShape(type,x=50,y=50){const shape={id:globalThis.crypto?.randomUUID?.()||`shape-${Date.now()}`,type,x,y,size:120,width:120,height:120,color:site.accent,opacity:.8,blend:"normal",rotation:0,z:2};site.shapes.push(shape);selectedShapeId=shape.id;selectedObjectId="";selectedContent=null;setRailPanel("edit");save();renderCanvas();renderShapeTools();renderInspector();}
 function hexToHsv(hex){const value=hex.replace("#","");let r=parseInt(value.slice(0,2),16)/255,g=parseInt(value.slice(2,4),16)/255,b=parseInt(value.slice(4,6),16)/255;const max=Math.max(r,g,b),min=Math.min(r,g,b),delta=max-min;let h=0;if(delta){if(max===r)h=((g-b)/delta)%6;else if(max===g)h=(b-r)/delta+2;else h=(r-g)/delta+4;h=(h*60+360)%360;}return{h,s:max?delta/max:0,v:max};}
 function hsvToHex(h,s,v){const c=v*s,x=c*(1-Math.abs((h/60)%2-1)),m=v-c;let rgb=h<60?[c,x,0]:h<120?[x,c,0]:h<180?[0,c,x]:h<240?[0,x,c]:h<300?[x,0,c]:[c,0,x];return"#"+rgb.map(channel=>Math.round((channel+m)*255).toString(16).padStart(2,"0")).join("");}
 function appendShapeColorPicker(parent,shape){const state=hexToHsv(shape.color),wrap=document.createElement("div"),label=document.createElement("label"),hue=document.createElement("input"),field=document.createElement("div"),thumb=document.createElement("span");wrap.className="shape-color-picker";label.textContent="Color";hue.type="range";hue.min=0;hue.max=360;hue.value=state.h;hue.setAttribute("aria-label","Color hue");field.className="shape-color-field";field.tabIndex=0;field.setAttribute("role","slider");field.setAttribute("aria-label","Color saturation and brightness");thumb.className="shape-color-thumb";field.append(thumb);const paint=()=>{field.style.backgroundImage=`linear-gradient(to top,#000,transparent),linear-gradient(to right,#fff,hsl(${state.h} 100% 50%))`;thumb.style.left=`${state.s*100}%`;thumb.style.top=`${(1-state.v)*100}%`;field.setAttribute("aria-valuetext",shape.color);};const updateColor=()=>{shape.color=hsvToHex(state.h,state.s,state.v);paint();save();renderCanvas();};const pickPoint=event=>{const rect=field.getBoundingClientRect();state.s=Math.max(0,Math.min(1,(event.clientX-rect.left)/rect.width));state.v=1-Math.max(0,Math.min(1,(event.clientY-rect.top)/rect.height));updateColor();};hue.addEventListener("input",()=>{state.h=Number(hue.value);updateColor();});field.addEventListener("pointerdown",event=>{event.preventDefault();field.setPointerCapture(event.pointerId);pickPoint(event);const move=e=>pickPoint(e),stop=()=>{field.removeEventListener("pointermove",move);field.removeEventListener("pointerup",stop);field.removeEventListener("pointercancel",stop);};field.addEventListener("pointermove",move);field.addEventListener("pointerup",stop);field.addEventListener("pointercancel",stop);});field.addEventListener("keydown",event=>{const step=event.shiftKey ? 0.1 : 0.02;if(event.key==="ArrowLeft")state.s=Math.max(0,state.s-step);else if(event.key==="ArrowRight")state.s=Math.min(1,state.s+step);else if(event.key==="ArrowUp")state.v=Math.min(1,state.v+step);else if(event.key==="ArrowDown")state.v=Math.max(0,state.v-step);else return;event.preventDefault();updateColor();});paint();wrap.append(label,hue,field);parent.append(wrap);}
@@ -469,7 +522,7 @@ shapeDropZone.addEventListener("drop",event=>{const shapeType=event.dataTransfer
 function renderAddonToolTabs(){const definitions=[{feature:"drawing-menu",label:"Drawing",panel:"#shape-tools"},{feature:"text-tool",label:"Text",panel:"#text-tools"},{feature:"image-tool",label:"Image",panel:"#image-tools"},{feature:"template-studio",label:"Templates",panel:"#template-tools"}];const available=definitions.filter(definition=>definition.feature!=="template-studio"||installed.some(pack=>pack.features.includes(definition.feature)));if(!available.some(definition=>definition.feature===activeAddonTool))activeAddonTool=available[0]?.feature||"";const tabs=$("#addon-tool-tabs");tabs.replaceChildren();tabs.hidden=!available.length;available.forEach(definition=>{const button=document.createElement("button");button.type="button";button.className=`addon-tool-tab ${activeAddonTool===definition.feature?"active":""}`;button.textContent=definition.label;button.setAttribute("aria-selected",String(activeAddonTool===definition.feature));button.addEventListener("click",()=>{activeAddonTool=definition.feature;renderAddonToolTabs();});tabs.append(button);});definitions.forEach(definition=>{const panel=$(definition.panel);panel.hidden=!available.some(item=>item.feature===definition.feature)||activeAddonTool!==definition.feature;});}
 function renderShapeTools(){renderAddonToolTabs();const groups={"Basic shapes":["square","rectangle","rounded-square","circle","ellipse","triangle","inverted-triangle","right-triangle","diamond","cross","plus"],Polygons:["trapezoid","parallelogram","pentagon","hexagon","heptagon","octagon","nonagon","decagon"],Stars:["star-3","star-4","star-5","star-6","star-8","star-10","star-12","starburst"],Arrows:["arrow-right","arrow-left","arrow-up","arrow-down","double-arrow","chevron"],Symbols:["heart","lightning","moon","cloud","speech-bubble","line","curve","zigzag","pie","arc","ring"],Flowchart:["flow-terminal","flow-process","flow-decision","flow-document","flow-data","flow-delay","flow-display","flow-preparation","flow-database","flow-manual-input","flow-stored-data"]};const palette=$("#shape-palette");palette.replaceChildren();Object.entries(groups).forEach(([group,types])=>{const wrapper=document.createElement("div");wrapper.className="shape-group";const title=document.createElement("div");title.className="shape-group-title";title.textContent=group;wrapper.append(title);const row=document.createElement("div");row.className="shape-picks";types.forEach((type,index)=>{const button=document.createElement("button");button.type="button";button.className="shape-pick";button.title=type.replaceAll("-"," ");button.setAttribute("aria-label",`Add ${button.title}`);button.innerHTML=`<svg viewBox="0 0 100 100" aria-hidden="true">${shapeSvgMarkup(type,site.accent)}</svg>`;if(index>=5)button.hidden=true;button.addEventListener("click",()=>{if(Date.now()>=suppressPaletteClickUntil)addShape(type);});button.draggable=true;button.addEventListener("dragstart",event=>{event.dataTransfer?.setData("application/x-websiteforge-shape",type);if(event.dataTransfer)event.dataTransfer.effectAllowed="copy";});row.append(button);});wrapper.append(row);if(types.length>5){const more=document.createElement("button");more.type="button";more.className="button ghost small shape-more";more.textContent="Add more…";more.addEventListener("click",()=>{const expand=more.dataset.expanded!=="true";row.querySelectorAll("button").forEach(button=>button.hidden=!expand&&Array.from(row.children).indexOf(button)>=5);more.dataset.expanded=String(expand);more.textContent=expand?"Show less":"Add more…";});wrapper.append(more);}palette.append(wrapper);});const list=$("#shape-list");list.replaceChildren();$("#shape-count").textContent=String(site.shapes.length);site.shapes.forEach((shape,index)=>{const card=document.createElement("div");card.className=`shape-card ${selectedShapeId===shape.id?"selected":""}`;const head=document.createElement("div");head.className="shape-card-head";head.innerHTML=`<strong>${shape.type.replaceAll("-"," ")}</strong>`;head.addEventListener("click",()=>{selectedShapeId=shape.id;selectedObjectId="";renderCanvas();renderShapeTools();});const controls=document.createElement("div");controls.className="shape-controls";const addControl=(label,type,value,oninput,attrs={})=>{const wrap=document.createElement("label");wrap.textContent=label;const input=document.createElement("input");input.type=type;input.value=value;Object.assign(input,attrs);input.addEventListener("input",()=>{oninput(input.value);save();});input.addEventListener("change",renderCanvas);wrap.append(input);controls.append(wrap);};appendShapeColorPicker(controls,shape);addControl("Width","range",shape.width??shape.size,v=>shape.width=Number(v),{min:24,max:600});addControl("Height","range",shape.height??shape.size,v=>shape.height=Number(v),{min:24,max:600});addControl("Opacity","range",shape.opacity,v=>shape.opacity=Number(v),{min:0,max:1,step:.05});addControl("Rotation","range",shape.rotation,v=>shape.rotation=Number(v),{min:-180,max:180});const blendLabel=document.createElement("label");blendLabel.textContent="Blending";const blend=document.createElement("select");blendOptions.forEach(mode=>blend.add(new Option(mode.replaceAll("-"," "),mode)));blend.value=shape.blend;blend.addEventListener("change",()=>{shape.blend=blend.value;save();renderCanvas();});blendLabel.append(blend);controls.append(blendLabel);const remove=document.createElement("button");remove.type="button";remove.className="button danger wide";remove.textContent="Delete shape";remove.addEventListener("click",()=>{site.shapes.splice(index,1);save();renderCanvas();renderShapeTools();});card.append(head,controls,remove);list.append(card);});}
 const textPresets={heading:{label:"Heading",text:"Your heading",fontSize:52},subheading:{label:"Subheading",text:"A supporting line",fontSize:32},caption:{label:"Caption",text:"Add a caption",fontSize:18},label:{label:"Label",text:"SECTION LABEL",fontSize:14},badge:{label:"Badge",text:"New",fontSize:20},plain:{label:"Plain text",text:"Your text",fontSize:24}};
-function addCanvasObject(type,x=50,y=50,preset="plain") {const definition=textPresets[preset]||textPresets.plain;const object={id:globalThis.crypto?.randomUUID?.()||`object-${Date.now()}`,type,x,y,width:type==="image"?300:preset==="badge"?140:320,height:type==="image"?190:preset==="badge"?54:100,rotation:0,color:type==="text"?(preset==="badge"?"#ffffff":site.palette.ink):site.palette.ink,background:type==="text"&&preset==="badge"?site.accent:"",opacity:1,blend:"normal",z:3,text:definition.text,fontSize:definition.fontSize,preset:type==="text"?preset:"plain",url:"",alt:""};site.objects.push(object);selectedObjectId=object.id;selectedShapeId="";selectedContent=null;save();renderCanvas();renderCanvasObjectTools();renderInspector();}
+function addCanvasObject(type,x=50,y=50,preset="plain") {const definition=textPresets[preset]||textPresets.plain;const object={id:globalThis.crypto?.randomUUID?.()||`object-${Date.now()}`,type,x,y,width:type==="image"?300:preset==="badge"?140:320,height:type==="image"?190:preset==="badge"?54:100,rotation:0,color:type==="text"?(preset==="badge"?"#ffffff":site.palette.ink):site.palette.ink,background:type==="text"&&preset==="badge"?site.accent:"",opacity:1,blend:"normal",z:3,text:definition.text,fontSize:definition.fontSize,preset:type==="text"?preset:"plain",url:"",alt:""};site.objects.push(object);selectedObjectId=object.id;selectedShapeId="";selectedContent=null;setRailPanel("edit");save();renderCanvas();renderCanvasObjectTools();renderInspector();}
 function renderCanvasObjectTools(){renderAddonToolTabs();const presets=$("#text-presets");presets.replaceChildren();Object.entries(textPresets).forEach(([key,item])=>{const button=document.createElement("button");button.type="button";button.className=`object-preset preset-${key}`;button.textContent=item.label;button.title=`Add ${item.label.toLowerCase()}`;button.addEventListener("click",()=>{if(Date.now()>=suppressPaletteClickUntil)addCanvasObject("text",50,50,key);});button.draggable=true;button.addEventListener("dragstart",event=>{event.dataTransfer?.setData("application/x-websiteforge-text",key);if(event.dataTransfer)event.dataTransfer.effectAllowed="copy";});presets.append(button);});const addImage=$("#add-image-object");addImage.onclick=()=>addCanvasObject("image");addImage.draggable=true;addImage.ondragstart=event=>{event.dataTransfer?.setData("application/x-websiteforge-image","image");if(event.dataTransfer)event.dataTransfer.effectAllowed="copy";};const renderList=(type,target)=>{const list=$(target);list.replaceChildren();site.objects.forEach((object,index)=>{if(object.type!==type)return;const card=document.createElement("div");card.className=`shape-card ${selectedObjectId===object.id?"selected":""}`;const head=document.createElement("div");head.className="shape-card-head object-card-head";head.textContent=type==="text"?`${textPresets[object.preset]?.label||"Text"}: ${object.text.slice(0,24)||"Text"}`:"Image frame";head.addEventListener("click",()=>{selectedObjectId=object.id;selectedShapeId="";renderCanvas();renderCanvasObjectTools();});card.append(head);const controls=document.createElement("div");controls.className="shape-controls object-controls";const addControl=(label,inputType,value,oninput,attrs={})=>{const wrap=document.createElement("label");wrap.textContent=label;const input=document.createElement(inputType==="textarea"?"textarea":"input");input.type=inputType==="textarea"?"text":inputType;input.value=value??"";Object.assign(input,attrs);if(inputType==="textarea"){input.rows=3;input.maxLength=500;}input.addEventListener("input",()=>{oninput(input.value);save();if(inputType==="range")input.setAttribute("aria-valuenow",input.value);renderCanvas();});input.addEventListener("change",()=>{renderCanvas();renderCanvasObjectTools();});wrap.append(input);controls.append(wrap);};const addSelect=(label,value,options,onchange)=>{const wrap=document.createElement("label");wrap.textContent=label;const select=document.createElement("select");options.forEach(([key,name])=>select.add(new Option(name,key)));select.value=value;select.addEventListener("change",()=>{onchange(select.value);save();renderCanvas();renderCanvasObjectTools();});wrap.append(select);controls.append(wrap);};if(type==="text"){addControl("Text","textarea",object.text,value=>object.text=value);addSelect("Text style",object.preset,Object.entries(textPresets).map(([key,item])=>[key,item.label]),value=>{object.preset=value;object.fontSize=textPresets[value].fontSize;if(value==="badge"){object.background=site.accent;object.color="#ffffff";}else if(object.preset!=="badge"){object.background="";}});addControl("Text size","range",object.fontSize,value=>object.fontSize=Number(value),{min:10,max:180});appendShapeColorPicker(controls,object);addControl("Width","range",object.width,value=>object.width=Number(value),{min:24,max:900});addControl("Height","range",object.height,value=>object.height=Number(value),{min:24,max:600});if(object.preset==="badge")addControl("Badge background","color",object.background||site.accent,value=>object.background=value);}
 else{addControl("Image URL (HTTPS)","url",object.url,value=>object.url=value,{placeholder:"https://example.com/image.jpg",maxLength:500});addControl("Alt text","text",object.alt,value=>object.alt=value,{maxLength:160});addControl("Width","range",object.width,value=>object.width=Number(value),{min:24,max:900});addControl("Height","range",object.height,value=>object.height=Number(value),{min:24,max:600});addControl("Frame color","color",object.background||"#d8d8d8",value=>object.background=value);}
 addControl("Opacity","range",object.opacity,value=>object.opacity=Number(value),{min:0,max:1,step:.05});addSelect("Blending",object.blend,blendOptions.map(mode=>[mode,mode.replaceAll("-"," ")]),value=>object.blend=value);const remove=document.createElement("button");remove.type="button";remove.className="button danger wide";remove.textContent=`Delete ${type==="text"?"text":"image frame"}`;remove.addEventListener("click",()=>{site.objects.splice(index,1);if(selectedObjectId===object.id)selectedObjectId="";save();renderCanvas();renderCanvasObjectTools();});card.append(controls,remove);list.append(card);});};renderList("text","#text-object-list");renderList("image","#image-object-list");}
@@ -640,7 +693,7 @@ function update() {
   $("#button-style").value = site.design.buttonStyle;
   renderList(); renderThemes(); renderInspector(); renderCanvas(); renderPlugins(); renderShapeTools(); renderCanvasObjectTools();
 }
-function select(id) { selectedId = id; selectedObjectId = ""; selectedShapeId = ""; selectedContent = null; renderList(); renderInspector(); renderCanvas(); }
+function select(id) { selectedId = id; selectedObjectId = ""; selectedShapeId = ""; selectedContent = null; setRailPanel("edit"); renderList(); renderInspector(); renderCanvas(); }
 function restoreHistory(direction) {
   const next = historyIndex + direction;
   if (next < 0 || next >= history.length) return;
@@ -691,6 +744,116 @@ function shiftLayer(direction) {
   item.z = Math.max(-20, Math.min(20, (Number(item.z) || 0) + direction));
   save(); renderCanvas(); renderInspector();
 }
+function copySelection() {
+  if (selectedObjectId) {
+    const object = site.objects.find(item => item.id === selectedObjectId);
+    if (!object) return false;
+    copiedElement = { kind: "object", value: structuredClone(object) };
+  } else if (selectedShapeId) {
+    const shape = site.shapes.find(item => item.id === selectedShapeId);
+    if (!shape) return false;
+    copiedElement = { kind: "shape", value: structuredClone(shape) };
+  } else if (selectedContent) {
+    const ref = contentRef();
+    const element = document.querySelector(`[data-section-id="${selectedContent.sectionId}"] [data-content-key="${selectedContent.key}"]`);
+    const page = $("#site-preview .built-site");
+    if (!ref || !element || !page) return false;
+    const rect = element.getBoundingClientRect(), pageRect = page.getBoundingClientRect();
+    copiedElement = { kind: "content", image: ref.key === "imageUrl", value: ref.target[ref.key],
+      x: (rect.left + rect.width / 2 - pageRect.left) / pageRect.width * 100,
+      y: (rect.top + rect.height / 2 - pageRect.top) / pageRect.height * 100,
+      width: Math.round(rect.width / zoom), height: Math.round(rect.height / zoom),
+      fontSize: Math.round(parseFloat(getComputedStyle(element).fontSize) || 24),
+      color: getComputedStyle(element).color };
+  } else return false;
+  toast("Element copied. Press Ctrl+V to paste.");
+  return true;
+}
+function pasteSelection() {
+  if (!copiedElement) return false;
+  if (copiedElement.kind === "content") {
+    const copy = copiedElement;
+    addCanvasObject(copy.image ? "image" : "text", Math.min(100, copy.x + 3), Math.min(100, copy.y + 3), copy.image ? "plain" : "caption");
+    const object = site.objects.find(item => item.id === selectedObjectId);
+    if (!object) return false;
+    if (copy.image) { object.url = copy.value; object.alt = "Copied image"; }
+    else { object.text = copy.value; object.fontSize = Math.max(10, Math.min(180, copy.fontSize)); }
+    object.width = Math.max(24, Math.min(900, copy.width)); object.height = Math.max(24, Math.min(600, copy.height));
+  } else if (copiedElement.kind === "object") {
+    const object = { ...structuredClone(copiedElement.value), id: freshContentId("object"), x: Math.min(100, copiedElement.value.x + 3), y: Math.min(100, copiedElement.value.y + 3) };
+    site.objects.push(object); selectedObjectId = object.id; selectedShapeId = ""; selectedContent = null;
+  } else {
+    const shape = { ...structuredClone(copiedElement.value), id: freshContentId("shape"), x: Math.min(100, copiedElement.value.x + 3), y: Math.min(100, copiedElement.value.y + 3) };
+    site.shapes.push(shape); selectedShapeId = shape.id; selectedObjectId = ""; selectedContent = null;
+  }
+  setRailPanel("edit"); update(); toast("Element pasted.");
+  return true;
+}
+function nudgeSelection(dx, dy) {
+  if (!(selectedContent || selectedObjectId || selectedShapeId)) return false;
+  if (selectedContent) {
+    const ref = contentRef(); if (!ref) return false;
+    ref.section.elementStyles ||= {};
+    const layout = ref.section.elementStyles[selectedContent.key] ||= {};
+    layout.x = Math.max(-2000, Math.min(2000, (Number(layout.x) || 0) + dx));
+    layout.y = Math.max(-2000, Math.min(2000, (Number(layout.y) || 0) + dy));
+  } else {
+    const item = selectedObjectId ? site.objects.find(entry => entry.id === selectedObjectId) : site.shapes.find(entry => entry.id === selectedShapeId);
+    const rect = $("#site-preview .built-site")?.getBoundingClientRect();
+    if (!item || !rect) return false;
+    item.x = Math.max(0, Math.min(100, item.x + dx * zoom / rect.width * 100));
+    item.y = Math.max(0, Math.min(100, item.y + dy * zoom / rect.height * 100));
+  }
+  save(); renderCanvas(); renderInspector();
+  return true;
+}
+function changeZoom(amount) {
+  const control = $("#canvas-zoom");
+  control.value = Math.max(Number(control.min), Math.min(Number(control.max), Number(control.value) + amount));
+  control.dispatchEvent(new Event("input", { bubbles: true }));
+  return true;
+}
+function saveShortcuts() {
+  try { localStorage.setItem(shortcutStorageKey, JSON.stringify(shortcuts)); }
+  catch { $("#shortcut-status").textContent = "Could not save shortcuts in this browser."; }
+}
+function renderShortcutSettings() {
+  const list = $("#shortcut-list"); list.replaceChildren();
+  let group = "";
+  for (const definition of SHORTCUT_DEFINITIONS) {
+    if (definition.group !== group) { group = definition.group; const heading = document.createElement("h4"); heading.textContent = group; list.append(heading); }
+    const row = document.createElement("div"); row.className = "shortcut-row";
+    const label = document.createElement("span"); label.textContent = definition.label;
+    const key = document.createElement("button"); key.type = "button"; key.className = "shortcut-key"; key.textContent = shortcuts[definition.id].replaceAll("+", " + ");
+    key.setAttribute("aria-label", `Change ${definition.label} shortcut`);
+    key.addEventListener("click", () => { key.textContent = "Press keys…"; key.classList.add("recording"); key.focus(); });
+    key.addEventListener("keydown", event => {
+      if (!key.classList.contains("recording")) return;
+      event.preventDefault(); event.stopPropagation();
+      if (event.key === "Escape") { renderShortcutSettings(); return; }
+      const combination = shortcutFromKeyboardEvent(event);
+      if (!combination) return;
+      if (["Tab", "Ctrl+Tab", "Ctrl+R", "Ctrl+Shift+R", "Ctrl+L", "Ctrl+W", "F5"].includes(combination)) { $("#shortcut-status").textContent = "That key combination is reserved for the browser."; return; }
+      const conflict = SHORTCUT_DEFINITIONS.find(item => item.id !== definition.id && shortcuts[item.id] === combination);
+      if (conflict) { $("#shortcut-status").textContent = `${combination} is already used for ${conflict.label}.`; return; }
+      shortcuts[definition.id] = combination; saveShortcuts(); renderShortcutSettings();
+      $("#shortcut-status").textContent = `${definition.label} is now ${combination}.`;
+    });
+    const reset = document.createElement("button"); reset.type = "button"; reset.className = "shortcut-reset"; reset.textContent = "Reset";
+    reset.setAttribute("aria-label", `Reset ${definition.label} shortcut`);
+    reset.addEventListener("click", () => {
+      const conflict = SHORTCUT_DEFINITIONS.find(item => item.id !== definition.id && shortcuts[item.id] === definition.default);
+      if (conflict) { $("#shortcut-status").textContent = `Reset ${conflict.label} first, or use Reset all.`; return; }
+      shortcuts[definition.id] = definition.default; saveShortcuts(); renderShortcutSettings();
+      $("#shortcut-status").textContent = `${definition.label} restored.`;
+    });
+    row.append(label, key, reset); list.append(row);
+  }
+}
+function showSettingsTab(name) {
+  document.querySelectorAll(".settings-tab").forEach(button => button.classList.toggle("active", button.dataset.settingsTab === name));
+  document.querySelectorAll(".settings-panel").forEach(panel => panel.hidden = panel.id !== `settings-${name}`);
+}
 async function uploadSelectedImage(file) {
   if (!file || !/^image\/(png|jpeg|webp|gif)$/.test(file.type) || file.size > 15000000) { toast("Choose a PNG, JPG, WebP, or GIF under 15 MB."); return; }
   try {
@@ -725,7 +888,13 @@ async function ai(action) {
   finally { button.disabled = false; }
 }
 
-document.querySelectorAll(".tab").forEach(tab => tab.addEventListener("click", () => setTab(tab.dataset.tab)));
+document.querySelectorAll(".tab").forEach(tab => tab.addEventListener("click", () => setRailPanel(tab.dataset.tab)));
+document.querySelectorAll(".rail-button").forEach(button => button.addEventListener("click", () => setRailPanel(button.dataset.rail)));
+$("#page-strip-add").addEventListener("click", () => { setRailPanel("pages"); $("#add-section").focus(); });
+$("#settings-button").addEventListener("click", () => { showSettingsTab("general"); $("#settings-dialog").showModal(); });
+$("#close-settings-dialog").addEventListener("click", () => $("#settings-dialog").close());
+document.querySelectorAll(".settings-tab").forEach(button => button.addEventListener("click", () => showSettingsTab(button.dataset.settingsTab)));
+$("#reset-all-shortcuts").addEventListener("click", () => { shortcuts = defaultShortcuts(); saveShortcuts(); renderShortcutSettings(); $("#shortcut-status").textContent = "All keyboard shortcuts restored."; });
 $("#undo-button").addEventListener("click", () => restoreHistory(-1));
 $("#redo-button").addEventListener("click", () => restoreHistory(1));
 $("#selection-duplicate").addEventListener("click", duplicateSelection);
@@ -738,19 +907,30 @@ $("#add-shape-button").addEventListener("click", () => addShape("rounded-square"
 $("#open-templates-button").addEventListener("click", () => $("#template-dialog").showModal());
 $("#canvas-image-file").addEventListener("change", async event => { await uploadSelectedImage(event.target.files?.[0]); event.target.value = ""; });
 $("#canvas-zoom").addEventListener("input", event => { zoom = Number(event.target.value) / 100; $("#canvas-frame").style.zoom = String(zoom); $("#zoom-value").textContent = `${event.target.value}%`; });
+const shortcutHandlers = {
+  copy: copySelection, paste: pasteSelection,
+  cut: () => { if (!copySelection()) return false; deleteSelection(); return true; },
+  duplicate: () => { if (!(selectedContent || selectedObjectId || selectedShapeId)) return false; duplicateSelection(); return true; },
+  delete: () => { if (!(selectedContent || selectedObjectId || selectedShapeId)) return false; deleteSelection(); return true; },
+  deleteAlternate: () => shortcutHandlers.delete(),
+  undo: () => { restoreHistory(-1); return true; },
+  redo: () => { restoreHistory(1); return true; },
+  redoAlternate: () => { restoreHistory(1); return true; },
+  forward: () => { if (!(selectedContent || selectedObjectId || selectedShapeId)) return false; shiftLayer(1); return true; },
+  backward: () => { if (!(selectedContent || selectedObjectId || selectedShapeId)) return false; shiftLayer(-1); return true; },
+  up: () => nudgeSelection(0, -1), down: () => nudgeSelection(0, 1), left: () => nudgeSelection(-1, 0), right: () => nudgeSelection(1, 0),
+  upFast: () => nudgeSelection(0, -10), downFast: () => nudgeSelection(0, 10), leftFast: () => nudgeSelection(-10, 0), rightFast: () => nudgeSelection(10, 0),
+  zoomIn: () => changeZoom(10), zoomOut: () => changeZoom(-10),
+  preview: () => { $("#preview-button").click(); return true; },
+  save: () => { $("#export-json-button").click(); return true; },
+  export: () => { $("#export-html-button").click(); return true; },
+  settings: () => { $("#settings-dialog").showModal(); return true; }
+};
 document.addEventListener("keydown", event => {
-  const editing = event.target.closest?.("input,textarea,select,[contenteditable=true]");
-  if (editing) return;
-  if ((event.ctrlKey || event.metaKey) && !event.altKey && event.key.toLowerCase() === "z") { event.preventDefault(); restoreHistory(event.shiftKey ? 1 : -1); return; }
-  if ((event.ctrlKey || event.metaKey) && !event.altKey && event.key.toLowerCase() === "y") { event.preventDefault(); restoreHistory(1); return; }
-  if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "d" && (selectedContent || selectedObjectId || selectedShapeId)) { event.preventDefault(); duplicateSelection(); return; }
-  if ((event.key === "Delete" || event.key === "Backspace") && (selectedContent || selectedObjectId || selectedShapeId)) { event.preventDefault(); deleteSelection(); return; }
-  if (!["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(event.key) || !(selectedContent || selectedObjectId || selectedShapeId)) return;
-  event.preventDefault();
-  const amount = event.shiftKey ? 10 : 1, dx = event.key === "ArrowLeft" ? -amount : event.key === "ArrowRight" ? amount : 0, dy = event.key === "ArrowUp" ? -amount : event.key === "ArrowDown" ? amount : 0;
-  if (selectedContent) { const ref = contentRef(); if (!ref) return; ref.section.elementStyles ||= {}; const layout = ref.section.elementStyles[selectedContent.key] ||= {}; layout.x = (Number(layout.x) || 0) + dx; layout.y = (Number(layout.y) || 0) + dy; }
-  else { const item = selectedObjectId ? site.objects.find(entry => entry.id === selectedObjectId) : site.shapes.find(entry => entry.id === selectedShapeId); if (!item) return; const rect = $("#site-preview .built-site").getBoundingClientRect(); item.x = Math.max(0, Math.min(100, item.x + dx * zoom / rect.width * 100)); item.y = Math.max(0, Math.min(100, item.y + dy * zoom / rect.height * 100)); }
-  save(); renderCanvas(); renderInspector();
+  if (event.target.closest?.("input,textarea,select,[contenteditable=true]") || $("#settings-dialog").open || $("#template-dialog").open) return;
+  const combination = shortcutFromKeyboardEvent(event);
+  const action = SHORTCUT_DEFINITIONS.find(item => shortcuts[item.id] === combination)?.id;
+  if (action && shortcutHandlers[action]?.()) event.preventDefault();
 });
 $("#site-name").addEventListener("input", event => { site.name = event.target.value; save(); renderCanvas(); });
 $("#site-tagline").addEventListener("input", event => { site.tagline = event.target.value; save(); renderCanvas(); });
@@ -790,4 +970,4 @@ $("#install-file-button").addEventListener("click", () => $("#plugin-file").clic
 $("#plugin-file").addEventListener("change", async event => { const file = event.target.files[0]; if (!file) return; try { if (file.size > 1000000) throw new Error("Plugin pack is too large."); installPack(JSON.parse(await file.text())); } catch (error) { pluginStatus(error.message || "Could not install pack."); } event.target.value = ""; });
 $("#generate-site-button").addEventListener("click", () => ai("site"));
 $("#rewrite-section-button").addEventListener("click", () => ai("rewrite"));
-renderTemplateGallery(); applyWorkspaceMode(); setTab(activeTab); update(); renderCatalog(); checkAiAvailability();
+renderTemplateGallery(); renderShortcutSettings(); applyWorkspaceMode(); setRailPanel(activeRail); update(); renderCatalog(); checkAiAvailability();

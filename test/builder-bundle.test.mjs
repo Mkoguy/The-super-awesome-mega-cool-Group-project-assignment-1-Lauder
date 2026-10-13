@@ -14,6 +14,10 @@ test("both browser entry files include the editor and built-in packs", async () 
   assert.equal(index, offline);
   assert.doesNotMatch(index, /<script[^>]+src=|<link[^>]+rel="stylesheet"/i);
   assert.match(index, /websiteforge\.artist-essentials/);
+  assert.match(index, /class="tool-rail"/);
+  assert.match(index, /id="page-strip-list"/);
+  assert.match(index, /id="settings-shortcuts"/);
+  assert.match(index, /function normalizeShortcuts\(/);
   const scripts = [...index.matchAll(/<script>([\s\S]*?)<\/script>/g)];
   assert.equal(scripts.length, 1);
   assert.doesNotThrow(() => new Script(scripts[0][1]));

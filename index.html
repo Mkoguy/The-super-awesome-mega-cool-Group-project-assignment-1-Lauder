@@ -32,6 +32,23 @@ body.workspace-light{background:#f4f3ef;color:#22252a}body.workspace-light .app-
 @media(max-width:760px){.canvas-tip{flex-wrap:wrap}.selection-toolbar{position:relative}}
 .site-preview .editor-content:not(.art-label){position:relative}.site-preview .art-label.editor-content{position:absolute}.site-preview .text-object-content.inline-editing{cursor:text;user-select:text;pointer-events:auto;outline:2px solid #f47b20}
 
+/* Left tool rail and compact pull-out editor inspired by the supplied layout. */
+.app-header{height:76px;min-height:76px;background:linear-gradient(105deg,#08b9c1 0%,#3487d4 48%,#6835d9 100%);border-bottom:0;box-shadow:0 4px 22px #0003}
+.app-header .header-brand small,.app-header .header-center{color:#e6f8ff}.app-header .status-dot{background:#d5fff0}.app-header .button.ghost{border-color:#ffffff55;background:#ffffff16;color:white}.app-header .button.ghost:hover{background:#ffffff30}.app-header .button.primary{background:#fff;border-color:#fff;color:#24202e}.app-header .button.primary:hover{background:#f1e9ff}
+.workspace{height:calc(100vh - 76px);min-height:600px;grid-template-columns:76px 306px minmax(0,1fr);overflow:hidden}
+.tool-rail{grid-column:1;display:flex;flex-direction:column;gap:4px;overflow-y:auto;padding:15px 6px;background:#111218;border-right:1px solid #2f3038;scrollbar-width:thin}
+.rail-button{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;flex:0 0 auto;min-height:68px;padding:7px 3px;border:0;border-radius:9px;background:transparent;color:#b4b6c0;font-size:10px;font-weight:600;cursor:pointer}
+.rail-button:hover,.rail-button:focus-visible{background:#282a35;color:#fff}.rail-button.active{background:#343141;color:#fff;box-shadow:inset 3px 0 #b88aff}.rail-icon{font-size:24px;font-weight:500;line-height:1.05}
+.sidebar{grid-column:2;display:block;height:100%;overflow-y:auto;background:#202127;border-right:1px solid #363740;scrollbar-width:thin;scrollbar-color:#585a64 transparent}
+.sidebar-heading,.tab-list,.sidebar-foot{display:none}.tab-panel{padding:18px;min-height:0}.tab-panel>.section-title:first-child{margin-top:5px}.tab-panel>.section-title h2{font-size:16px}
+.drawer-section{margin:0 0 10px;border:1px solid #40424c;border-radius:11px;background:#282a31;overflow:hidden}.drawer-section[open]{border-color:#665577;background:#272830}.drawer-section>summary{display:flex;align-items:center;justify-content:space-between;list-style:none;padding:15px 16px;color:#f6f6f8;font-size:13px;font-weight:800;cursor:pointer}.drawer-section>summary::-webkit-details-marker{display:none}.drawer-section>summary::after{content:'⌄';font-size:17px;color:#a9aab3;transform:rotate(-90deg);transition:transform .15s}.drawer-section[open]>summary::after{transform:rotate(0)}.drawer-section>summary:hover{background:#343640}.drawer-section[open]>summary{border-bottom:1px solid #41424a}.drawer-section>*:not(summary){margin-left:15px;margin-right:15px}.drawer-section>.section-title{margin-top:15px}.drawer-section>.section-title h2{display:none}.drawer-section .quick-add-grid{margin-top:15px}.drawer-section .helper{margin-bottom:14px}.drawer-section .control-group:first-of-type{margin-top:16px}.drawer-section #add-section,.drawer-section #layer-list{margin-bottom:16px}.drawer-section .canvas-toolbox{margin-top:12px}
+.inspector{border-left:0;border-top:0;padding:21px 18px;background:transparent}.inspector-header{margin-bottom:17px}.inspector-header h2{font-size:22px}.inspector #inspector-form{display:block}.inspector-actions{margin-bottom:16px}
+.stage{grid-column:3;display:flex;flex-direction:column;min-height:0;overflow:hidden;background:#14151b}.stage-toolbar{flex:0 0 auto;min-height:64px;padding:10px 23px;background:#1c1d24;border-color:#30313a}.stage-toolbar .eyebrow{color:#a68beb}.stage-controls .icon-button{font-size:19px}.stage-controls .button{background:#30323b}.selection-toolbar{flex:0 0 auto;background:#252630;border-color:#3d3e49}.canvas-area{flex:1;min-height:0;padding:26px 30px 38px;background:#14151b;align-items:flex-start}.canvas-frame{max-width:1120px;box-shadow:0 18px 55px #000b;border:1px solid #4a4a55}.canvas-frame.mobile{width:390px}.canvas-tip{flex:0 0 auto;padding:9px 19px;min-height:38px;background:#1b1c24;border-top:1px solid #2e3038;color:#9b9eaa}.canvas-tip input{accent-color:#a381f7}
+.page-strip{flex:0 0 auto;display:flex;align-items:center;gap:12px;min-height:122px;padding:10px 18px;background:#1a1b22;border-top:1px solid #34353e}.page-strip-heading{align-self:flex-start;display:grid;gap:3px;min-width:76px;color:#d9d9e1;font-size:11px;font-weight:700}.page-strip-heading span:last-child{color:#90919b;font-size:10px}.page-strip-list{display:flex;align-items:flex-start;gap:10px;min-width:0;flex:1;overflow-x:auto;padding:3px 2px 7px;scrollbar-width:thin}.page-thumb-button{display:grid;gap:5px;flex:0 0 116px;border:0;background:transparent;color:#bfc0c9;text-align:left;cursor:pointer;padding:0}.page-thumb-preview{position:relative;display:block;width:116px;height:69px;overflow:hidden;border:2px solid #484a56;border-radius:6px;background:linear-gradient(150deg,#22262e,#111216);box-shadow:0 2px 7px #0007}.page-thumb-button.active .page-thumb-preview{border-color:#b88aff;box-shadow:0 0 0 2px #b88aff55}.page-thumb-preview::before{content:'';position:absolute;inset:0 auto 0 0;width:10px;background:var(--thumb-accent,#f47b20)}.page-thumb-preview strong{position:absolute;top:17px;left:18px;right:31px;color:#f5f5f7;font-size:8px;line-height:1.15;overflow:hidden;max-height:28px}.page-thumb-preview i{position:absolute;left:18px;bottom:13px;width:48px;height:3px;background:#8c8e96}.page-thumb-preview b{position:absolute;right:10px;top:15px;width:22px;height:34px;border-radius:4px;background:var(--thumb-accent,#f47b20)}.page-thumb-caption{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:10px}.page-strip-add{flex:0 0 46px;height:70px;border:1px solid #4a4c56;border-radius:7px;background:#292a33;color:#d6d6df;font-size:28px}.page-strip-add:hover{border-color:#b88aff;background:#353340}
+.settings-dialog{width:min(760px,calc(100vw - 28px));max-height:min(760px,calc(100vh - 35px));padding:0;border:1px solid #595b68;border-radius:15px;background:#24252c;color:#f6f6f8;box-shadow:0 24px 75px #000b}.settings-dialog::backdrop{background:#0b0b11b8}.settings-dialog-header{display:flex;align-items:center;justify-content:space-between;padding:22px 25px 18px;border-bottom:1px solid #3e404a}.settings-dialog-header h2{margin:5px 0 0;font-size:25px}.settings-dialog-body{display:grid;grid-template-columns:170px minmax(0,1fr);min-height:340px;max-height:calc(100vh - 140px)}.settings-tabs{display:flex;flex-direction:column;gap:5px;padding:18px 10px;background:#1d1e25;border-right:1px solid #3e404a}.settings-tab{padding:12px;border:0;border-radius:8px;background:transparent;color:#b8bac5;text-align:left;font-size:12px;font-weight:700}.settings-tab:hover,.settings-tab.active{background:#393647;color:#fff}.settings-tab.active{box-shadow:inset 3px 0 #b88aff}.settings-panel{overflow:auto;padding:22px 24px}.settings-panel h3{margin:0 0 8px;font-size:18px}.settings-panel p{margin:0 0 19px;color:#afb0ba;font-size:12px;line-height:1.5}.settings-panel-heading{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}.shortcut-list h4{margin:21px 0 7px;color:#b88aff;font-size:11px;letter-spacing:.1em;text-transform:uppercase}.shortcut-row{display:grid;grid-template-columns:minmax(0,1fr) 136px 46px;align-items:center;gap:9px;padding:8px 0;border-bottom:1px solid #3a3b45;font-size:12px}.shortcut-row>span{min-width:0}.shortcut-key{min-height:33px;padding:5px 7px;border:1px solid #626371;border-radius:7px;background:#343640;color:#fff;font-size:11px;font-weight:700;white-space:nowrap}.shortcut-key.recording{border-color:#b88aff;background:#54456f}.shortcut-reset{border:0;background:none;color:#bbb3d3;font-size:10px}.shortcut-reset:hover{color:white}#shortcut-status{min-height:18px;color:#d7b7ff}
+@media(max-width:1100px){.workspace{grid-template-columns:66px 274px minmax(0,1fr)}.rail-button{font-size:9px}.canvas-area{padding:18px}.page-strip-heading{display:none}.inspector{grid-column:auto}.inspector #inspector-form{display:block}}
+@media(max-width:760px){.app-header{height:auto;min-height:76px;flex-wrap:wrap}.workspace{display:grid;grid-template-columns:1fr;grid-template-rows:63px minmax(0,auto) minmax(480px,1fr);height:auto;min-height:100vh;overflow:visible}.tool-rail{grid-column:1;grid-row:1;flex-direction:row;overflow-x:auto;overflow-y:hidden;padding:4px 9px}.rail-button{min-width:68px;min-height:53px;gap:1px}.rail-icon{font-size:19px}.sidebar{grid-column:1;grid-row:2;height:auto;max-height:350px;border-right:0;border-bottom:1px solid #373943}.stage{grid-column:1;grid-row:3;min-height:480px}.canvas-area{min-height:280px;padding:14px}.page-strip{min-height:107px}.page-thumb-button{flex-basis:95px}.page-thumb-preview{width:95px;height:57px}.canvas-tip>span{display:none}.settings-dialog-body{grid-template-columns:1fr}.settings-tabs{flex-direction:row;border-right:0;border-bottom:1px solid #3e404a}.shortcut-row{grid-template-columns:minmax(0,1fr) 106px 35px}}
+
     </style>
 
   </head>
@@ -57,11 +74,24 @@ body.workspace-light{background:#f4f3ef;color:#22252a}body.workspace-light .app-
           <div class="header-context-actions" data-header-for="ai" hidden>
             <a class="button ghost" href="settings.html">AI settings</a>
           </div>
-          <a class="button ghost" href="settings.html" aria-label="WebsiteForge settings">Settings</a>
+          <button type="button" class="button ghost" id="settings-button" aria-label="WebsiteForge settings">Settings</button>
           <input id="import-file" type="file" accept="application/json,.json" hidden />
         </div>
       </header>
       <div class="workspace">
+        <nav class="tool-rail" aria-label="Editor tools">
+          <button type="button" class="rail-button active" data-rail="templates" title="Templates"><span class="rail-icon">▤</span><span>Templates</span></button>
+          <button type="button" class="rail-button" data-rail="elements" title="Elements"><span class="rail-icon">◇</span><span>Elements</span></button>
+          <button type="button" class="rail-button" data-rail="text" title="Text"><span class="rail-icon">T</span><span>Text</span></button>
+          <button type="button" class="rail-button" data-rail="uploads" title="Uploads"><span class="rail-icon">↑</span><span>Uploads</span></button>
+          <button type="button" class="rail-button" data-rail="design" title="Design"><span class="rail-icon">◉</span><span>Design</span></button>
+          <button type="button" class="rail-button" data-rail="site" title="Site details"><span class="rail-icon">⌂</span><span>Site</span></button>
+          <button type="button" class="rail-button" data-rail="layers" title="Layers"><span class="rail-icon">☷</span><span>Layers</span></button>
+          <button type="button" class="rail-button" data-rail="pages" title="Pages"><span class="rail-icon">▣</span><span>Pages</span></button>
+          <button type="button" class="rail-button" data-rail="edit" title="Edit selection"><span class="rail-icon">✎</span><span>Edit</span></button>
+          <button type="button" class="rail-button" data-rail="plugins" title="Plugins"><span class="rail-icon">✧</span><span>Plugins</span></button>
+          <button type="button" class="rail-button" data-rail="ai" title="AI tools"><span class="rail-icon">✦</span><span>AI</span></button>
+        </nav>
         <aside class="sidebar" aria-label="Builder tools">
           <div class="sidebar-heading"><span class="eyebrow">DESIGN STUDIO</span><h1>Make it yours.</h1><p>Add elements, then select anything on the canvas to edit, move, or resize it.</p></div>
           <div class="tab-list" role="tablist" aria-label="Builder panels">
@@ -71,25 +101,37 @@ body.workspace-light{background:#f4f3ef;color:#22252a}body.workspace-light .app-
             <button class="tab" type="button" role="tab" aria-selected="false" data-tab="ai">AI tools <span class="sparkle">✦</span></button>
           </div>
           <section class="tab-panel active" id="panel-build" role="tabpanel">
+            <details class="drawer-section" id="drawer-add" open><summary>Add to canvas</summary>
             <div class="section-title"><h2>Add to canvas</h2></div>
             <div class="quick-add-grid"><button type="button" class="quick-add" id="add-text-button"><span aria-hidden="true">T</span><strong>Text</strong></button><button type="button" class="quick-add" id="add-image-button"><span aria-hidden="true">▧</span><strong>Image</strong></button><button type="button" class="quick-add" id="add-shape-button"><span aria-hidden="true">◆</span><strong>Shape</strong></button><button type="button" class="quick-add" id="open-templates-button"><span aria-hidden="true">▤</span><strong>Template</strong></button></div>
             <input id="canvas-image-file" type="file" accept="image/png,image/jpeg,image/webp,image/gif" hidden />
             <p class="helper">Double-click text to type. Drag any selected element or its corner handle.</p>
-            <div class="sidebar-divider"></div>
+            <div id="canvas-toolbox" class="canvas-toolbox"></div>
+            </details>
+            <details class="drawer-section" id="drawer-site"><summary>Website details</summary>
             <div class="control-group"><label for="site-name">Website name</label><input id="site-name" type="text" maxlength="70" placeholder="Your studio name" /></div>
             <div class="control-group"><label for="site-tagline">Short tagline</label><input id="site-tagline" type="text" maxlength="120" placeholder="Artist & maker" /></div>
             <div class="control-group"><label for="site-footer-note">Footer note</label><input id="site-footer-note" type="text" maxlength="120" placeholder="Made with care" /></div>
+            </details>
+            <details class="drawer-section" id="drawer-templates"><summary>Templates</summary>
             <div class="control-group"><label for="template-select">Starting template</label><div class="template-row"><select id="template-select"><option value="portfolio">Artist portfolio</option><option value="events">Event landing page</option><option value="shop">Creative shop</option><option value="commissions">Commissions & services</option><option value="links">Simple link hub</option></select><button type="button" class="button subtle" id="apply-template-button">Use</button></div><button type="button" class="button ghost wide" id="browse-template-button">Browse template gallery</button><p class="helper">Applying a template replaces the current page.</p></div>
-            <div class="sidebar-divider"></div>
+            </details>
+            <details class="drawer-section" id="drawer-pages"><summary>Page sections</summary>
             <div class="section-title"><h2>Page sections</h2><span id="section-count" class="count">0</span></div>
             <div id="section-list" class="section-list" aria-label="Reorder and select sections"></div>
             <label for="add-section" class="visually-hidden">Add a section</label>
             <select id="add-section"><option value="">+ Add a section</option><option value="hero">Hero</option><option value="intro">About</option><option value="gallery">Gallery</option><option value="features">Highlights</option><option value="events">Events</option><option value="links">Links</option><option value="cta">Call to action</option><option value="blank">Blank</option></select>
-            <div class="sidebar-divider"></div><div class="section-title"><h2>Layers</h2><span class="count" id="layer-count">0</span></div><div id="layer-list" class="layer-list" aria-label="Canvas layers"></div>
+            </details>
+            <details class="drawer-section" id="drawer-layers"><summary>Layers</summary><div class="section-title"><h2>Layers</h2><span class="count" id="layer-count">0</span></div><div id="layer-list" class="layer-list" aria-label="Canvas layers"></div></details>
           </section>
           <section class="tab-panel" id="panel-design" role="tabpanel" hidden>
+            <details class="drawer-section" id="drawer-mood"><summary>Color mood</summary>
             <div class="section-title"><h2>Color mood</h2></div><div id="theme-list" class="theme-list"></div><div class="sidebar-divider"></div>
+            </details>
+            <details class="drawer-section" id="drawer-typography"><summary>Typography</summary>
             <div class="control-group"><label for="font-select">Typography</label><select id="font-select"><option value="editorial">Editorial serif</option><option value="modern">Modern sans</option><option value="playful">Playful rounded</option></select></div>
+            </details>
+            <details class="drawer-section" id="drawer-palette"><summary>Color palette</summary>
             <div class="section-title"><h2>Color palette</h2></div>
             <div class="palette-grid">
               <div class="control-group"><label for="custom-accent">Accent</label><input id="custom-accent" type="color" value="#ed7418" /></div>
@@ -97,6 +139,8 @@ body.workspace-light{background:#f4f3ef;color:#22252a}body.workspace-light .app-
               <div class="control-group"><label for="ink-color">Text</label><input id="ink-color" type="color" value="#27272b" /></div>
               <div class="control-group"><label for="muted-color">Secondary text</label><input id="muted-color" type="color" value="#66666c" /></div>
             </div>
+            </details>
+            <details class="drawer-section" id="drawer-layout"><summary>Layout controls</summary>
             <div class="sidebar-divider"></div>
             <div class="section-title"><h2>Layout controls</h2></div>
             <div class="control-group"><label for="content-width">Content width <output id="content-width-value"></output></label><input id="content-width" type="range" min="760" max="1600" step="20" /></div>
@@ -105,6 +149,7 @@ body.workspace-light{background:#f4f3ef;color:#22252a}body.workspace-light .app-
             <div class="control-group"><label for="heading-scale">Heading size <output id="heading-scale-value"></output></label><input id="heading-scale" type="range" min="0.7" max="1.5" step="0.05" /></div>
             <div class="control-group"><label for="button-style">Button style</label><select id="button-style"><option value="solid">Solid</option><option value="outline">Outline</option><option value="pill">Pill</option></select></div>
             <p class="helper">All settings carry into your exported website.</p>
+            </details>
           </section>
           <section class="tab-panel" id="panel-plugins" role="tabpanel" hidden>
             <div class="ai-intro"><span class="ai-icon" aria-hidden="true">✚</span><h2>Community plugins</h2><p>Add editor tools, sections, themes, and reusable templates. Packs are shareable JSON files; no plugin code runs in your browser.</p></div>
@@ -135,7 +180,8 @@ body.workspace-light{background:#f4f3ef;color:#22252a}body.workspace-light .app-
           <div class="stage-toolbar"><div><span class="eyebrow">PAGE CANVAS</span><strong id="canvas-title">Your website</strong></div><div class="stage-controls"><button type="button" class="icon-button" id="undo-button" aria-label="Undo" title="Undo (Ctrl+Z)">↶</button><button type="button" class="icon-button" id="redo-button" aria-label="Redo" title="Redo (Ctrl+Y)">↷</button><div class="viewport-switch" aria-label="Preview width"><button type="button" class="icon-button active" id="desktop-button" aria-label="Desktop preview" title="Desktop preview">▣</button><button type="button" class="icon-button" id="mobile-button" aria-label="Mobile preview" title="Mobile preview">▯</button></div><button type="button" class="button ghost" id="preview-button">Preview</button></div></div>
           <div id="selection-toolbar" class="selection-toolbar" hidden><span id="selection-label">Element</span><button type="button" class="button ghost small" id="selection-duplicate">Duplicate</button><button type="button" class="button ghost small" id="selection-front">Bring forward</button><button type="button" class="button ghost small" id="selection-back">Send backward</button><button type="button" class="button danger small" id="selection-delete">Delete</button></div>
           <div class="canvas-area"><div id="canvas-frame" class="canvas-frame"><div id="site-preview" class="site-preview"></div></div></div>
-          <div class="canvas-tip"><span>Select text or an image, drag to move it, and use the right panel for precise edits.</span><label for="canvas-zoom">Zoom <input id="canvas-zoom" type="range" min="50" max="150" step="10" value="100" /><output id="zoom-value">100%</output></label></div>
+          <div class="page-strip"><div class="page-strip-heading"><span>Page sections</span><span id="page-strip-count">0</span></div><div id="page-strip-list" class="page-strip-list" aria-label="Page sections"></div><button type="button" class="page-strip-add" id="page-strip-add" aria-label="Add section" title="Add section">+</button></div>
+          <div class="canvas-tip"><span>Double-click text to edit. Drag to move, or select a layer in the left panel.</span><label for="canvas-zoom">Zoom <input id="canvas-zoom" type="range" min="50" max="150" step="10" value="100" /><output id="zoom-value">100%</output></label></div>
         </main>
         <aside class="inspector" aria-label="Selected section editor"><div class="inspector-header"><span class="eyebrow">SECTION EDITOR</span><h2 id="inspector-title">Select a section</h2><p id="inspector-description">Choose a section from the canvas or the list to edit its content.</p></div><form id="inspector-form" autocomplete="off"></form><div class="inspector-actions" id="inspector-actions" hidden><button type="button" class="button ghost" id="duplicate-section-button">Duplicate</button><button type="button" class="button danger" id="delete-section-button">Delete</button></div><nav id="addon-tool-tabs" class="addon-tool-tabs" aria-label="Installed add-on tools" hidden></nav><section class="shape-tools" data-addon-panel="drawing-menu" id="shape-tools" aria-label="Shapes and blending"><div class="sidebar-divider"></div><div class="section-title"><h2>Drawing menu</h2><span class="count" id="shape-count">0</span></div><p class="helper">Drag a shape from the palette onto the preview, or click to place it. Drag a shape to move it, or use its corner handle to resize. Shapes stay with the page as you scroll.</p><div id="shape-palette" class="shape-palette"></div><div class="shape-list" id="shape-list"></div></section><section class="shape-tools" data-addon-panel="text-tool" id="text-tools" aria-label="Text tool" hidden><div class="sidebar-divider"></div><div class="section-title"><h2>Text tool</h2></div><p class="helper">Add a preset, then edit its words, color, and size. Drag it onto the page or click to place it.</p><div id="text-presets" class="object-presets"></div><div id="text-object-list" class="shape-list"></div></section><section class="shape-tools" data-addon-panel="image-tool" id="image-tools" aria-label="Image tool" hidden><div class="sidebar-divider"></div><div class="section-title"><h2>Image tool</h2></div><p class="helper">Place an image frame, paste an HTTPS image URL, then drag or resize it on the page.</p><button type="button" class="button subtle wide image-frame-pick" id="add-image-object">▧ Add image frame</button><div id="image-object-list" class="shape-list"></div></section><section class="shape-tools template-tools" data-addon-panel="template-studio" id="template-tools" aria-label="Template studio" hidden><div class="sidebar-divider"></div><div class="section-title"><h2>Template Studio</h2></div><p class="helper">Save the selected section or canvas item, or package your whole page. Image, button, and link URLs stay in the template.</p><div class="control-group"><label for="template-name">Template name</label><input id="template-name" type="text" maxlength="70" value="My reusable template" /></div><div class="control-group"><label for="template-description">Description</label><textarea id="template-description" rows="3" maxlength="180" placeholder="What makes this template useful?"></textarea></div><div class="control-group"><label for="template-scope">Save</label><select id="template-scope"><option value="selection">Selected section or canvas item</option><option value="page">All sections and canvas items</option></select></div><button type="button" class="button primary wide" id="save-template-pack">Create &amp; download template pack</button><p id="template-status" class="helper" role="status">The JSON pack can be shared by email or installed from a file or HTTPS URL.</p></section></aside>
       </div>
@@ -143,6 +189,12 @@ body.workspace-light{background:#f4f3ef;color:#22252a}body.workspace-light .app-
     <dialog id="template-dialog" class="template-dialog" aria-labelledby="template-dialog-title">
       <div class="template-dialog-header"><div><span class="eyebrow">STARTING POINTS</span><h2 id="template-dialog-title">Choose a template</h2><p>Preview a starter layout or add an installed template pack.</p></div><button type="button" class="button ghost" id="close-template-dialog">Close</button></div>
       <div id="template-gallery" class="template-gallery"></div>
+    </dialog>
+    <dialog id="settings-dialog" class="settings-dialog" aria-labelledby="settings-dialog-title">
+      <div class="settings-dialog-header"><div><span class="eyebrow">PREFERENCES</span><h2 id="settings-dialog-title">Settings</h2></div><button type="button" class="button ghost" id="close-settings-dialog">Close</button></div>
+      <div class="settings-dialog-body"><nav class="settings-tabs" aria-label="Settings tabs"><button type="button" class="settings-tab active" data-settings-tab="general">General</button><button type="button" class="settings-tab" data-settings-tab="shortcuts">Keyboard shortcuts</button></nav>
+      <section class="settings-panel" id="settings-general"><h3>WebsiteForge</h3><p>Your page and shortcut preferences are saved in this browser.</p><a class="button ghost" href="settings.html">AI settings</a></section>
+      <section class="settings-panel" id="settings-shortcuts" hidden><div class="settings-panel-heading"><div><h3>Keyboard shortcuts</h3><p>Click a shortcut, then press the keys you want to use.</p></div><button type="button" class="button ghost small" id="reset-all-shortcuts">Reset all</button></div><div id="shortcut-list" class="shortcut-list"></div><p id="shortcut-status" class="helper" role="status"></p></section></div>
     </dialog>
     <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
     <script>
@@ -434,15 +486,85 @@ function createPluginSection(definition) {
   return makeSection("plugin", { ...structuredClone(definition.defaults), layout: definition.layout, pluginName: definition.name });
 }
 
+const SHORTCUT_DEFINITIONS = [
+  { id: "copy", label: "Copy selected element", group: "Editing", default: "Ctrl+C" },
+  { id: "paste", label: "Paste element", group: "Editing", default: "Ctrl+V" },
+  { id: "cut", label: "Cut selected element", group: "Editing", default: "Ctrl+X" },
+  { id: "duplicate", label: "Duplicate selected element", group: "Editing", default: "Ctrl+D" },
+  { id: "delete", label: "Delete selected element", group: "Editing", default: "Delete" },
+  { id: "deleteAlternate", label: "Delete (alternate)", group: "Editing", default: "Backspace" },
+  { id: "undo", label: "Undo", group: "Editing", default: "Ctrl+Z" },
+  { id: "redo", label: "Redo", group: "Editing", default: "Ctrl+Shift+Z" },
+  { id: "redoAlternate", label: "Redo (alternate)", group: "Editing", default: "Ctrl+Y" },
+  { id: "forward", label: "Bring forward", group: "Arrange", default: "Ctrl+BracketRight" },
+  { id: "backward", label: "Send backward", group: "Arrange", default: "Ctrl+BracketLeft" },
+  { id: "up", label: "Move up 1 px", group: "Arrange", default: "ArrowUp" },
+  { id: "down", label: "Move down 1 px", group: "Arrange", default: "ArrowDown" },
+  { id: "left", label: "Move left 1 px", group: "Arrange", default: "ArrowLeft" },
+  { id: "right", label: "Move right 1 px", group: "Arrange", default: "ArrowRight" },
+  { id: "upFast", label: "Move up 10 px", group: "Arrange", default: "Shift+ArrowUp" },
+  { id: "downFast", label: "Move down 10 px", group: "Arrange", default: "Shift+ArrowDown" },
+  { id: "leftFast", label: "Move left 10 px", group: "Arrange", default: "Shift+ArrowLeft" },
+  { id: "rightFast", label: "Move right 10 px", group: "Arrange", default: "Shift+ArrowRight" },
+  { id: "zoomIn", label: "Zoom in", group: "View", default: "Ctrl+Equal" },
+  { id: "zoomOut", label: "Zoom out", group: "View", default: "Ctrl+Minus" },
+  { id: "preview", label: "Preview site", group: "View", default: "Ctrl+P" },
+  { id: "save", label: "Save project file", group: "Project", default: "Ctrl+S" },
+  { id: "export", label: "Export website", group: "Project", default: "Ctrl+E" },
+  { id: "settings", label: "Open settings", group: "Project", default: "Ctrl+Comma" }
+];
+
+const DEFAULTS = Object.fromEntries(SHORTCUT_DEFINITIONS.map(item => [item.id, item.default]));
+const specialKeys = { " ": "Space", "+": "Plus", "-": "Minus", "=": "Equal", ",": "Comma", "[": "BracketLeft", "]": "BracketRight", "/": "Slash" };
+const modifierKeys = new Set(["Control", "Shift", "Alt", "Meta"]);
+
+function shortcutFromKeyboardEvent(event) {
+  if (modifierKeys.has(event.key)) return "";
+  const key = specialKeys[event.key] || (event.key.length === 1 ? event.key.toUpperCase() : event.key);
+  if (!/^(?:[A-Z0-9]|F(?:[1-9]|1[0-2])|Arrow(?:Up|Down|Left|Right)|Delete|Backspace|Escape|Enter|Tab|Space|Plus|Minus|Equal|Comma|BracketLeft|BracketRight|Slash)$/.test(key)) return "";
+  return [event.ctrlKey || event.metaKey ? "Ctrl" : "", event.altKey ? "Alt" : "", event.shiftKey ? "Shift" : "", key].filter(Boolean).join("+");
+}
+
+function normalizeShortcuts(saved) {
+  if (!saved || typeof saved !== "object" || Array.isArray(saved)) return { ...DEFAULTS };
+  const valid = value => typeof value === "string" && value.length <= 36 &&
+    /^(?:(?:Ctrl|Alt|Shift)\+)*(?:[A-Z0-9]|F(?:[1-9]|1[0-2])|Arrow(?:Up|Down|Left|Right)|Delete|Backspace|Escape|Enter|Tab|Space|Plus|Minus|Equal|Comma|BracketLeft|BracketRight|Slash)$/.test(value) &&
+    !["Tab", "Ctrl+Tab", "Ctrl+R", "Ctrl+Shift+R", "Ctrl+L", "Ctrl+W", "F5"].includes(value);
+  const proposed = Object.fromEntries(SHORTCUT_DEFINITIONS.map(item => [item.id, valid(saved[item.id]) ? saved[item.id] : item.default]));
+  if (new Set(Object.values(proposed)).size === SHORTCUT_DEFINITIONS.length) return proposed;
+  const result = {}, used = new Set();
+  for (const item of SHORTCUT_DEFINITIONS) {
+    const value = proposed[item.id];
+    if (value !== item.default && !used.has(value)) { result[item.id] = value; used.add(value); }
+  }
+  for (const item of SHORTCUT_DEFINITIONS) {
+    if (result[item.id]) continue;
+    const value = !used.has(item.default) ? item.default : SHORTCUT_DEFINITIONS.map(entry => entry.default).find(entry => !used.has(entry));
+    result[item.id] = value;
+    used.add(value);
+  }
+  return result;
+}
+
+function defaultShortcuts() { return { ...DEFAULTS }; }
+
 
 const siteStyles = document.createElement("style"); siteStyles.textContent = SITE_CSS; document.head.append(siteStyles);
 
 const $ = selector => document.querySelector(selector);
-for (const id of ["addon-tool-tabs", "shape-tools", "text-tools", "image-tools", "template-tools"]) $("#panel-build").append($("#" + id));
+for (const id of ["addon-tool-tabs", "shape-tools", "text-tools", "image-tools", "template-tools"]) $("#canvas-toolbox").append($("#" + id));
 $("#addon-tool-tabs").setAttribute("aria-label", "Canvas tools");
+document.querySelectorAll(".drawer-section").forEach(section => section.name = "builder-drawer");
+$(".sidebar").insertBefore($(".inspector"), $(".sidebar-foot"));
+$(".inspector").hidden = true;
+const uploadToolButton = document.createElement("button");
+uploadToolButton.type = "button"; uploadToolButton.className = "button subtle wide"; uploadToolButton.textContent = "↑ Upload image";
+uploadToolButton.addEventListener("click", () => { selectedContent = null; selectedObjectId = ""; selectedShapeId = ""; $("#canvas-image-file").click(); });
+$("#add-image-object").after(uploadToolButton);
 const storageKey = "websiteforge-project-v1";
 const pluginStorageKey = "websiteforge-plugins-v1";
 const workspaceModeKey = "websiteforge-workspace-mode-v1";
+const shortcutStorageKey = "websiteforge-shortcuts-v1";
 const bundledCatalog = globalThis.websiteForgeBuiltins || null;
 let site;
 try { site = normalizeSite(JSON.parse(localStorage.getItem(storageKey))); }
@@ -460,11 +582,16 @@ let selectedContent = null;
 let activeAddonTool = "";
 let suppressPaletteClickUntil = 0;
 let activeTab = "build";
+let activeRail = "templates";
 let toastTimer;
 let zoom = 1;
 let history = [JSON.stringify(site)];
 let historyIndex = 0;
 let restoringHistory = false;
+let shortcuts;
+try { shortcuts = normalizeShortcuts(JSON.parse(localStorage.getItem(shortcutStorageKey))); }
+catch { shortcuts = defaultShortcuts(); }
+let copiedElement = null;
 
 function save() {
   const snapshot = JSON.stringify(site);
@@ -556,6 +683,25 @@ function setTab(name) {
     panel.classList.toggle("active", current);
   });
 }
+function setRailPanel(name) {
+  activeRail = name;
+  document.querySelectorAll(".rail-button").forEach(button => {
+    const active = button.dataset.rail === name;
+    button.classList.toggle("active", active);
+    button.setAttribute("aria-current", active ? "true" : "false");
+  });
+  const tab = ["design", "plugins", "ai"].includes(name) ? name : "build";
+  setTab(tab);
+  const editing = name === "edit";
+  $(".inspector").hidden = !editing;
+  if (editing) $("#panel-build").hidden = true;
+  const tool = ({ elements: "drawing-menu", text: "text-tool", uploads: "image-tool" })[name];
+  if (tool) { activeAddonTool = tool; renderAddonToolTabs(); }
+  const drawer = ({ templates: "drawer-templates", elements: "drawer-add", text: "drawer-add", uploads: "drawer-add", layers: "drawer-layers", pages: "drawer-pages", site: "drawer-site", design: "drawer-mood" })[name];
+  document.querySelectorAll(".drawer-section").forEach(section => section.open = section.id === drawer);
+  const sidebar = $(".sidebar");
+  sidebar.scrollTop = 0;
+}
 function renderList() {
   const list = $("#section-list");
   list.replaceChildren();
@@ -571,6 +717,26 @@ function renderList() {
     row.append(choose, up, down); list.append(row);
   });
   $("#section-count").textContent = String(site.sections.length);
+}
+function renderPageStrip() {
+  const list = $("#page-strip-list");
+  list.replaceChildren();
+  site.sections.forEach((section, index) => {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = `page-thumb-button ${section.id === selectedId ? "active" : ""}`;
+    button.setAttribute("aria-label", `Select ${SECTION_LABELS[section.type] || "section"} ${index + 1}`);
+    const preview = document.createElement("span"); preview.className = "page-thumb-preview";
+    preview.style.setProperty("--thumb-accent", section.background || site.accent);
+    const heading = document.createElement("strong"); heading.textContent = (section.title || SECTION_LABELS[section.type] || "Section").slice(0, 34);
+    const line = document.createElement("i"); const art = document.createElement("b");
+    preview.append(heading, line, art);
+    const caption = document.createElement("span"); caption.className = "page-thumb-caption"; caption.textContent = `${index + 1}. ${SECTION_LABELS[section.type] || "Section"}`;
+    button.append(preview, caption);
+    button.addEventListener("click", () => { select(section.id); $("#site-preview [data-section-id=\"" + section.id + "\"]")?.scrollIntoView({ block: "center", behavior: "smooth" }); });
+    list.append(button);
+  });
+  $("#page-strip-count").textContent = String(site.sections.length);
 }
 function move(index, direction) {
   const [item] = site.sections.splice(index, 1);
@@ -659,10 +825,10 @@ function renderLayerList() {
 }
 function selectContent(sectionId, key) {
   selectedId = sectionId; selectedContent = { sectionId, key }; selectedObjectId = ""; selectedShapeId = "";
-  renderList(); renderInspector(); renderCanvas();
+  setRailPanel("edit"); renderList(); renderInspector(); renderCanvas();
 }
-function selectCanvasObject(id) { selectedObjectId = id; selectedShapeId = ""; selectedContent = null; renderInspector(); renderCanvas(); renderCanvasObjectTools(); }
-function selectCanvasShape(id) { selectedShapeId = id; selectedObjectId = ""; selectedContent = null; renderInspector(); renderCanvas(); renderShapeTools(); }
+function selectCanvasObject(id) { selectedObjectId = id; selectedShapeId = ""; selectedContent = null; setRailPanel("edit"); renderInspector(); renderCanvas(); renderCanvasObjectTools(); }
+function selectCanvasShape(id) { selectedShapeId = id; selectedObjectId = ""; selectedContent = null; setRailPanel("edit"); renderInspector(); renderCanvas(); renderShapeTools(); }
 function startInlineEdit(element, sectionId, key) {
   selectedContent = { sectionId, key }; const ref = contentRef(); if (!ref) return;
   element.textContent = ref.target[ref.key] || "";
@@ -772,7 +938,7 @@ function renderCanvas() {
       event.stopPropagation();
       if (element.isContentEditable) return;
       event.preventDefault();
-      selectedId = sectionId; selectedContent = { sectionId, key }; selectedObjectId = ""; selectedShapeId = "";
+      selectedId = sectionId; selectedContent = { sectionId, key }; selectedObjectId = ""; selectedShapeId = ""; setRailPanel("edit");
       document.querySelectorAll(".content-selected").forEach(node => node.classList.remove("content-selected"));
       element.classList.add("content-selected");
       if (!element.querySelector(".content-resize-handle")) { const handle = document.createElement("span"); handle.className = "content-resize-handle"; element.append(handle); }
@@ -811,7 +977,7 @@ function renderCanvas() {
     element.addEventListener("pointerdown", event => {
       event.preventDefault(); event.stopPropagation();
       const shape = site.shapes.find(item => item.id === element.dataset.shapeId); if (!shape) return;
-      selectedShapeId = shape.id; selectedObjectId = ""; selectedContent = null;
+      selectedShapeId = shape.id; selectedObjectId = ""; selectedContent = null; setRailPanel("edit");
       document.querySelectorAll(".shape-resize-handle").forEach(existing => { if (existing.parentElement !== element) existing.remove(); });
       if (!element.querySelector(".shape-resize-handle")) element.insertAdjacentHTML("beforeend", '<rect class="shape-selection-box" x="1" y="1" width="98" height="98"/><rect class="shape-resize-handle" data-resize="n" x="35" y="-3" width="30" height="6" rx="3"/><rect class="shape-resize-handle" data-resize="e" x="97" y="35" width="6" height="30" rx="3"/><rect class="shape-resize-handle" data-resize="s" x="35" y="97" width="30" height="6" rx="3"/><rect class="shape-resize-handle" data-resize="w" x="-3" y="35" width="6" height="30" rx="3"/><circle class="shape-resize-handle" data-resize="nw" cx="3" cy="3" r="4"/><circle class="shape-resize-handle" data-resize="ne" cx="97" cy="3" r="4"/><circle class="shape-resize-handle" data-resize="se" cx="97" cy="97" r="5"/><circle class="shape-resize-handle" data-resize="sw" cx="3" cy="97" r="4"/>');
       const resizeDirection = event.target.closest(".shape-resize-handle")?.dataset.resize || "";
@@ -859,7 +1025,7 @@ function renderCanvas() {
       const object = site.objects.find(item => item.id === element.dataset.objectId); if (!object) return;
       if (selectedObjectId !== object.id) {
         document.querySelectorAll(".canvas-object-selected").forEach(previous => { previous.classList.remove("canvas-object-selected"); previous.querySelectorAll(".object-selection-box,.object-resize-handle").forEach(handle => handle.remove()); });
-        selectedObjectId = object.id; selectedShapeId = ""; selectedContent = null;
+        selectedObjectId = object.id; selectedShapeId = ""; selectedContent = null; setRailPanel("edit");
         element.classList.add("canvas-object-selected");
         element.insertAdjacentHTML("beforeend", `<span class="object-selection-box"></span>${["n","e","s","w","nw","ne","se","sw"].map(direction => `<span class="object-resize-handle" data-resize="${direction}" aria-label="Resize ${direction}"></span>`).join("")}`);
         renderCanvasObjectTools(); renderInspector(); renderLayerList();
@@ -889,11 +1055,11 @@ function renderCanvas() {
     });
   });
   $("#canvas-title").textContent = site.name;
-  renderSelectionToolbar(); renderLayerList();
+  renderSelectionToolbar(); renderLayerList(); renderPageStrip();
 }
 const shapeOptions=SHAPE_TYPES;
 const blendOptions=["normal","multiply","screen","overlay","darken","lighten","color-dodge","color-burn","hard-light","soft-light","difference","exclusion","hue","saturation","color","luminosity"];
-function addShape(type,x=50,y=50){const shape={id:globalThis.crypto?.randomUUID?.()||`shape-${Date.now()}`,type,x,y,size:120,width:120,height:120,color:site.accent,opacity:.8,blend:"normal",rotation:0,z:2};site.shapes.push(shape);selectedShapeId=shape.id;selectedObjectId="";selectedContent=null;save();renderCanvas();renderShapeTools();renderInspector();}
+function addShape(type,x=50,y=50){const shape={id:globalThis.crypto?.randomUUID?.()||`shape-${Date.now()}`,type,x,y,size:120,width:120,height:120,color:site.accent,opacity:.8,blend:"normal",rotation:0,z:2};site.shapes.push(shape);selectedShapeId=shape.id;selectedObjectId="";selectedContent=null;setRailPanel("edit");save();renderCanvas();renderShapeTools();renderInspector();}
 function hexToHsv(hex){const value=hex.replace("#","");let r=parseInt(value.slice(0,2),16)/255,g=parseInt(value.slice(2,4),16)/255,b=parseInt(value.slice(4,6),16)/255;const max=Math.max(r,g,b),min=Math.min(r,g,b),delta=max-min;let h=0;if(delta){if(max===r)h=((g-b)/delta)%6;else if(max===g)h=(b-r)/delta+2;else h=(r-g)/delta+4;h=(h*60+360)%360;}return{h,s:max?delta/max:0,v:max};}
 function hsvToHex(h,s,v){const c=v*s,x=c*(1-Math.abs((h/60)%2-1)),m=v-c;let rgb=h<60?[c,x,0]:h<120?[x,c,0]:h<180?[0,c,x]:h<240?[0,x,c]:h<300?[x,0,c]:[c,0,x];return"#"+rgb.map(channel=>Math.round((channel+m)*255).toString(16).padStart(2,"0")).join("");}
 function appendShapeColorPicker(parent,shape){const state=hexToHsv(shape.color),wrap=document.createElement("div"),label=document.createElement("label"),hue=document.createElement("input"),field=document.createElement("div"),thumb=document.createElement("span");wrap.className="shape-color-picker";label.textContent="Color";hue.type="range";hue.min=0;hue.max=360;hue.value=state.h;hue.setAttribute("aria-label","Color hue");field.className="shape-color-field";field.tabIndex=0;field.setAttribute("role","slider");field.setAttribute("aria-label","Color saturation and brightness");thumb.className="shape-color-thumb";field.append(thumb);const paint=()=>{field.style.backgroundImage=`linear-gradient(to top,#000,transparent),linear-gradient(to right,#fff,hsl(${state.h} 100% 50%))`;thumb.style.left=`${state.s*100}%`;thumb.style.top=`${(1-state.v)*100}%`;field.setAttribute("aria-valuetext",shape.color);};const updateColor=()=>{shape.color=hsvToHex(state.h,state.s,state.v);paint();save();renderCanvas();};const pickPoint=event=>{const rect=field.getBoundingClientRect();state.s=Math.max(0,Math.min(1,(event.clientX-rect.left)/rect.width));state.v=1-Math.max(0,Math.min(1,(event.clientY-rect.top)/rect.height));updateColor();};hue.addEventListener("input",()=>{state.h=Number(hue.value);updateColor();});field.addEventListener("pointerdown",event=>{event.preventDefault();field.setPointerCapture(event.pointerId);pickPoint(event);const move=e=>pickPoint(e),stop=()=>{field.removeEventListener("pointermove",move);field.removeEventListener("pointerup",stop);field.removeEventListener("pointercancel",stop);};field.addEventListener("pointermove",move);field.addEventListener("pointerup",stop);field.addEventListener("pointercancel",stop);});field.addEventListener("keydown",event=>{const step=event.shiftKey ? 0.1 : 0.02;if(event.key==="ArrowLeft")state.s=Math.max(0,state.s-step);else if(event.key==="ArrowRight")state.s=Math.min(1,state.s+step);else if(event.key==="ArrowUp")state.v=Math.min(1,state.v+step);else if(event.key==="ArrowDown")state.v=Math.max(0,state.v-step);else return;event.preventDefault();updateColor();});paint();wrap.append(label,hue,field);parent.append(wrap);}
@@ -903,7 +1069,7 @@ shapeDropZone.addEventListener("drop",event=>{const shapeType=event.dataTransfer
 function renderAddonToolTabs(){const definitions=[{feature:"drawing-menu",label:"Drawing",panel:"#shape-tools"},{feature:"text-tool",label:"Text",panel:"#text-tools"},{feature:"image-tool",label:"Image",panel:"#image-tools"},{feature:"template-studio",label:"Templates",panel:"#template-tools"}];const available=definitions.filter(definition=>definition.feature!=="template-studio"||installed.some(pack=>pack.features.includes(definition.feature)));if(!available.some(definition=>definition.feature===activeAddonTool))activeAddonTool=available[0]?.feature||"";const tabs=$("#addon-tool-tabs");tabs.replaceChildren();tabs.hidden=!available.length;available.forEach(definition=>{const button=document.createElement("button");button.type="button";button.className=`addon-tool-tab ${activeAddonTool===definition.feature?"active":""}`;button.textContent=definition.label;button.setAttribute("aria-selected",String(activeAddonTool===definition.feature));button.addEventListener("click",()=>{activeAddonTool=definition.feature;renderAddonToolTabs();});tabs.append(button);});definitions.forEach(definition=>{const panel=$(definition.panel);panel.hidden=!available.some(item=>item.feature===definition.feature)||activeAddonTool!==definition.feature;});}
 function renderShapeTools(){renderAddonToolTabs();const groups={"Basic shapes":["square","rectangle","rounded-square","circle","ellipse","triangle","inverted-triangle","right-triangle","diamond","cross","plus"],Polygons:["trapezoid","parallelogram","pentagon","hexagon","heptagon","octagon","nonagon","decagon"],Stars:["star-3","star-4","star-5","star-6","star-8","star-10","star-12","starburst"],Arrows:["arrow-right","arrow-left","arrow-up","arrow-down","double-arrow","chevron"],Symbols:["heart","lightning","moon","cloud","speech-bubble","line","curve","zigzag","pie","arc","ring"],Flowchart:["flow-terminal","flow-process","flow-decision","flow-document","flow-data","flow-delay","flow-display","flow-preparation","flow-database","flow-manual-input","flow-stored-data"]};const palette=$("#shape-palette");palette.replaceChildren();Object.entries(groups).forEach(([group,types])=>{const wrapper=document.createElement("div");wrapper.className="shape-group";const title=document.createElement("div");title.className="shape-group-title";title.textContent=group;wrapper.append(title);const row=document.createElement("div");row.className="shape-picks";types.forEach((type,index)=>{const button=document.createElement("button");button.type="button";button.className="shape-pick";button.title=type.replaceAll("-"," ");button.setAttribute("aria-label",`Add ${button.title}`);button.innerHTML=`<svg viewBox="0 0 100 100" aria-hidden="true">${shapeSvgMarkup(type,site.accent)}</svg>`;if(index>=5)button.hidden=true;button.addEventListener("click",()=>{if(Date.now()>=suppressPaletteClickUntil)addShape(type);});button.draggable=true;button.addEventListener("dragstart",event=>{event.dataTransfer?.setData("application/x-websiteforge-shape",type);if(event.dataTransfer)event.dataTransfer.effectAllowed="copy";});row.append(button);});wrapper.append(row);if(types.length>5){const more=document.createElement("button");more.type="button";more.className="button ghost small shape-more";more.textContent="Add more…";more.addEventListener("click",()=>{const expand=more.dataset.expanded!=="true";row.querySelectorAll("button").forEach(button=>button.hidden=!expand&&Array.from(row.children).indexOf(button)>=5);more.dataset.expanded=String(expand);more.textContent=expand?"Show less":"Add more…";});wrapper.append(more);}palette.append(wrapper);});const list=$("#shape-list");list.replaceChildren();$("#shape-count").textContent=String(site.shapes.length);site.shapes.forEach((shape,index)=>{const card=document.createElement("div");card.className=`shape-card ${selectedShapeId===shape.id?"selected":""}`;const head=document.createElement("div");head.className="shape-card-head";head.innerHTML=`<strong>${shape.type.replaceAll("-"," ")}</strong>`;head.addEventListener("click",()=>{selectedShapeId=shape.id;selectedObjectId="";renderCanvas();renderShapeTools();});const controls=document.createElement("div");controls.className="shape-controls";const addControl=(label,type,value,oninput,attrs={})=>{const wrap=document.createElement("label");wrap.textContent=label;const input=document.createElement("input");input.type=type;input.value=value;Object.assign(input,attrs);input.addEventListener("input",()=>{oninput(input.value);save();});input.addEventListener("change",renderCanvas);wrap.append(input);controls.append(wrap);};appendShapeColorPicker(controls,shape);addControl("Width","range",shape.width??shape.size,v=>shape.width=Number(v),{min:24,max:600});addControl("Height","range",shape.height??shape.size,v=>shape.height=Number(v),{min:24,max:600});addControl("Opacity","range",shape.opacity,v=>shape.opacity=Number(v),{min:0,max:1,step:.05});addControl("Rotation","range",shape.rotation,v=>shape.rotation=Number(v),{min:-180,max:180});const blendLabel=document.createElement("label");blendLabel.textContent="Blending";const blend=document.createElement("select");blendOptions.forEach(mode=>blend.add(new Option(mode.replaceAll("-"," "),mode)));blend.value=shape.blend;blend.addEventListener("change",()=>{shape.blend=blend.value;save();renderCanvas();});blendLabel.append(blend);controls.append(blendLabel);const remove=document.createElement("button");remove.type="button";remove.className="button danger wide";remove.textContent="Delete shape";remove.addEventListener("click",()=>{site.shapes.splice(index,1);save();renderCanvas();renderShapeTools();});card.append(head,controls,remove);list.append(card);});}
 const textPresets={heading:{label:"Heading",text:"Your heading",fontSize:52},subheading:{label:"Subheading",text:"A supporting line",fontSize:32},caption:{label:"Caption",text:"Add a caption",fontSize:18},label:{label:"Label",text:"SECTION LABEL",fontSize:14},badge:{label:"Badge",text:"New",fontSize:20},plain:{label:"Plain text",text:"Your text",fontSize:24}};
-function addCanvasObject(type,x=50,y=50,preset="plain") {const definition=textPresets[preset]||textPresets.plain;const object={id:globalThis.crypto?.randomUUID?.()||`object-${Date.now()}`,type,x,y,width:type==="image"?300:preset==="badge"?140:320,height:type==="image"?190:preset==="badge"?54:100,rotation:0,color:type==="text"?(preset==="badge"?"#ffffff":site.palette.ink):site.palette.ink,background:type==="text"&&preset==="badge"?site.accent:"",opacity:1,blend:"normal",z:3,text:definition.text,fontSize:definition.fontSize,preset:type==="text"?preset:"plain",url:"",alt:""};site.objects.push(object);selectedObjectId=object.id;selectedShapeId="";selectedContent=null;save();renderCanvas();renderCanvasObjectTools();renderInspector();}
+function addCanvasObject(type,x=50,y=50,preset="plain") {const definition=textPresets[preset]||textPresets.plain;const object={id:globalThis.crypto?.randomUUID?.()||`object-${Date.now()}`,type,x,y,width:type==="image"?300:preset==="badge"?140:320,height:type==="image"?190:preset==="badge"?54:100,rotation:0,color:type==="text"?(preset==="badge"?"#ffffff":site.palette.ink):site.palette.ink,background:type==="text"&&preset==="badge"?site.accent:"",opacity:1,blend:"normal",z:3,text:definition.text,fontSize:definition.fontSize,preset:type==="text"?preset:"plain",url:"",alt:""};site.objects.push(object);selectedObjectId=object.id;selectedShapeId="";selectedContent=null;setRailPanel("edit");save();renderCanvas();renderCanvasObjectTools();renderInspector();}
 function renderCanvasObjectTools(){renderAddonToolTabs();const presets=$("#text-presets");presets.replaceChildren();Object.entries(textPresets).forEach(([key,item])=>{const button=document.createElement("button");button.type="button";button.className=`object-preset preset-${key}`;button.textContent=item.label;button.title=`Add ${item.label.toLowerCase()}`;button.addEventListener("click",()=>{if(Date.now()>=suppressPaletteClickUntil)addCanvasObject("text",50,50,key);});button.draggable=true;button.addEventListener("dragstart",event=>{event.dataTransfer?.setData("application/x-websiteforge-text",key);if(event.dataTransfer)event.dataTransfer.effectAllowed="copy";});presets.append(button);});const addImage=$("#add-image-object");addImage.onclick=()=>addCanvasObject("image");addImage.draggable=true;addImage.ondragstart=event=>{event.dataTransfer?.setData("application/x-websiteforge-image","image");if(event.dataTransfer)event.dataTransfer.effectAllowed="copy";};const renderList=(type,target)=>{const list=$(target);list.replaceChildren();site.objects.forEach((object,index)=>{if(object.type!==type)return;const card=document.createElement("div");card.className=`shape-card ${selectedObjectId===object.id?"selected":""}`;const head=document.createElement("div");head.className="shape-card-head object-card-head";head.textContent=type==="text"?`${textPresets[object.preset]?.label||"Text"}: ${object.text.slice(0,24)||"Text"}`:"Image frame";head.addEventListener("click",()=>{selectedObjectId=object.id;selectedShapeId="";renderCanvas();renderCanvasObjectTools();});card.append(head);const controls=document.createElement("div");controls.className="shape-controls object-controls";const addControl=(label,inputType,value,oninput,attrs={})=>{const wrap=document.createElement("label");wrap.textContent=label;const input=document.createElement(inputType==="textarea"?"textarea":"input");input.type=inputType==="textarea"?"text":inputType;input.value=value??"";Object.assign(input,attrs);if(inputType==="textarea"){input.rows=3;input.maxLength=500;}input.addEventListener("input",()=>{oninput(input.value);save();if(inputType==="range")input.setAttribute("aria-valuenow",input.value);renderCanvas();});input.addEventListener("change",()=>{renderCanvas();renderCanvasObjectTools();});wrap.append(input);controls.append(wrap);};const addSelect=(label,value,options,onchange)=>{const wrap=document.createElement("label");wrap.textContent=label;const select=document.createElement("select");options.forEach(([key,name])=>select.add(new Option(name,key)));select.value=value;select.addEventListener("change",()=>{onchange(select.value);save();renderCanvas();renderCanvasObjectTools();});wrap.append(select);controls.append(wrap);};if(type==="text"){addControl("Text","textarea",object.text,value=>object.text=value);addSelect("Text style",object.preset,Object.entries(textPresets).map(([key,item])=>[key,item.label]),value=>{object.preset=value;object.fontSize=textPresets[value].fontSize;if(value==="badge"){object.background=site.accent;object.color="#ffffff";}else if(object.preset!=="badge"){object.background="";}});addControl("Text size","range",object.fontSize,value=>object.fontSize=Number(value),{min:10,max:180});appendShapeColorPicker(controls,object);addControl("Width","range",object.width,value=>object.width=Number(value),{min:24,max:900});addControl("Height","range",object.height,value=>object.height=Number(value),{min:24,max:600});if(object.preset==="badge")addControl("Badge background","color",object.background||site.accent,value=>object.background=value);}
 else{addControl("Image URL (HTTPS)","url",object.url,value=>object.url=value,{placeholder:"https://example.com/image.jpg",maxLength:500});addControl("Alt text","text",object.alt,value=>object.alt=value,{maxLength:160});addControl("Width","range",object.width,value=>object.width=Number(value),{min:24,max:900});addControl("Height","range",object.height,value=>object.height=Number(value),{min:24,max:600});addControl("Frame color","color",object.background||"#d8d8d8",value=>object.background=value);}
 addControl("Opacity","range",object.opacity,value=>object.opacity=Number(value),{min:0,max:1,step:.05});addSelect("Blending",object.blend,blendOptions.map(mode=>[mode,mode.replaceAll("-"," ")]),value=>object.blend=value);const remove=document.createElement("button");remove.type="button";remove.className="button danger wide";remove.textContent=`Delete ${type==="text"?"text":"image frame"}`;remove.addEventListener("click",()=>{site.objects.splice(index,1);if(selectedObjectId===object.id)selectedObjectId="";save();renderCanvas();renderCanvasObjectTools();});card.append(controls,remove);list.append(card);});};renderList("text","#text-object-list");renderList("image","#image-object-list");}
@@ -1074,7 +1240,7 @@ function update() {
   $("#button-style").value = site.design.buttonStyle;
   renderList(); renderThemes(); renderInspector(); renderCanvas(); renderPlugins(); renderShapeTools(); renderCanvasObjectTools();
 }
-function select(id) { selectedId = id; selectedObjectId = ""; selectedShapeId = ""; selectedContent = null; renderList(); renderInspector(); renderCanvas(); }
+function select(id) { selectedId = id; selectedObjectId = ""; selectedShapeId = ""; selectedContent = null; setRailPanel("edit"); renderList(); renderInspector(); renderCanvas(); }
 function restoreHistory(direction) {
   const next = historyIndex + direction;
   if (next < 0 || next >= history.length) return;
@@ -1125,6 +1291,116 @@ function shiftLayer(direction) {
   item.z = Math.max(-20, Math.min(20, (Number(item.z) || 0) + direction));
   save(); renderCanvas(); renderInspector();
 }
+function copySelection() {
+  if (selectedObjectId) {
+    const object = site.objects.find(item => item.id === selectedObjectId);
+    if (!object) return false;
+    copiedElement = { kind: "object", value: structuredClone(object) };
+  } else if (selectedShapeId) {
+    const shape = site.shapes.find(item => item.id === selectedShapeId);
+    if (!shape) return false;
+    copiedElement = { kind: "shape", value: structuredClone(shape) };
+  } else if (selectedContent) {
+    const ref = contentRef();
+    const element = document.querySelector(`[data-section-id="${selectedContent.sectionId}"] [data-content-key="${selectedContent.key}"]`);
+    const page = $("#site-preview .built-site");
+    if (!ref || !element || !page) return false;
+    const rect = element.getBoundingClientRect(), pageRect = page.getBoundingClientRect();
+    copiedElement = { kind: "content", image: ref.key === "imageUrl", value: ref.target[ref.key],
+      x: (rect.left + rect.width / 2 - pageRect.left) / pageRect.width * 100,
+      y: (rect.top + rect.height / 2 - pageRect.top) / pageRect.height * 100,
+      width: Math.round(rect.width / zoom), height: Math.round(rect.height / zoom),
+      fontSize: Math.round(parseFloat(getComputedStyle(element).fontSize) || 24),
+      color: getComputedStyle(element).color };
+  } else return false;
+  toast("Element copied. Press Ctrl+V to paste.");
+  return true;
+}
+function pasteSelection() {
+  if (!copiedElement) return false;
+  if (copiedElement.kind === "content") {
+    const copy = copiedElement;
+    addCanvasObject(copy.image ? "image" : "text", Math.min(100, copy.x + 3), Math.min(100, copy.y + 3), copy.image ? "plain" : "caption");
+    const object = site.objects.find(item => item.id === selectedObjectId);
+    if (!object) return false;
+    if (copy.image) { object.url = copy.value; object.alt = "Copied image"; }
+    else { object.text = copy.value; object.fontSize = Math.max(10, Math.min(180, copy.fontSize)); }
+    object.width = Math.max(24, Math.min(900, copy.width)); object.height = Math.max(24, Math.min(600, copy.height));
+  } else if (copiedElement.kind === "object") {
+    const object = { ...structuredClone(copiedElement.value), id: freshContentId("object"), x: Math.min(100, copiedElement.value.x + 3), y: Math.min(100, copiedElement.value.y + 3) };
+    site.objects.push(object); selectedObjectId = object.id; selectedShapeId = ""; selectedContent = null;
+  } else {
+    const shape = { ...structuredClone(copiedElement.value), id: freshContentId("shape"), x: Math.min(100, copiedElement.value.x + 3), y: Math.min(100, copiedElement.value.y + 3) };
+    site.shapes.push(shape); selectedShapeId = shape.id; selectedObjectId = ""; selectedContent = null;
+  }
+  setRailPanel("edit"); update(); toast("Element pasted.");
+  return true;
+}
+function nudgeSelection(dx, dy) {
+  if (!(selectedContent || selectedObjectId || selectedShapeId)) return false;
+  if (selectedContent) {
+    const ref = contentRef(); if (!ref) return false;
+    ref.section.elementStyles ||= {};
+    const layout = ref.section.elementStyles[selectedContent.key] ||= {};
+    layout.x = Math.max(-2000, Math.min(2000, (Number(layout.x) || 0) + dx));
+    layout.y = Math.max(-2000, Math.min(2000, (Number(layout.y) || 0) + dy));
+  } else {
+    const item = selectedObjectId ? site.objects.find(entry => entry.id === selectedObjectId) : site.shapes.find(entry => entry.id === selectedShapeId);
+    const rect = $("#site-preview .built-site")?.getBoundingClientRect();
+    if (!item || !rect) return false;
+    item.x = Math.max(0, Math.min(100, item.x + dx * zoom / rect.width * 100));
+    item.y = Math.max(0, Math.min(100, item.y + dy * zoom / rect.height * 100));
+  }
+  save(); renderCanvas(); renderInspector();
+  return true;
+}
+function changeZoom(amount) {
+  const control = $("#canvas-zoom");
+  control.value = Math.max(Number(control.min), Math.min(Number(control.max), Number(control.value) + amount));
+  control.dispatchEvent(new Event("input", { bubbles: true }));
+  return true;
+}
+function saveShortcuts() {
+  try { localStorage.setItem(shortcutStorageKey, JSON.stringify(shortcuts)); }
+  catch { $("#shortcut-status").textContent = "Could not save shortcuts in this browser."; }
+}
+function renderShortcutSettings() {
+  const list = $("#shortcut-list"); list.replaceChildren();
+  let group = "";
+  for (const definition of SHORTCUT_DEFINITIONS) {
+    if (definition.group !== group) { group = definition.group; const heading = document.createElement("h4"); heading.textContent = group; list.append(heading); }
+    const row = document.createElement("div"); row.className = "shortcut-row";
+    const label = document.createElement("span"); label.textContent = definition.label;
+    const key = document.createElement("button"); key.type = "button"; key.className = "shortcut-key"; key.textContent = shortcuts[definition.id].replaceAll("+", " + ");
+    key.setAttribute("aria-label", `Change ${definition.label} shortcut`);
+    key.addEventListener("click", () => { key.textContent = "Press keys…"; key.classList.add("recording"); key.focus(); });
+    key.addEventListener("keydown", event => {
+      if (!key.classList.contains("recording")) return;
+      event.preventDefault(); event.stopPropagation();
+      if (event.key === "Escape") { renderShortcutSettings(); return; }
+      const combination = shortcutFromKeyboardEvent(event);
+      if (!combination) return;
+      if (["Tab", "Ctrl+Tab", "Ctrl+R", "Ctrl+Shift+R", "Ctrl+L", "Ctrl+W", "F5"].includes(combination)) { $("#shortcut-status").textContent = "That key combination is reserved for the browser."; return; }
+      const conflict = SHORTCUT_DEFINITIONS.find(item => item.id !== definition.id && shortcuts[item.id] === combination);
+      if (conflict) { $("#shortcut-status").textContent = `${combination} is already used for ${conflict.label}.`; return; }
+      shortcuts[definition.id] = combination; saveShortcuts(); renderShortcutSettings();
+      $("#shortcut-status").textContent = `${definition.label} is now ${combination}.`;
+    });
+    const reset = document.createElement("button"); reset.type = "button"; reset.className = "shortcut-reset"; reset.textContent = "Reset";
+    reset.setAttribute("aria-label", `Reset ${definition.label} shortcut`);
+    reset.addEventListener("click", () => {
+      const conflict = SHORTCUT_DEFINITIONS.find(item => item.id !== definition.id && shortcuts[item.id] === definition.default);
+      if (conflict) { $("#shortcut-status").textContent = `Reset ${conflict.label} first, or use Reset all.`; return; }
+      shortcuts[definition.id] = definition.default; saveShortcuts(); renderShortcutSettings();
+      $("#shortcut-status").textContent = `${definition.label} restored.`;
+    });
+    row.append(label, key, reset); list.append(row);
+  }
+}
+function showSettingsTab(name) {
+  document.querySelectorAll(".settings-tab").forEach(button => button.classList.toggle("active", button.dataset.settingsTab === name));
+  document.querySelectorAll(".settings-panel").forEach(panel => panel.hidden = panel.id !== `settings-${name}`);
+}
 async function uploadSelectedImage(file) {
   if (!file || !/^image\/(png|jpeg|webp|gif)$/.test(file.type) || file.size > 15000000) { toast("Choose a PNG, JPG, WebP, or GIF under 15 MB."); return; }
   try {
@@ -1159,7 +1435,13 @@ async function ai(action) {
   finally { button.disabled = false; }
 }
 
-document.querySelectorAll(".tab").forEach(tab => tab.addEventListener("click", () => setTab(tab.dataset.tab)));
+document.querySelectorAll(".tab").forEach(tab => tab.addEventListener("click", () => setRailPanel(tab.dataset.tab)));
+document.querySelectorAll(".rail-button").forEach(button => button.addEventListener("click", () => setRailPanel(button.dataset.rail)));
+$("#page-strip-add").addEventListener("click", () => { setRailPanel("pages"); $("#add-section").focus(); });
+$("#settings-button").addEventListener("click", () => { showSettingsTab("general"); $("#settings-dialog").showModal(); });
+$("#close-settings-dialog").addEventListener("click", () => $("#settings-dialog").close());
+document.querySelectorAll(".settings-tab").forEach(button => button.addEventListener("click", () => showSettingsTab(button.dataset.settingsTab)));
+$("#reset-all-shortcuts").addEventListener("click", () => { shortcuts = defaultShortcuts(); saveShortcuts(); renderShortcutSettings(); $("#shortcut-status").textContent = "All keyboard shortcuts restored."; });
 $("#undo-button").addEventListener("click", () => restoreHistory(-1));
 $("#redo-button").addEventListener("click", () => restoreHistory(1));
 $("#selection-duplicate").addEventListener("click", duplicateSelection);
@@ -1172,19 +1454,30 @@ $("#add-shape-button").addEventListener("click", () => addShape("rounded-square"
 $("#open-templates-button").addEventListener("click", () => $("#template-dialog").showModal());
 $("#canvas-image-file").addEventListener("change", async event => { await uploadSelectedImage(event.target.files?.[0]); event.target.value = ""; });
 $("#canvas-zoom").addEventListener("input", event => { zoom = Number(event.target.value) / 100; $("#canvas-frame").style.zoom = String(zoom); $("#zoom-value").textContent = `${event.target.value}%`; });
+const shortcutHandlers = {
+  copy: copySelection, paste: pasteSelection,
+  cut: () => { if (!copySelection()) return false; deleteSelection(); return true; },
+  duplicate: () => { if (!(selectedContent || selectedObjectId || selectedShapeId)) return false; duplicateSelection(); return true; },
+  delete: () => { if (!(selectedContent || selectedObjectId || selectedShapeId)) return false; deleteSelection(); return true; },
+  deleteAlternate: () => shortcutHandlers.delete(),
+  undo: () => { restoreHistory(-1); return true; },
+  redo: () => { restoreHistory(1); return true; },
+  redoAlternate: () => { restoreHistory(1); return true; },
+  forward: () => { if (!(selectedContent || selectedObjectId || selectedShapeId)) return false; shiftLayer(1); return true; },
+  backward: () => { if (!(selectedContent || selectedObjectId || selectedShapeId)) return false; shiftLayer(-1); return true; },
+  up: () => nudgeSelection(0, -1), down: () => nudgeSelection(0, 1), left: () => nudgeSelection(-1, 0), right: () => nudgeSelection(1, 0),
+  upFast: () => nudgeSelection(0, -10), downFast: () => nudgeSelection(0, 10), leftFast: () => nudgeSelection(-10, 0), rightFast: () => nudgeSelection(10, 0),
+  zoomIn: () => changeZoom(10), zoomOut: () => changeZoom(-10),
+  preview: () => { $("#preview-button").click(); return true; },
+  save: () => { $("#export-json-button").click(); return true; },
+  export: () => { $("#export-html-button").click(); return true; },
+  settings: () => { $("#settings-dialog").showModal(); return true; }
+};
 document.addEventListener("keydown", event => {
-  const editing = event.target.closest?.("input,textarea,select,[contenteditable=true]");
-  if (editing) return;
-  if ((event.ctrlKey || event.metaKey) && !event.altKey && event.key.toLowerCase() === "z") { event.preventDefault(); restoreHistory(event.shiftKey ? 1 : -1); return; }
-  if ((event.ctrlKey || event.metaKey) && !event.altKey && event.key.toLowerCase() === "y") { event.preventDefault(); restoreHistory(1); return; }
-  if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "d" && (selectedContent || selectedObjectId || selectedShapeId)) { event.preventDefault(); duplicateSelection(); return; }
-  if ((event.key === "Delete" || event.key === "Backspace") && (selectedContent || selectedObjectId || selectedShapeId)) { event.preventDefault(); deleteSelection(); return; }
-  if (!["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(event.key) || !(selectedContent || selectedObjectId || selectedShapeId)) return;
-  event.preventDefault();
-  const amount = event.shiftKey ? 10 : 1, dx = event.key === "ArrowLeft" ? -amount : event.key === "ArrowRight" ? amount : 0, dy = event.key === "ArrowUp" ? -amount : event.key === "ArrowDown" ? amount : 0;
-  if (selectedContent) { const ref = contentRef(); if (!ref) return; ref.section.elementStyles ||= {}; const layout = ref.section.elementStyles[selectedContent.key] ||= {}; layout.x = (Number(layout.x) || 0) + dx; layout.y = (Number(layout.y) || 0) + dy; }
-  else { const item = selectedObjectId ? site.objects.find(entry => entry.id === selectedObjectId) : site.shapes.find(entry => entry.id === selectedShapeId); if (!item) return; const rect = $("#site-preview .built-site").getBoundingClientRect(); item.x = Math.max(0, Math.min(100, item.x + dx * zoom / rect.width * 100)); item.y = Math.max(0, Math.min(100, item.y + dy * zoom / rect.height * 100)); }
-  save(); renderCanvas(); renderInspector();
+  if (event.target.closest?.("input,textarea,select,[contenteditable=true]") || $("#settings-dialog").open || $("#template-dialog").open) return;
+  const combination = shortcutFromKeyboardEvent(event);
+  const action = SHORTCUT_DEFINITIONS.find(item => shortcuts[item.id] === combination)?.id;
+  if (action && shortcutHandlers[action]?.()) event.preventDefault();
 });
 $("#site-name").addEventListener("input", event => { site.name = event.target.value; save(); renderCanvas(); });
 $("#site-tagline").addEventListener("input", event => { site.tagline = event.target.value; save(); renderCanvas(); });
@@ -1224,7 +1517,7 @@ $("#install-file-button").addEventListener("click", () => $("#plugin-file").clic
 $("#plugin-file").addEventListener("change", async event => { const file = event.target.files[0]; if (!file) return; try { if (file.size > 1000000) throw new Error("Plugin pack is too large."); installPack(JSON.parse(await file.text())); } catch (error) { pluginStatus(error.message || "Could not install pack."); } event.target.value = ""; });
 $("#generate-site-button").addEventListener("click", () => ai("site"));
 $("#rewrite-section-button").addEventListener("click", () => ai("rewrite"));
-renderTemplateGallery(); applyWorkspaceMode(); setTab(activeTab); update(); renderCatalog(); checkAiAvailability();
+renderTemplateGallery(); renderShortcutSettings(); applyWorkspaceMode(); setRailPanel(activeRail); update(); renderCatalog(); checkAiAvailability();
 
 })();
     </script>

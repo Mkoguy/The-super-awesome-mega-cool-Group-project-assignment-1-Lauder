@@ -25,6 +25,7 @@ const files = new Map([
   ["/styles.css", ["styles.css", "text/css; charset=utf-8"]],
   ["/script.js", ["script.js", "text/javascript; charset=utf-8"]],
   ["/site-model.js", ["site-model.js", "text/javascript; charset=utf-8"]],
+  ["/shortcuts-model.js", ["shortcuts-model.js", "text/javascript; charset=utf-8"]],
   ["/plugin-model.js", ["plugin-model.js", "text/javascript; charset=utf-8"]],
   ["/settings.html", ["settings.html", "text/html; charset=utf-8"]],
   ["/settings.js", ["settings.js", "text/javascript; charset=utf-8"]],
