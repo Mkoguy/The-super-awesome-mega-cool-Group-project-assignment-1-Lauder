@@ -1,0 +1,9 @@
+{
+  "format": "websiteforge-plugin",
+  "version": 1,
+  "id": "websiteforge.image-tool",
+  "name": "Image frame tool",
+  "author": "WebsiteForge",
+  "description": "Place resizable image frames and fill them with an image URL.",
+  "features": ["image-tool"]
+}

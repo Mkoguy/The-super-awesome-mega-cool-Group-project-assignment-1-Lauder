@@ -30,7 +30,11 @@ const files = new Map([
   ["/settings.js", ["settings.js", "text/javascript; charset=utf-8"]],
   ["/plugins/catalog.json", ["plugins/catalog.json", "application/json; charset=utf-8"]],
   ["/plugins/artist-essentials.json", ["plugins/artist-essentials.json", "application/json; charset=utf-8"]],
-  ["/plugins/light-mode.json", ["plugins/light-mode.json", "application/json; charset=utf-8"]]
+  ["/plugins/light-mode.json", ["plugins/light-mode.json", "application/json; charset=utf-8"]],
+  ["/plugins/drawing-menu.json", ["plugins/drawing-menu.json", "application/json; charset=utf-8"]],
+  ["/plugins/text-tool.json", ["plugins/text-tool.json", "application/json; charset=utf-8"]],
+  ["/plugins/image-tool.json", ["plugins/image-tool.json", "application/json; charset=utf-8"]],
+  ["/plugins/template-studio.json", ["plugins/template-studio.json", "application/json; charset=utf-8"]]
 ]);
 const send = (res, status, value) => { res.writeHead(status, { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store" }); res.end(JSON.stringify(value)); };
 async function readJson(req) {

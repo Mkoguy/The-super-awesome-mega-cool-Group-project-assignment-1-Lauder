@@ -30,6 +30,8 @@ Manual editing, local saving, and exports work without an API key. Project chang
 
 The **Design** tab controls the full palette, font, content width, section spacing, corner radius, heading scale, and button style. Select any section for its text, images, alignment, spacing, and optional background and text-color overrides. The five templates can be browsed in a visual gallery. The Links section provides editable destination URLs for link hub pages. All site settings are included in the standalone HTML export. Older WebsiteForge project JSON files still import.
 
+The built-in **Drawing menu**, **Text tool**, and **Image frame tool** packs add draggable shapes, text, and images to the canvas. You can move, resize, and style them in the editor; they are included in project backups and website exports. **Template Studio** can save a section or the whole page as a shareable JSON template pack. Install these packs from the **Plugins** tab.
+
 ## Community plugins
 
 The **Plugins** tab lists packs from `plugins/catalog.json` and accepts a JSON file or HTTPS manifest URL. A community pack can contribute section layouts (`cards`, `faq`, `quote`, or `banner`) and color themes. The built-in **Light mode** pack adds an optional bright theme for the editor; it does not change the exported website. Installed packs are saved in this browser. Added sections are copied into the project, so uninstalling the pack does not break the site or its export. **Share JSON** downloads an installed pack for another creator.

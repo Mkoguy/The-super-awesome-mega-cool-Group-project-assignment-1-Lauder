@@ -1,0 +1,9 @@
+{
+  "format": "websiteforge-plugin",
+  "version": 1,
+  "id": "websiteforge.text-tool",
+  "name": "Text tool",
+  "author": "WebsiteForge",
+  "description": "Place, style, resize, and recolor editable text on your page.",
+  "features": ["text-tool"]
+}

@@ -1,0 +1,9 @@
+{
+  "format": "websiteforge-plugin",
+  "version": 1,
+  "id": "websiteforge.template-studio",
+  "name": "Template Studio",
+  "author": "WebsiteForge",
+  "description": "Save page sections and canvas designs as shareable templates, with their image and button URLs.",
+  "features": ["template-studio"]
+}

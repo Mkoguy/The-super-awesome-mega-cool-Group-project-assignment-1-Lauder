@@ -1,0 +1,9 @@
+{
+  "format": "websiteforge-plugin",
+  "version": 1,
+  "id": "websiteforge.drawing-menu",
+  "name": "Drawing menu",
+  "author": "WebsiteForge",
+  "description": "Add draggable decorative shapes and blend modes to the WebsiteForge editor.",
+  "features": ["drawing-menu"]
+}

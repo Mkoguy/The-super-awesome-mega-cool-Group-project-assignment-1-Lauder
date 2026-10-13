@@ -12,6 +12,30 @@
       "name": "Light mode",
       "description": "An optional bright workspace theme for the WebsiteForge editor.",
       "manifest": "/plugins/light-mode.json"
+    },
+    {
+      "id": "websiteforge.drawing-menu",
+      "name": "Drawing menu",
+      "description": "Add editable shapes and blend modes to your page.",
+      "manifest": "/plugins/drawing-menu.json"
+    },
+    {
+      "id": "websiteforge.text-tool",
+      "name": "Text tool",
+      "description": "Place, style, resize, and recolor editable text on your page.",
+      "manifest": "/plugins/text-tool.json"
+    },
+    {
+      "id": "websiteforge.image-tool",
+      "name": "Image frame tool",
+      "description": "Place resizable image frames and fill them with an image URL.",
+      "manifest": "/plugins/image-tool.json"
+    },
+    {
+      "id": "websiteforge.template-studio",
+      "name": "Template Studio",
+      "description": "Save page sections and canvas designs as shareable templates, with their image and button URLs.",
+      "manifest": "/plugins/template-studio.json"
     }
   ]
 }

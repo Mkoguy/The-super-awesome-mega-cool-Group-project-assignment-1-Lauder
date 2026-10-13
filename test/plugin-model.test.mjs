@@ -80,3 +80,27 @@ test("website links accept pasted domains and remain clickable in the editor and
   site.sections[0].buttonUrl = "javascript:alert(1)";
   assert.equal(normalizeSite(site).sections[0].buttonUrl, "#");
 });
+
+test("new built-in tool packs are valid and template packs preserve safe content", async () => {
+  for (const [file, feature] of [
+    ["drawing-menu", "drawing-menu"], ["text-tool", "text-tool"],
+    ["image-tool", "image-tool"], ["template-studio", "template-studio"]
+  ]) {
+    const raw = JSON.parse(await readFile(new URL(`../plugins/${file}.json`, import.meta.url), "utf8"));
+    assert.deepEqual(normalizePluginPack(raw).features, [feature]);
+  }
+  const pack = normalizePluginPack({
+    format: "websiteforge-plugin", version: 1, id: "artist.saved-template", name: "Saved design",
+    templates: [{ id: "saved-design", name: "My design", sections: [{ id: "blank", type: "blank" }],
+      objects: [{ id: "text-1", type: "text", text: "<b>Hello</b>" },
+        { id: "image-1", type: "image", url: "javascript:alert(1)" }],
+      shapes: [{ id: "shape-1", type: "heart", color: "#123456" }] }]
+  });
+  assert.equal(pack.templates.length, 1);
+  assert.equal(pack.templates[0].objects[1].url, "");
+  const site = normalizeSite({ ...template(), ...pack.templates[0], sections: pack.templates[0].sections });
+  const html = exportDocument(site);
+  assert.match(html, /class="site-decoration"/);
+  assert.match(html, /&lt;b&gt;Hello&lt;\/b&gt;/);
+  assert.doesNotMatch(html, /javascript:alert/);
+});
