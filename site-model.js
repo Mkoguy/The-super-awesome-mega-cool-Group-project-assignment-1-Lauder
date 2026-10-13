@@ -73,11 +73,11 @@ export function makeSection(type = "intro", overrides = {}) {
     links: { eyebrow: "FIND ME ONLINE", title: "Explore more", body: "Choose where you would like to go next.", items: [{ title: "Portfolio", body: "Selected work and projects.", linkUrl: "#gallery" }, { title: "Email", body: "Start a conversation.", linkUrl: "mailto:hello@example.com" }] },
     cta: { eyebrow: "LET'S CONNECT", title: "Let's make something beautiful.", body: "Have an idea, a question, or just want to say hi? My inbox is open.", buttonText: "Get in touch", buttonUrl: "mailto:hello@example.com" }
   };
-  return { id: makeId(), type, eyebrow: "", title: "", body: "", buttonText: "", buttonUrl: "", imageUrl: "", items: [], layout: "cards", pluginName: "", background: "", textColor: "", alignment: "left", spacing: "normal", ...examples[type], ...overrides };
+  return { id: makeId(), type, eyebrow: "", title: "", body: "", buttonText: "", buttonUrl: "", imageUrl: "", artLabel: "ARTIST / MAKER / DREAMER", items: [], layout: "cards", pluginName: "", background: "", textColor: "", alignment: "left", spacing: "normal", ...examples[type], ...overrides };
 }
 
 export function template(name = "portfolio") {
-  const common = { version: 2, theme: "forge", accent: THEMES.forge.accent, palette: { paper: THEMES.forge.paper, ink: THEMES.forge.ink, muted: THEMES.forge.muted }, design: { ...DEFAULT_DESIGN }, font: "modern", shapes: [], objects: [] };
+  const common = { version: 2, theme: "forge", accent: THEMES.forge.accent, palette: { paper: THEMES.forge.paper, ink: THEMES.forge.ink, muted: THEMES.forge.muted }, design: { ...DEFAULT_DESIGN }, font: "modern", footerNote: "Made with care ✳", shapes: [], objects: [] };
   if (name === "events") return { ...common, name: "The Artist Gathering", tagline: "A place for creative people to meet", sections: [makeSection("hero", { eyebrow: "YOU'RE INVITED", title: "A weekend made for makers.", body: "Meet artists, discover beautiful things, and leave with a little more inspiration.", buttonText: "See the schedule", buttonUrl: "#events" }), makeSection("intro", { title: "Come as you are.", body: "A welcoming space for artists and art lovers to connect, learn, and celebrate the joy of making." }), makeSection("events"), makeSection("cta", { title: "Save your spot.", body: "We can't wait to see you there.", buttonText: "Email the organizers", buttonUrl: "mailto:hello@example.com" })] };
   if (name === "shop") return { ...common, name: "Little Cove Studio", tagline: "Art and objects for everyday joy", sections: [makeSection("hero", { eyebrow: "HANDMADE WITH HEART", title: "Little pieces of joy for your everyday.", body: "Original art and handmade goods from a small, happy studio.", buttonText: "Browse the collection", buttonUrl: "#gallery" }), makeSection("gallery", { title: "From the studio" }), makeSection("features", { title: "Why handmade?" }), makeSection("cta", { title: "Want first dibs?", body: "Say hello and ask about the next collection.", buttonText: "Email the studio", buttonUrl: "mailto:hello@example.com" })] };
   if (name === "commissions") return { ...common, name: "Your Creative Studio", tagline: "Custom work made with care", sections: [makeSection("hero", { eyebrow: "CUSTOM WORK", title: "Let's make something for you.", body: "Explore the kinds of creative work I offer and get in touch to discuss an idea.", buttonText: "See services", buttonUrl: "#services" }), makeSection("features", { id: "services", eyebrow: "SERVICES", title: "Ways to work together", body: "Choose a starting point and ask about availability.", items: [{ title: "Custom artwork", body: "A personal piece shaped around your idea." }, { title: "Creative collaboration", body: "Visual work for a project or small business." }, { title: "Studio consultation", body: "A conversation to explore the right approach." }] }), makeSection("intro", { title: "How it works", body: "Share your idea, timeline, and budget. I will reply with availability and next steps." }), makeSection("cta", { title: "Start a conversation", body: "Tell me what you have in mind.", buttonText: "Email the studio", buttonUrl: "mailto:hello@example.com" })] };
@@ -86,6 +86,7 @@ export function template(name = "portfolio") {
 }
 
 function safeUrl(value, image = false) {
+  if (image && typeof value === "string" && value.length <= 2000000 && /^data:image\/(?:png|jpeg|webp|gif);base64,[A-Za-z0-9+/]+={0,2}$/.test(value)) return value;
   const url = trim(value, 500);
   const bareDomain = /^(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z]{2,63}(?::\d{1,5})?(?:[/?#][^\s]*)?$/i;
   const destination = !image && bareDomain.test(url) ? `https://${url}` : url;
@@ -107,36 +108,42 @@ export function normalizeSite(input) {
   const design = { contentWidth: number(input.design?.contentWidth, 1180, 760, 1600), sectionSpacing: number(input.design?.sectionSpacing, 90, 35, 160), cornerRadius: number(input.design?.cornerRadius, 4, 0, 40), headingScale: number(input.design?.headingScale, 1, .7, 1.5), buttonStyle: choice(input.design?.buttonStyle, ["solid", "outline", "pill"], "solid") };
   const sections = input.sections.slice(0, MAX_SECTIONS).filter(section => section && SECTION_TYPES.includes(section.type)).map(section => ({
     id: /^[a-zA-Z0-9_-]{1,80}$/.test(section.id) ? section.id : makeId(), type: section.type,
-    eyebrow: trim(section.eyebrow, limits.eyebrow), title: trim(section.title, limits.title), body: trim(section.body, limits.body),
+    eyebrow: trim(section.eyebrow, limits.eyebrow), title: trim(section.title, limits.title), body: trim(section.body, limits.body), artLabel: typeof section.artLabel === "string" ? trim(section.artLabel, 80) : "ARTIST / MAKER / DREAMER",
     buttonText: trim(section.buttonText, limits.buttonText), buttonUrl: trim(section.buttonUrl, limits.buttonUrl) ? safeUrl(section.buttonUrl) : "", imageUrl: safeUrl(section.imageUrl, true),
     layout: choice(section.layout, ["cards", "faq", "quote", "banner"], "cards"), pluginName: trim(section.pluginName, 70),
     background: color(section.background), textColor: color(section.textColor), alignment: choice(section.alignment, ["left", "center"], "left"), spacing: choice(section.spacing, ["compact", "normal", "roomy"], "normal"),
-    items: (Array.isArray(section.items) ? section.items : []).slice(0, 6).map(item => ({ title: trim(item?.title, limits.itemTitle), body: trim(item?.body, limits.itemBody), imageUrl: safeUrl(item?.imageUrl, true), linkUrl: trim(item?.linkUrl, limits.buttonUrl) ? safeUrl(item.linkUrl) : "" }))
+    items: (Array.isArray(section.items) ? section.items : []).slice(0, 6).map(item => ({ title: trim(item?.title, limits.itemTitle), body: trim(item?.body, limits.itemBody), imageUrl: safeUrl(item?.imageUrl, true), linkUrl: trim(item?.linkUrl, limits.buttonUrl) ? safeUrl(item.linkUrl) : "" })),
+    elementStyles: Object.fromEntries(Object.entries(section.elementStyles && typeof section.elementStyles === "object" ? section.elementStyles : {}).slice(0, 40).filter(([key, value]) => /^(eyebrow|title|body|artLabel|buttonText|imageUrl|item-[0-5]-(title|body|imageUrl|linkUrl))$/.test(key) && value && typeof value === "object").map(([key, value]) => [key, {
+      x: number(value.x, 0, -2000, 2000), y: number(value.y, 0, -2000, 2000),
+      width: number(value.width, 0, 0, 1600), height: number(value.height, 0, 0, 1200),
+      fontSize: number(value.fontSize, 0, 0, 180), color: color(value.color),
+      z: number(value.z, 0, -20, 20)
+    }]))
   }));
   if (!sections.length) throw new Error("A project needs at least one section.");
   const shapeTypes = SHAPE_TYPES;
   const blends = ["normal","multiply","screen","overlay","darken","lighten","color-dodge","color-burn","hard-light","soft-light","difference","exclusion","hue","saturation","color","luminosity"];
   const shapes = (Array.isArray(input.shapes) ? input.shapes : []).slice(0, 80).filter(item => item && shapeTypes.includes(item.type)).map(item => {
     const size = number(item.size, 120, 24, 600);
-    return { id: /^[a-zA-Z0-9_-]{1,80}$/.test(item.id) ? item.id : makeId(), type:item.type, x:number(item.x,50,0,100), y:number(item.y,50,0,100), size, width:number(item.width,size,24,600), height:number(item.height,size,24,600), color:color(item.color,"#f5b91b"), opacity:number(item.opacity,.8,0,1), blend:choice(item.blend,blends,"normal"), rotation:number(item.rotation,0,-360,360) };
+    return { id: /^[a-zA-Z0-9_-]{1,80}$/.test(item.id) ? item.id : makeId(), type:item.type, x:number(item.x,50,0,100), y:number(item.y,50,0,100), size, width:number(item.width,size,24,600), height:number(item.height,size,24,600), color:color(item.color,"#f5b91b"), opacity:number(item.opacity,.8,0,1), blend:choice(item.blend,blends,"normal"), rotation:number(item.rotation,0,-360,360), z:number(item.z,2,-20,20) };
   });
   const objects = (Array.isArray(input.objects) ? input.objects : []).slice(0, 100).filter(item => item && ["text", "image"].includes(item.type)).map(item => ({
     id: /^[a-zA-Z0-9_-]{1,80}$/.test(item.id) ? item.id : makeId(), type: item.type,
     x: number(item.x, 50, 0, 100), y: number(item.y, 50, 0, 100),
     width: number(item.width, 240, 24, 900), height: number(item.height, 90, 24, 600),
     rotation: number(item.rotation, 0, -360, 360), color: color(item.color, "#27272b"), background: color(item.background),
-    opacity: number(item.opacity, 1, 0, 1), blend: choice(item.blend, blends, "normal"),
+    opacity: number(item.opacity, 1, 0, 1), blend: choice(item.blend, blends, "normal"), z:number(item.z,3,-20,20),
     text: trim(item.text, 500), fontSize: number(item.fontSize, 42, 10, 180),
     preset: choice(item.preset, ["heading", "subheading", "caption", "label", "badge", "plain"], "plain"),
     url: safeUrl(item.url, true), alt: trim(item.alt, 160)
   }));
-  return { version: 2, name: trim(input.name, limits.name) || "My Artist Site", tagline: trim(input.tagline, limits.tagline), theme, accent, palette, design, font: ["editorial", "modern", "playful"].includes(input.font) ? input.font : "modern", sections, shapes, objects };
+  return { version: 2, name: trim(input.name, limits.name) || "My Artist Site", tagline: trim(input.tagline, limits.tagline), footerNote: typeof input.footerNote === "string" ? trim(input.footerNote, 120) : "Made with care ✳", theme, accent, palette, design, font: ["editorial", "modern", "playful"].includes(input.font) ? input.font : "modern", sections, shapes, objects };
 }
 
-const mark = section => `<p class="site-eyebrow">${escapeHtml(section.eyebrow)}</p>`;
-const heading = (section, tag = "h2") => `<${tag}>${escapeHtml(section.title)}</${tag}>`;
-const body = section => `<p class="site-body">${escapeHtml(section.body)}</p>`;
-const button = section => section.buttonText ? `<a class="site-button" href="${escapeHtml(safeUrl(section.buttonUrl))}">${escapeHtml(section.buttonText)} <span aria-hidden="true">↗</span></a>` : "";
+const mark = (section, attrs = "") => `<p class="site-eyebrow"${attrs}>${escapeHtml(section.eyebrow)}</p>`;
+const heading = (section, tag = "h2", attrs = "") => `<${tag}${attrs}>${escapeHtml(section.title)}</${tag}>`;
+const body = (section, attrs = "") => `<p class="site-body"${attrs}>${escapeHtml(section.body)}</p>`;
+const button = (section, attrs = "") => section.buttonText ? `<a class="site-button" href="${escapeHtml(safeUrl(section.buttonUrl))}"${attrs}>${escapeHtml(section.buttonText)} <span aria-hidden="true">↗</span></a>` : "";
 const picture = (url, index) => url ? `<img src="${escapeHtml(safeUrl(url, true))}" alt="Artwork ${index + 1}" loading="lazy">` : `<span class="art-shape art-shape-${index % 4}" aria-hidden="true"></span>`;
 
 export function renderSection(section, editable = false) {
@@ -145,19 +152,31 @@ export function renderSection(section, editable = false) {
   const attrs = ` id="${escapeHtml(anchor)}"${editable ? ` data-section-id="${escapeHtml(section.id)}" tabindex="0" role="button" aria-label="Edit ${escapeHtml(label)} section"` : ""}`;
   const classes = `built-section section-${section.type} align-${choice(section.alignment, ["left", "center"], "left")} spacing-${choice(section.spacing, ["compact", "normal", "roomy"], "normal")}`;
   const style = `${section.background ? `background:${color(section.background)};` : ""}${section.textColor ? `color:${color(section.textColor)};--site-muted:${color(section.textColor)};` : ""}`;
+  const fieldAttrs = key => {
+    const entry = section.elementStyles?.[key];
+    const rules = entry ? [
+      key === "artLabel" ? "position:absolute" : "position:relative", `z-index:${number(entry.z, 0, -20, 20)}`,
+      `transform:translate(${number(entry.x, 0, -2000, 2000)}px,${number(entry.y, 0, -2000, 2000)}px)`,
+      entry.width ? `width:${number(entry.width, 0, 0, 1600)}px` : "",
+      entry.height ? `height:${number(entry.height, 0, 0, 1200)}px` : "",
+      entry.fontSize ? `font-size:${number(entry.fontSize, 0, 0, 180)}px` : "",
+      entry.color ? `color:${color(entry.color)}` : ""
+    ].filter(Boolean).join(";") : "";
+    return `${editable ? ` data-content-key="${key}" tabindex="0"` : ""}${rules ? ` style="${rules}"` : ""}`;
+  };
   let content = "";
-  if (section.type === "hero") content = `<div class="site-content"><div>${mark(section)}${heading(section, "h1")}${body(section)}${button(section)}</div><div class="hero-art">${picture(section.imageUrl, 0)}<span class="art-label">ARTIST / MAKER / DREAMER</span></div></div>`;
-  if (section.type === "intro") content = `<div class="intro-grid"><div>${mark(section)}${heading(section)}</div><div>${body(section)}<span class="intro-scribble" aria-hidden="true">✳</span></div></div>`;
-  if (["gallery", "features", "events"].includes(section.type)) content = `<div class="site-section-heading">${mark(section)}${heading(section)}${body(section)}</div><div class="card-grid ${section.type === "events" ? "event-grid" : ""}">${section.items.map((item, index) => `<article class="site-card">${section.type === "gallery" ? `<div class="card-art">${picture(item.imageUrl, index)}</div>` : `<span class="card-number">${String(index + 1).padStart(2, "0")}</span>`}<h3>${escapeHtml(item.title)}</h3><p>${escapeHtml(item.body)}</p></article>`).join("")}</div>`;
-  if (section.type === "links") content = `<div class="site-section-heading">${mark(section)}${heading(section)}${body(section)}</div><div class="link-grid">${section.items.map(item => `<a class="link-card" href="${escapeHtml(safeUrl(item.linkUrl))}"><strong>${escapeHtml(item.title)}</strong><span>${escapeHtml(item.body)}</span><b aria-hidden="true">↗</b></a>`).join("")}</div>`;
-  if (section.type === "cta") content = `<div class="cta-content">${mark(section)}${heading(section)}${body(section)}${button(section)}</div><span class="cta-star" aria-hidden="true">✳</span>`;
+  if (section.type === "hero") content = `<div class="site-content"><div>${mark(section, fieldAttrs("eyebrow"))}${heading(section, "h1", fieldAttrs("title"))}${body(section, fieldAttrs("body"))}${button(section, fieldAttrs("buttonText"))}</div><div class="hero-art"${fieldAttrs("imageUrl")}>${picture(section.imageUrl, 0)}<span class="art-label"${fieldAttrs("artLabel")}>${escapeHtml(section.artLabel ?? "ARTIST / MAKER / DREAMER")}</span></div></div>`;
+  if (section.type === "intro") content = `<div class="intro-grid"><div>${mark(section, fieldAttrs("eyebrow"))}${heading(section, "h2", fieldAttrs("title"))}</div><div>${body(section, fieldAttrs("body"))}<span class="intro-scribble" aria-hidden="true">✳</span></div></div>`;
+  if (["gallery", "features", "events"].includes(section.type)) content = `<div class="site-section-heading">${mark(section, fieldAttrs("eyebrow"))}${heading(section, "h2", fieldAttrs("title"))}${body(section, fieldAttrs("body"))}</div><div class="card-grid ${section.type === "events" ? "event-grid" : ""}">${section.items.map((item, index) => `<article class="site-card">${section.type === "gallery" ? `<div class="card-art"${fieldAttrs(`item-${index}-imageUrl`)}>${picture(item.imageUrl, index)}</div>` : `<span class="card-number">${String(index + 1).padStart(2, "0")}</span>`}<h3${fieldAttrs(`item-${index}-title`)}>${escapeHtml(item.title)}</h3><p${fieldAttrs(`item-${index}-body`)}>${escapeHtml(item.body)}</p></article>`).join("")}</div>`;
+  if (section.type === "links") content = `<div class="site-section-heading">${mark(section, fieldAttrs("eyebrow"))}${heading(section, "h2", fieldAttrs("title"))}${body(section, fieldAttrs("body"))}</div><div class="link-grid">${section.items.map((item, index) => `<a class="link-card" href="${escapeHtml(safeUrl(item.linkUrl))}"${fieldAttrs(`item-${index}-linkUrl`)}><strong${fieldAttrs(`item-${index}-title`)}>${escapeHtml(item.title)}</strong><span${fieldAttrs(`item-${index}-body`)}>${escapeHtml(item.body)}</span><b aria-hidden="true">↗</b></a>`).join("")}</div>`;
+  if (section.type === "cta") content = `<div class="cta-content">${mark(section, fieldAttrs("eyebrow"))}${heading(section, "h2", fieldAttrs("title"))}${body(section, fieldAttrs("body"))}${button(section, fieldAttrs("buttonText"))}</div><span class="cta-star" aria-hidden="true">✳</span>`;
   if (section.type === "blank") content = "";
   if (section.type === "plugin") {
     const items = section.items || [];
-    if (section.layout === "faq") content = `<div class="site-section-heading">${mark(section)}${heading(section)}${body(section)}</div><div class="plugin-faq">${items.map(item => `<details><summary>${escapeHtml(item.title)}</summary><p>${escapeHtml(item.body)}</p></details>`).join("")}</div>`;
-    else if (section.layout === "quote") content = `<div class="site-section-heading">${mark(section)}${heading(section)}${body(section)}</div><div class="plugin-quotes">${items.map(item => `<blockquote><p>“${escapeHtml(item.body)}”</p><cite>${escapeHtml(item.title)}</cite></blockquote>`).join("")}</div>`;
-    else if (section.layout === "banner") content = `<div class="site-content"><div>${mark(section)}${heading(section)}${body(section)}${button(section)}</div><div class="hero-art">${picture(section.imageUrl, 0)}</div></div>`;
-    else content = `<div class="site-section-heading">${mark(section)}${heading(section)}${body(section)}</div><div class="card-grid">${items.map((item, index) => `<article class="site-card">${item.imageUrl ? `<div class="card-art">${picture(item.imageUrl, index)}</div>` : `<span class="card-number">${String(index + 1).padStart(2, "0")}</span>`}<h3>${escapeHtml(item.title)}</h3><p>${escapeHtml(item.body)}</p></article>`).join("")}</div>${button(section)}`;
+    if (section.layout === "faq") content = `<div class="site-section-heading">${mark(section, fieldAttrs("eyebrow"))}${heading(section, "h2", fieldAttrs("title"))}${body(section, fieldAttrs("body"))}</div><div class="plugin-faq">${items.map((item, index) => `<details><summary${fieldAttrs(`item-${index}-title`)}>${escapeHtml(item.title)}</summary><p${fieldAttrs(`item-${index}-body`)}>${escapeHtml(item.body)}</p></details>`).join("")}</div>`;
+    else if (section.layout === "quote") content = `<div class="site-section-heading">${mark(section, fieldAttrs("eyebrow"))}${heading(section, "h2", fieldAttrs("title"))}${body(section, fieldAttrs("body"))}</div><div class="plugin-quotes">${items.map((item, index) => `<blockquote><p${fieldAttrs(`item-${index}-body`)}>“${escapeHtml(item.body)}”</p><cite${fieldAttrs(`item-${index}-title`)}>${escapeHtml(item.title)}</cite></blockquote>`).join("")}</div>`;
+    else if (section.layout === "banner") content = `<div class="site-content"><div>${mark(section, fieldAttrs("eyebrow"))}${heading(section, "h2", fieldAttrs("title"))}${body(section, fieldAttrs("body"))}${button(section, fieldAttrs("buttonText"))}</div><div class="hero-art"${fieldAttrs("imageUrl")}>${picture(section.imageUrl, 0)}</div></div>`;
+    else content = `<div class="site-section-heading">${mark(section, fieldAttrs("eyebrow"))}${heading(section, "h2", fieldAttrs("title"))}${body(section, fieldAttrs("body"))}</div><div class="card-grid">${items.map((item, index) => `<article class="site-card">${item.imageUrl ? `<div class="card-art"${fieldAttrs(`item-${index}-imageUrl`)}>${picture(item.imageUrl, index)}</div>` : `<span class="card-number">${String(index + 1).padStart(2, "0")}</span>`}<h3${fieldAttrs(`item-${index}-title`)}>${escapeHtml(item.title)}</h3><p${fieldAttrs(`item-${index}-body`)}>${escapeHtml(item.body)}</p></article>`).join("")}</div>${button(section, fieldAttrs("buttonText"))}`;
   }
   return `<section class="${classes}" style="${style}"${attrs}>${content}</section>`;
 }
@@ -173,20 +192,21 @@ export function renderSite(site, editable = false, selectedShapeId = "", selecte
     const editAttrs = editable ? `data-shape-id="${escapeHtml(shape.id)}" tabindex="0" role="button" aria-label="Move ${escapeHtml(shape.type)} shape"` : `aria-hidden="true"`;
     const blend = choice(shape.blend, ["normal", "multiply", "screen", "overlay", "darken", "lighten", "color-dodge", "color-burn", "hard-light", "soft-light", "difference", "exclusion", "hue", "saturation", "color", "luminosity"], "normal");
     const resizeHandle = editable && shape.id === selectedShapeId ? `<rect class="shape-selection-box" x="1" y="1" width="98" height="98"/><rect class="shape-resize-handle" data-resize="n" x="35" y="-3" width="30" height="6" rx="3"/><rect class="shape-resize-handle" data-resize="e" x="97" y="35" width="6" height="30" rx="3"/><rect class="shape-resize-handle" data-resize="s" x="35" y="97" width="30" height="6" rx="3"/><rect class="shape-resize-handle" data-resize="w" x="-3" y="35" width="6" height="30" rx="3"/><circle class="shape-resize-handle" data-resize="nw" cx="3" cy="3" r="4"/><circle class="shape-resize-handle" data-resize="ne" cx="97" cy="3" r="4"/><circle class="shape-resize-handle" data-resize="se" cx="97" cy="97" r="5"/><circle class="shape-resize-handle" data-resize="sw" cx="3" cy="97" r="4"/>` : "";
-    return `<svg class="site-decoration${editable ? " editor-decoration" : ""}" ${editAttrs} viewBox="0 0 100 100" preserveAspectRatio="none" style="left:${shape.x}%;top:${shape.y}%;width:${shape.width ?? shape.size}px;height:${shape.height ?? shape.size}px;opacity:${shape.opacity};mix-blend-mode:${blend};transform:translate(-50%,-50%) rotate(${shape.rotation}deg)">${shapeMarkup}${resizeHandle}</svg>`;
+    return `<svg class="site-decoration${editable ? " editor-decoration" : ""}" ${editAttrs} viewBox="0 0 100 100" preserveAspectRatio="none" style="left:${shape.x}%;top:${shape.y}%;width:${shape.width ?? shape.size}px;height:${shape.height ?? shape.size}px;opacity:${shape.opacity};mix-blend-mode:${blend};z-index:${number(shape.z,2,-20,20)};transform:translate(-50%,-50%) rotate(${shape.rotation}deg)">${shapeMarkup}${resizeHandle}</svg>`;
   }).join("");
   const objects = (site.objects || []).map(object => {
     const editAttrs = editable ? `data-object-id="${escapeHtml(object.id)}" tabindex="0" role="button" aria-label="Move ${object.type} object"` : "";
     const selected = editable && object.id === selectedObjectId;
     const handles = selected ? `<span class="object-selection-box"></span>${["n","e","s","w","nw","ne","se","sw"].map(direction => `<span class="object-resize-handle" data-resize="${direction}" aria-label="Resize ${direction}"></span>`).join("")}` : "";
-    const style = `left:${object.x}%;top:${object.y}%;width:${object.width}px;height:${object.height}px;transform:translate(-50%,-50%) rotate(${object.rotation}deg);color:${color(object.color,"#27272b")};opacity:${number(object.opacity,1,0,1)};mix-blend-mode:${choice(object.blend,BLEND_MODES,"normal")};${object.background ? `background:${color(object.background)};` : ""}`;
+    const style = `left:${object.x}%;top:${object.y}%;width:${object.width}px;height:${object.height}px;transform:translate(-50%,-50%) rotate(${object.rotation}deg);color:${color(object.color,"#27272b")};opacity:${number(object.opacity,1,0,1)};mix-blend-mode:${choice(object.blend,BLEND_MODES,"normal")};z-index:${number(object.z,3,-20,20)};${object.background ? `background:${color(object.background)};` : ""}`;
     const imageUrl = object.type === "image" ? safeUrl(object.url, true) : "";
     const content = object.type === "image"
       ? imageUrl ? `<img src="${escapeHtml(imageUrl)}" alt="${escapeHtml(object.alt)}" draggable="false">` : `<span class="image-object-empty">Add an HTTPS image URL</span>`
       : `<span class="text-object-content preset-${object.preset}" style="font-size:${number(object.fontSize,42,10,180)}px">${escapeHtml(object.text || "Your text")}</span>`;
     return `<div class="site-canvas-object canvas-object-${object.type}${object.type === "text" ? ` preset-frame-${object.preset}` : ""}${editable ? " editor-canvas-object" : ""}${selected ? " canvas-object-selected" : ""}" ${editAttrs} style="${style}">${content}${handles}</div>`;
   }).join("");
-  return `<div class="built-site font-${site.font} button-${choice(design.buttonStyle, ["solid", "outline", "pill"], "solid")}" style="${style}">${shapes}${objects}<header class="site-nav"><div class="site-brand"><span aria-hidden="true">✳</span><strong>${escapeHtml(site.name)}</strong></div><nav>${nav}</nav><span class="nav-tagline">${escapeHtml(site.tagline)}</span></header>${site.sections.map(section => renderSection(section, editable)).join("")}<footer class="site-footer"><strong>${escapeHtml(site.name)}</strong><span>${escapeHtml(site.tagline)}</span><small>Made with care ✳</small></footer></div>`;
+  const siteAttr = key => editable ? ` data-site-key="${key}" tabindex="0"` : "";
+  return `<div class="built-site font-${site.font} button-${choice(design.buttonStyle, ["solid", "outline", "pill"], "solid")}" style="${style}">${shapes}${objects}<header class="site-nav"><div class="site-brand"><span aria-hidden="true">✳</span><strong${siteAttr("name")}>${escapeHtml(site.name)}</strong></div><nav>${nav}</nav><span class="nav-tagline"${siteAttr("tagline")}>${escapeHtml(site.tagline)}</span></header>${site.sections.map(section => renderSection(section, editable)).join("")}<footer class="site-footer"><strong${siteAttr("name")}>${escapeHtml(site.name)}</strong><span${siteAttr("tagline")}>${escapeHtml(site.tagline)}</span><small${siteAttr("footerNote")}>${escapeHtml(site.footerNote ?? "Made with care ✳")}</small></footer></div>`;
 }
 
 export const SITE_CSS = `

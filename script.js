@@ -4,6 +4,8 @@ import { normalizePluginPack, createPluginSection } from "./plugin-model.js";
 const siteStyles = document.createElement("style"); siteStyles.textContent = SITE_CSS; document.head.append(siteStyles);
 
 const $ = selector => document.querySelector(selector);
+for (const id of ["addon-tool-tabs", "shape-tools", "text-tools", "image-tools", "template-tools"]) $("#panel-build").append($("#" + id));
+$("#addon-tool-tabs").setAttribute("aria-label", "Canvas tools");
 const storageKey = "websiteforge-project-v1";
 const pluginStorageKey = "websiteforge-plugins-v1";
 const workspaceModeKey = "websiteforge-workspace-mode-v1";
@@ -20,13 +22,27 @@ catch { /* Browser storage may be unavailable for local files. */ }
 let selectedId = site.sections[0]?.id;
 let selectedShapeId = "";
 let selectedObjectId = "";
+let selectedContent = null;
 let activeAddonTool = "";
 let suppressPaletteClickUntil = 0;
 let activeTab = "build";
 let toastTimer;
+let zoom = 1;
+let history = [JSON.stringify(site)];
+let historyIndex = 0;
+let restoringHistory = false;
 
 function save() {
-  try { localStorage.setItem(storageKey, JSON.stringify(site)); $("#save-status").textContent = "Saved on this device"; }
+  const snapshot = JSON.stringify(site);
+  if (!restoringHistory && snapshot !== history[historyIndex]) {
+    history = history.slice(0, historyIndex + 1);
+    history.push(snapshot);
+    while (history.length > 1 && (history.length > 80 || history.reduce((length, entry) => length + entry.length, 0) > 12000000)) history.shift();
+    historyIndex = history.length - 1;
+  }
+  if ($("#undo-button")) $("#undo-button").disabled = historyIndex === 0;
+  if ($("#redo-button")) $("#redo-button").disabled = historyIndex === history.length - 1;
+  try { localStorage.setItem(storageKey, snapshot); $("#save-status").textContent = "Saved on this device"; }
   catch { $("#save-status").textContent = "Could not save on this device"; }
 }
 function toast(message) {
@@ -153,14 +169,118 @@ function choiceField(label, key, value, options) {
   select.addEventListener("change", () => { const section = selected(); if (!section) return; section[key] = select.value; save(); if (key === "layout") renderInspector(); renderCanvas(); });
   wrap.append(labelElement, select); return wrap;
 }
+function contentRef(selection = selectedContent) {
+  const section = site.sections.find(item => item.id === selection?.sectionId);
+  if (!section) return null;
+  const itemMatch = /^item-([0-5])-(title|body|imageUrl|linkUrl)$/.exec(selection.key);
+  const target = itemMatch ? section.items[Number(itemMatch[1])] : section;
+  const key = itemMatch ? itemMatch[2] : selection.key;
+  return target ? { section, target, key, styleKey: selection.key } : null;
+}
+function selectionControl(form, label, type, value, onInput, options = {}) {
+  const wrap = document.createElement("label"); wrap.className = "control-group selection-control"; wrap.textContent = label;
+  const input = document.createElement(type === "textarea" ? "textarea" : "input");
+  if (type !== "textarea") input.type = type;
+  else input.rows = 4;
+  input.value = value ?? "";
+  if (options.min !== undefined) input.min = options.min;
+  if (options.max !== undefined) input.max = options.max;
+  if (options.step !== undefined) input.step = options.step;
+  if (options.maxLength !== undefined) input.maxLength = options.maxLength;
+  input.addEventListener("input", () => { onInput(input.value); save(); renderCanvas(); });
+  wrap.append(input); form.append(wrap);
+  return input;
+}
+function renderSelectionToolbar() {
+  const chosen = selectedContent || selectedObjectId || selectedShapeId;
+  const bar = $("#selection-toolbar");
+  bar.hidden = !chosen;
+  if (chosen) $("#selection-label").textContent = selectedContent ? selectedContent.key.replace(/^item-\d+-/, "Item ").replace(/([A-Z])/g, " $1") : selectedObjectId ? (site.objects.find(item => item.id === selectedObjectId)?.type === "image" ? "Image" : "Text") : "Shape";
+}
+function renderLayerList() {
+  const list = $("#layer-list"); if (!list) return;
+  list.replaceChildren();
+  let count = 0;
+  site.sections.forEach(section => {
+    const group = document.createElement("div"); group.className = "layer-group";
+    const title = document.createElement("strong"); title.textContent = SECTION_LABELS[section.type] || "Section"; group.append(title);
+    const add = (key, label, value) => {
+      if (!value) return;
+      const button = document.createElement("button"); button.type = "button"; button.className = `layer-row ${selectedContent?.sectionId === section.id && selectedContent.key === key ? "selected" : ""}`;
+      button.textContent = label; button.addEventListener("click", () => { selectContent(section.id, key); document.querySelector(`[data-section-id="${section.id}"] [data-content-key="${key}"]`)?.scrollIntoView({ block: "center", behavior: "smooth" }); });
+      group.append(button); count++;
+    };
+    add("eyebrow", `Text · ${section.eyebrow}`, section.eyebrow);
+    add("title", `Title · ${section.title}`, section.title);
+    add("body", `Body · ${section.body}`, section.body);
+    add("buttonText", `Button · ${section.buttonText}`, section.buttonText);
+    if (section.type === "hero") add("artLabel", `Art label · ${section.artLabel || "ARTIST / MAKER / DREAMER"}`, section.artLabel || "ARTIST / MAKER / DREAMER");
+    if (section.imageUrl) add("imageUrl", "Image", section.imageUrl);
+    section.items.forEach((item, index) => { add(`item-${index}-title`, `Item ${index + 1} · ${item.title}`, item.title); add(`item-${index}-body`, `Body · ${item.body}`, item.body); if (item.imageUrl) add(`item-${index}-imageUrl`, `Image ${index + 1}`, item.imageUrl); });
+    list.append(group);
+  });
+  site.objects.forEach(object => { const button = document.createElement("button"); button.type = "button"; button.className = `layer-row ${selectedObjectId === object.id ? "selected" : ""}`; button.textContent = `${object.type === "image" ? "Image" : "Text"} · ${object.text?.slice(0, 28) || object.alt || "Untitled"}`; button.addEventListener("click", () => selectCanvasObject(object.id)); list.append(button); count++; });
+  site.shapes.forEach(shape => { const button = document.createElement("button"); button.type = "button"; button.className = `layer-row ${selectedShapeId === shape.id ? "selected" : ""}`; button.textContent = `Shape · ${shape.type.replaceAll("-", " ")}`; button.addEventListener("click", () => selectCanvasShape(shape.id)); list.append(button); count++; });
+  $("#layer-count").textContent = String(count);
+}
+function selectContent(sectionId, key) {
+  selectedId = sectionId; selectedContent = { sectionId, key }; selectedObjectId = ""; selectedShapeId = "";
+  renderList(); renderInspector(); renderCanvas();
+}
+function selectCanvasObject(id) { selectedObjectId = id; selectedShapeId = ""; selectedContent = null; renderInspector(); renderCanvas(); renderCanvasObjectTools(); }
+function selectCanvasShape(id) { selectedShapeId = id; selectedObjectId = ""; selectedContent = null; renderInspector(); renderCanvas(); renderShapeTools(); }
+function startInlineEdit(element, sectionId, key) {
+  selectedContent = { sectionId, key }; const ref = contentRef(); if (!ref) return;
+  element.textContent = ref.target[ref.key] || "";
+  element.contentEditable = "true"; element.classList.add("inline-editing"); element.focus();
+  const range = document.createRange(); range.selectNodeContents(element);
+  const selection = window.getSelection(); selection.removeAllRanges(); selection.addRange(range);
+  element.addEventListener("keydown", event => { if (event.key === "Escape") { event.preventDefault(); element.textContent = ref.target[ref.key] || ""; element.blur(); } else if (event.key === "Enter" && !event.shiftKey) { event.preventDefault(); element.blur(); } }, { once: false });
+  element.addEventListener("blur", () => { ref.target[ref.key] = element.textContent.trim(); element.contentEditable = "false"; save(); renderCanvas(); renderInspector(); }, { once: true });
+}
 function renderInspector() {
   const section = selected(); const form = $("#inspector-form"); form.replaceChildren();
+  renderSelectionToolbar();
+  if (selectedContent) {
+    const ref = contentRef(); if (!ref) { selectedContent = null; return renderInspector(); }
+    const isImage = ref.key === "imageUrl";
+    const style = ref.section.elementStyles ||= {};
+    const layout = style[ref.styleKey] ||= {};
+    $("#inspector-actions").hidden = true;
+    $("#inspector-title").textContent = isImage ? "Image" : "Text";
+    $("#inspector-description").textContent = "Edit here or drag this element on the canvas. Double-click text to type in place.";
+    selectionControl(form, isImage ? "Image URL (HTTPS)" : "Text", isImage ? "url" : "textarea", ref.target[ref.key], value => { ref.target[ref.key] = value; }, { maxLength: isImage ? 500 : 700 });
+    if (isImage) { const upload = document.createElement("button"); upload.type = "button"; upload.className = "button subtle wide"; upload.textContent = "Upload image"; upload.addEventListener("click", () => $("#canvas-image-file").click()); form.append(upload); }
+    else { selectionControl(form, "Font size (px)", "number", layout.fontSize || "", value => { layout.fontSize = Number(value) || 0; }, { min: 0, max: 180 }); selectionControl(form, "Text color", "color", layout.color || site.palette.ink, value => { layout.color = value; }); }
+    selectionControl(form, "Move right (px)", "number", layout.x || 0, value => { layout.x = Number(value) || 0; }, { min: -2000, max: 2000 });
+    selectionControl(form, "Move down (px)", "number", layout.y || 0, value => { layout.y = Number(value) || 0; }, { min: -2000, max: 2000 });
+    selectionControl(form, "Width (px, 0 = auto)", "number", layout.width || 0, value => { layout.width = Number(value) || 0; }, { min: 0, max: 1600 });
+    selectionControl(form, "Height (px, 0 = auto)", "number", layout.height || 0, value => { layout.height = Number(value) || 0; }, { min: 0, max: 1200 });
+    return;
+  }
+  if (selectedObjectId || selectedShapeId) {
+    const object = site.objects.find(item => item.id === selectedObjectId);
+    const shape = site.shapes.find(item => item.id === selectedShapeId);
+    const item = object || shape;
+    if (!item) { selectedObjectId = ""; selectedShapeId = ""; return renderInspector(); }
+    $("#inspector-actions").hidden = true;
+    $("#inspector-title").textContent = object?.type === "text" ? "Text" : object?.type === "image" ? "Image" : "Shape";
+    $("#inspector-description").textContent = "Drag on the canvas or adjust the selected layer here.";
+    if (object?.type === "text") { selectionControl(form, "Text", "textarea", object.text, value => { object.text = value; }, { maxLength: 500 }); selectionControl(form, "Font size (px)", "number", object.fontSize, value => { object.fontSize = Number(value); }, { min: 10, max: 180 }); }
+    if (object?.type === "image") { selectionControl(form, "Image URL (HTTPS)", "url", object.url, value => { object.url = value; }, { maxLength: 500 }); selectionControl(form, "Alt text", "text", object.alt, value => { object.alt = value; }, { maxLength: 160 }); const upload = document.createElement("button"); upload.type = "button"; upload.className = "button subtle wide"; upload.textContent = "Upload image"; upload.addEventListener("click", () => $("#canvas-image-file").click()); form.append(upload); }
+    if (object?.type === "text" || shape) selectionControl(form, "Color", "color", item.color, value => { item.color = value; });
+    selectionControl(form, "Width (px)", "number", item.width ?? item.size, value => { item.width = Number(value); }, { min: 24, max: 900 });
+    selectionControl(form, "Height (px)", "number", item.height ?? item.size, value => { item.height = Number(value); }, { min: 24, max: 600 });
+    selectionControl(form, "Rotation (degrees)", "number", item.rotation, value => { item.rotation = Number(value); }, { min: -360, max: 360 });
+    return;
+  }
   $("#inspector-actions").hidden = !section;
   if (!section) { $("#inspector-title").textContent = "Select a section"; $("#inspector-description").textContent = "Choose a section from the canvas or list to edit its content."; return; }
   $("#inspector-title").textContent = section.type === "plugin" ? section.pluginName : SECTION_LABELS[section.type];
   $("#inspector-description").textContent = "Changes appear in your preview immediately.";
   if (section.type !== "blank") form.append(field("Small heading", "eyebrow", section.eyebrow, { max: 80 }), field("Title", "title", section.title, { max: 130 }), field("Description", "body", section.body, { multiline: true, max: 700 }));
   if (["hero", "cta", "plugin"].includes(section.type)) form.append(field("Button label", "buttonText", section.buttonText, { max: 40 }), field("Button link", "buttonUrl", section.buttonUrl, { max: 300, placeholder: "https://youtube.com/... or youtube.com/..." }));
+  if (section.type === "hero") form.append(field("Artwork label", "artLabel", section.artLabel, { max: 80 }));
   if (section.type === "hero" || section.type === "plugin" && section.layout === "banner") form.append(field("Image URL (HTTPS)", "imageUrl", section.imageUrl, { max: 500 }));
   if (section.type === "plugin") form.append(choiceField("Plugin layout", "layout", section.layout, [["cards", "Cards"], ["faq", "FAQ"], ["quote", "Quotes"], ["banner", "Banner"]]));
   if (["gallery", "features", "events", "links", "plugin"].includes(section.type) && !(section.type === "plugin" && section.layout === "banner")) {
@@ -182,6 +302,19 @@ function renderInspector() {
 }
 function renderCanvas() {
   $("#site-preview").innerHTML = renderSite(site, true, selectedShapeId, selectedObjectId);
+  document.querySelectorAll("#site-preview [data-site-key]").forEach(element => {
+    element.classList.add("editor-content");
+    element.title = "Double-click to edit";
+    element.addEventListener("dblclick", event => {
+      event.preventDefault(); event.stopPropagation();
+      const key = element.dataset.siteKey;
+      element.contentEditable = "true"; element.classList.add("inline-editing"); element.focus();
+      const range = document.createRange(); range.selectNodeContents(element);
+      const selection = window.getSelection(); selection.removeAllRanges(); selection.addRange(range);
+      element.addEventListener("keydown", e => { if (e.key === "Escape") { element.textContent = site[key]; element.blur(); } else if (e.key === "Enter") { e.preventDefault(); element.blur(); } });
+      element.addEventListener("blur", () => { site[key] = element.textContent.trim().slice(0, key === "name" ? 70 : 120); save(); update(); }, { once: true });
+    });
+  });
   document.querySelectorAll("#site-preview a").forEach(link => {
     if (/^https?:\/\//i.test(link.getAttribute("href") || "")) { link.target = "_blank"; link.rel = "noopener noreferrer"; }
   });
@@ -190,11 +323,61 @@ function renderCanvas() {
     element.addEventListener("click", event => { if (event.target.closest("a") || event.target.closest("details")) return; select(element.dataset.sectionId); });
     element.addEventListener("keydown", event => { if (event.target === element && (event.key === "Enter" || event.key === " ")) { event.preventDefault(); select(element.dataset.sectionId); } });
   });
+  document.querySelectorAll("#site-preview [data-content-key]").forEach(element => {
+    const sectionId = element.closest("[data-section-id]")?.dataset.sectionId;
+    const key = element.dataset.contentKey;
+    if (!sectionId || !key) return;
+    element.classList.add("editor-content");
+    if (selectedContent?.sectionId === sectionId && selectedContent.key === key) {
+      element.classList.add("content-selected");
+      const handle = document.createElement("span"); handle.className = "content-resize-handle"; handle.setAttribute("aria-hidden", "true"); element.append(handle);
+    }
+    element.addEventListener("click", event => { event.preventDefault(); event.stopPropagation(); });
+    element.addEventListener("pointerdown", event => {
+      if (event.button !== 0) return;
+      event.stopPropagation();
+      if (element.isContentEditable) return;
+      event.preventDefault();
+      selectedId = sectionId; selectedContent = { sectionId, key }; selectedObjectId = ""; selectedShapeId = "";
+      document.querySelectorAll(".content-selected").forEach(node => node.classList.remove("content-selected"));
+      element.classList.add("content-selected");
+      if (!element.querySelector(".content-resize-handle")) { const handle = document.createElement("span"); handle.className = "content-resize-handle"; element.append(handle); }
+      const ref = contentRef(); if (!ref) return;
+      const layout = ref.section.elementStyles ||= {};
+      const position = layout[key] ||= {};
+      const startX = event.clientX, startY = event.clientY;
+      const initialX = Number(position.x) || 0, initialY = Number(position.y) || 0;
+      const initialWidth = Number(position.width) || element.getBoundingClientRect().width / zoom;
+      const initialHeight = Number(position.height) || element.getBoundingClientRect().height / zoom;
+      const resizing = Boolean(event.target.closest(".content-resize-handle"));
+      let moved = false;
+      element.setPointerCapture(event.pointerId);
+      const move = current => {
+        const dx = (current.clientX - startX) / zoom, dy = (current.clientY - startY) / zoom;
+        if (Math.abs(dx) + Math.abs(dy) < 2 && !moved) return;
+        moved = true;
+        if (resizing) {
+          position.width = Math.max(30, Math.min(1600, Math.round(initialWidth + dx)));
+          position.height = Math.max(18, Math.min(1200, Math.round(initialHeight + dy)));
+          element.style.width = `${position.width}px`; element.style.height = `${position.height}px`;
+        } else {
+          position.x = Math.max(-2000, Math.min(2000, Math.round(initialX + dx)));
+          position.y = Math.max(-2000, Math.min(2000, Math.round(initialY + dy)));
+          element.style.transform = `translate(${position.x}px,${position.y}px)`;
+        }
+      };
+      const finish = () => { element.removeEventListener("pointermove", move); if (moved) { save(); renderCanvas(); } renderInspector(); renderLayerList(); renderList(); };
+      element.addEventListener("pointermove", move);
+      element.addEventListener("pointerup", finish, { once: true });
+      element.addEventListener("pointercancel", finish, { once: true });
+    });
+    element.addEventListener("dblclick", event => { event.preventDefault(); event.stopPropagation(); if (!/imageUrl|linkUrl/.test(key)) startInlineEdit(element, sectionId, key); });
+  });
   document.querySelectorAll(".editor-decoration").forEach(element => {
     element.addEventListener("pointerdown", event => {
       event.preventDefault(); event.stopPropagation();
       const shape = site.shapes.find(item => item.id === element.dataset.shapeId); if (!shape) return;
-      selectedShapeId = shape.id; selectedObjectId = "";
+      selectedShapeId = shape.id; selectedObjectId = ""; selectedContent = null;
       document.querySelectorAll(".shape-resize-handle").forEach(existing => { if (existing.parentElement !== element) existing.remove(); });
       if (!element.querySelector(".shape-resize-handle")) element.insertAdjacentHTML("beforeend", '<rect class="shape-selection-box" x="1" y="1" width="98" height="98"/><rect class="shape-resize-handle" data-resize="n" x="35" y="-3" width="30" height="6" rx="3"/><rect class="shape-resize-handle" data-resize="e" x="97" y="35" width="6" height="30" rx="3"/><rect class="shape-resize-handle" data-resize="s" x="35" y="97" width="30" height="6" rx="3"/><rect class="shape-resize-handle" data-resize="w" x="-3" y="35" width="6" height="30" rx="3"/><circle class="shape-resize-handle" data-resize="nw" cx="3" cy="3" r="4"/><circle class="shape-resize-handle" data-resize="ne" cx="97" cy="3" r="4"/><circle class="shape-resize-handle" data-resize="se" cx="97" cy="97" r="5"/><circle class="shape-resize-handle" data-resize="sw" cx="3" cy="97" r="4"/>');
       const resizeDirection = event.target.closest(".shape-resize-handle")?.dataset.resize || "";
@@ -203,7 +386,7 @@ function renderCanvas() {
       element.setPointerCapture(event.pointerId);
       const moveShape = e => {
         if (resizeDirection) {
-          const dx = e.clientX - startX, dy = e.clientY - startY;
+          const dx = (e.clientX - startX) / zoom, dy = (e.clientY - startY) / zoom;
           if (resizeDirection.includes("e")) shape.width = Math.max(24, Math.min(600, startWidth + dx));
           else if (resizeDirection.includes("w")) shape.width = Math.max(24, Math.min(600, startWidth - dx));
           if (resizeDirection.includes("s")) shape.height = Math.max(24, Math.min(600, startHeight + dy));
@@ -220,26 +403,39 @@ function renderCanvas() {
       element.addEventListener("pointermove", moveShape);
       element.addEventListener("pointerup", stopShape, { once: true });
       element.addEventListener("pointercancel", stopShape, { once: true });
-      renderShapeTools();
+      renderShapeTools(); renderInspector(); renderLayerList();
     });
   });
   document.querySelectorAll(".editor-canvas-object").forEach(element => {
+    element.addEventListener("dblclick", event => {
+      const object = site.objects.find(item => item.id === element.dataset.objectId);
+      if (object?.type !== "text") return;
+      event.preventDefault(); event.stopPropagation();
+      const textNode = element.querySelector(".text-object-content");
+      if (!textNode) return;
+      textNode.contentEditable = "true"; textNode.classList.add("inline-editing"); textNode.focus();
+      const range = document.createRange(); range.selectNodeContents(textNode);
+      const selection = window.getSelection(); selection.removeAllRanges(); selection.addRange(range);
+      textNode.addEventListener("keydown", e => { if (e.key === "Escape") { textNode.textContent = object.text; textNode.blur(); } else if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); textNode.blur(); } });
+      textNode.addEventListener("blur", () => { object.text = textNode.textContent.trim(); save(); renderCanvas(); renderInspector(); }, { once: true });
+    });
     element.addEventListener("pointerdown", event => {
+      if (event.target.closest("[contenteditable=true]")) return;
       event.preventDefault(); event.stopPropagation();
       const object = site.objects.find(item => item.id === element.dataset.objectId); if (!object) return;
       if (selectedObjectId !== object.id) {
         document.querySelectorAll(".canvas-object-selected").forEach(previous => { previous.classList.remove("canvas-object-selected"); previous.querySelectorAll(".object-selection-box,.object-resize-handle").forEach(handle => handle.remove()); });
-        selectedObjectId = object.id; selectedShapeId = "";
+        selectedObjectId = object.id; selectedShapeId = ""; selectedContent = null;
         element.classList.add("canvas-object-selected");
         element.insertAdjacentHTML("beforeend", `<span class="object-selection-box"></span>${["n","e","s","w","nw","ne","se","sw"].map(direction => `<span class="object-resize-handle" data-resize="${direction}" aria-label="Resize ${direction}"></span>`).join("")}`);
-        renderCanvasObjectTools();
+        renderCanvasObjectTools(); renderInspector(); renderLayerList();
       }
       const resizeDirection = event.target.closest(".object-resize-handle")?.dataset.resize || "";
       const startX = event.clientX, startY = event.clientY, startWidth = object.width, startHeight = object.height;
       element.setPointerCapture(event.pointerId);
       const moveObject = e => {
         if (resizeDirection) {
-          const dx = e.clientX - startX, dy = e.clientY - startY;
+          const dx = (e.clientX - startX) / zoom, dy = (e.clientY - startY) / zoom;
           if (resizeDirection.includes("e")) object.width = Math.max(24, Math.min(900, startWidth + dx));
           else if (resizeDirection.includes("w")) object.width = Math.max(24, Math.min(900, startWidth - dx));
           if (resizeDirection.includes("s")) object.height = Math.max(24, Math.min(600, startHeight + dy));
@@ -259,20 +455,21 @@ function renderCanvas() {
     });
   });
   $("#canvas-title").textContent = site.name;
+  renderSelectionToolbar(); renderLayerList();
 }
 const shapeOptions=SHAPE_TYPES;
 const blendOptions=["normal","multiply","screen","overlay","darken","lighten","color-dodge","color-burn","hard-light","soft-light","difference","exclusion","hue","saturation","color","luminosity"];
-function addShape(type,x=50,y=50){const shape={id:globalThis.crypto?.randomUUID?.()||`shape-${Date.now()}`,type,x,y,size:120,width:120,height:120,color:site.accent,opacity:.8,blend:"normal",rotation:0};site.shapes.push(shape);selectedShapeId=shape.id;selectedObjectId="";save();renderCanvas();renderShapeTools();}
+function addShape(type,x=50,y=50){const shape={id:globalThis.crypto?.randomUUID?.()||`shape-${Date.now()}`,type,x,y,size:120,width:120,height:120,color:site.accent,opacity:.8,blend:"normal",rotation:0,z:2};site.shapes.push(shape);selectedShapeId=shape.id;selectedObjectId="";selectedContent=null;save();renderCanvas();renderShapeTools();renderInspector();}
 function hexToHsv(hex){const value=hex.replace("#","");let r=parseInt(value.slice(0,2),16)/255,g=parseInt(value.slice(2,4),16)/255,b=parseInt(value.slice(4,6),16)/255;const max=Math.max(r,g,b),min=Math.min(r,g,b),delta=max-min;let h=0;if(delta){if(max===r)h=((g-b)/delta)%6;else if(max===g)h=(b-r)/delta+2;else h=(r-g)/delta+4;h=(h*60+360)%360;}return{h,s:max?delta/max:0,v:max};}
 function hsvToHex(h,s,v){const c=v*s,x=c*(1-Math.abs((h/60)%2-1)),m=v-c;let rgb=h<60?[c,x,0]:h<120?[x,c,0]:h<180?[0,c,x]:h<240?[0,x,c]:h<300?[x,0,c]:[c,0,x];return"#"+rgb.map(channel=>Math.round((channel+m)*255).toString(16).padStart(2,"0")).join("");}
 function appendShapeColorPicker(parent,shape){const state=hexToHsv(shape.color),wrap=document.createElement("div"),label=document.createElement("label"),hue=document.createElement("input"),field=document.createElement("div"),thumb=document.createElement("span");wrap.className="shape-color-picker";label.textContent="Color";hue.type="range";hue.min=0;hue.max=360;hue.value=state.h;hue.setAttribute("aria-label","Color hue");field.className="shape-color-field";field.tabIndex=0;field.setAttribute("role","slider");field.setAttribute("aria-label","Color saturation and brightness");thumb.className="shape-color-thumb";field.append(thumb);const paint=()=>{field.style.backgroundImage=`linear-gradient(to top,#000,transparent),linear-gradient(to right,#fff,hsl(${state.h} 100% 50%))`;thumb.style.left=`${state.s*100}%`;thumb.style.top=`${(1-state.v)*100}%`;field.setAttribute("aria-valuetext",shape.color);};const updateColor=()=>{shape.color=hsvToHex(state.h,state.s,state.v);paint();save();renderCanvas();};const pickPoint=event=>{const rect=field.getBoundingClientRect();state.s=Math.max(0,Math.min(1,(event.clientX-rect.left)/rect.width));state.v=1-Math.max(0,Math.min(1,(event.clientY-rect.top)/rect.height));updateColor();};hue.addEventListener("input",()=>{state.h=Number(hue.value);updateColor();});field.addEventListener("pointerdown",event=>{event.preventDefault();field.setPointerCapture(event.pointerId);pickPoint(event);const move=e=>pickPoint(e),stop=()=>{field.removeEventListener("pointermove",move);field.removeEventListener("pointerup",stop);field.removeEventListener("pointercancel",stop);};field.addEventListener("pointermove",move);field.addEventListener("pointerup",stop);field.addEventListener("pointercancel",stop);});field.addEventListener("keydown",event=>{const step=event.shiftKey ? 0.1 : 0.02;if(event.key==="ArrowLeft")state.s=Math.max(0,state.s-step);else if(event.key==="ArrowRight")state.s=Math.min(1,state.s+step);else if(event.key==="ArrowUp")state.v=Math.min(1,state.v+step);else if(event.key==="ArrowDown")state.v=Math.max(0,state.v-step);else return;event.preventDefault();updateColor();});paint();wrap.append(label,hue,field);parent.append(wrap);}
 const shapeDropZone=$("#canvas-frame");
 shapeDropZone.addEventListener("dragover",event=>{const types=Array.from(event.dataTransfer?.types||[]);if(types.some(type=>["application/x-websiteforge-shape","application/x-websiteforge-text","application/x-websiteforge-image"].includes(type))){event.preventDefault();event.dataTransfer.dropEffect="copy";}});
 shapeDropZone.addEventListener("drop",event=>{const shapeType=event.dataTransfer?.getData("application/x-websiteforge-shape");const textPreset=event.dataTransfer?.getData("application/x-websiteforge-text");const imageType=event.dataTransfer?.getData("application/x-websiteforge-image");if(!shapeOptions.includes(shapeType)&&!textPresets[textPreset]&&!imageType)return;event.preventDefault();const canvas=$("#site-preview")?.querySelector(".built-site");if(!canvas)return;const rect=canvas.getBoundingClientRect();const x=Math.max(0,Math.min(100,(event.clientX-rect.left)/rect.width*100));const y=Math.max(0,Math.min(100,(event.clientY-rect.top)/rect.height*100));suppressPaletteClickUntil=Date.now()+500;if(shapeOptions.includes(shapeType))addShape(shapeType,x,y);else addCanvasObject(textPreset?"text":"image",x,y,textPreset||"plain");});
-function renderAddonToolTabs(){const definitions=[{feature:"drawing-menu",label:"Drawing",panel:"#shape-tools"},{feature:"text-tool",label:"Text",panel:"#text-tools"},{feature:"image-tool",label:"Image",panel:"#image-tools"},{feature:"template-studio",label:"Templates",panel:"#template-tools"}];const available=definitions.filter(definition=>installed.some(pack=>pack.features.includes(definition.feature)));if(!available.some(definition=>definition.feature===activeAddonTool))activeAddonTool=available[0]?.feature||"";const tabs=$("#addon-tool-tabs");tabs.replaceChildren();tabs.hidden=!available.length;available.forEach(definition=>{const button=document.createElement("button");button.type="button";button.className=`addon-tool-tab ${activeAddonTool===definition.feature?"active":""}`;button.textContent=definition.label;button.setAttribute("aria-selected",String(activeAddonTool===definition.feature));button.addEventListener("click",()=>{activeAddonTool=definition.feature;renderAddonToolTabs();});tabs.append(button);});definitions.forEach(definition=>{const panel=$(definition.panel);panel.hidden=!available.some(item=>item.feature===definition.feature)||activeAddonTool!==definition.feature;});}
+function renderAddonToolTabs(){const definitions=[{feature:"drawing-menu",label:"Drawing",panel:"#shape-tools"},{feature:"text-tool",label:"Text",panel:"#text-tools"},{feature:"image-tool",label:"Image",panel:"#image-tools"},{feature:"template-studio",label:"Templates",panel:"#template-tools"}];const available=definitions.filter(definition=>definition.feature!=="template-studio"||installed.some(pack=>pack.features.includes(definition.feature)));if(!available.some(definition=>definition.feature===activeAddonTool))activeAddonTool=available[0]?.feature||"";const tabs=$("#addon-tool-tabs");tabs.replaceChildren();tabs.hidden=!available.length;available.forEach(definition=>{const button=document.createElement("button");button.type="button";button.className=`addon-tool-tab ${activeAddonTool===definition.feature?"active":""}`;button.textContent=definition.label;button.setAttribute("aria-selected",String(activeAddonTool===definition.feature));button.addEventListener("click",()=>{activeAddonTool=definition.feature;renderAddonToolTabs();});tabs.append(button);});definitions.forEach(definition=>{const panel=$(definition.panel);panel.hidden=!available.some(item=>item.feature===definition.feature)||activeAddonTool!==definition.feature;});}
 function renderShapeTools(){renderAddonToolTabs();const groups={"Basic shapes":["square","rectangle","rounded-square","circle","ellipse","triangle","inverted-triangle","right-triangle","diamond","cross","plus"],Polygons:["trapezoid","parallelogram","pentagon","hexagon","heptagon","octagon","nonagon","decagon"],Stars:["star-3","star-4","star-5","star-6","star-8","star-10","star-12","starburst"],Arrows:["arrow-right","arrow-left","arrow-up","arrow-down","double-arrow","chevron"],Symbols:["heart","lightning","moon","cloud","speech-bubble","line","curve","zigzag","pie","arc","ring"],Flowchart:["flow-terminal","flow-process","flow-decision","flow-document","flow-data","flow-delay","flow-display","flow-preparation","flow-database","flow-manual-input","flow-stored-data"]};const palette=$("#shape-palette");palette.replaceChildren();Object.entries(groups).forEach(([group,types])=>{const wrapper=document.createElement("div");wrapper.className="shape-group";const title=document.createElement("div");title.className="shape-group-title";title.textContent=group;wrapper.append(title);const row=document.createElement("div");row.className="shape-picks";types.forEach((type,index)=>{const button=document.createElement("button");button.type="button";button.className="shape-pick";button.title=type.replaceAll("-"," ");button.setAttribute("aria-label",`Add ${button.title}`);button.innerHTML=`<svg viewBox="0 0 100 100" aria-hidden="true">${shapeSvgMarkup(type,site.accent)}</svg>`;if(index>=5)button.hidden=true;button.addEventListener("click",()=>{if(Date.now()>=suppressPaletteClickUntil)addShape(type);});button.draggable=true;button.addEventListener("dragstart",event=>{event.dataTransfer?.setData("application/x-websiteforge-shape",type);if(event.dataTransfer)event.dataTransfer.effectAllowed="copy";});row.append(button);});wrapper.append(row);if(types.length>5){const more=document.createElement("button");more.type="button";more.className="button ghost small shape-more";more.textContent="Add more…";more.addEventListener("click",()=>{const expand=more.dataset.expanded!=="true";row.querySelectorAll("button").forEach(button=>button.hidden=!expand&&Array.from(row.children).indexOf(button)>=5);more.dataset.expanded=String(expand);more.textContent=expand?"Show less":"Add more…";});wrapper.append(more);}palette.append(wrapper);});const list=$("#shape-list");list.replaceChildren();$("#shape-count").textContent=String(site.shapes.length);site.shapes.forEach((shape,index)=>{const card=document.createElement("div");card.className=`shape-card ${selectedShapeId===shape.id?"selected":""}`;const head=document.createElement("div");head.className="shape-card-head";head.innerHTML=`<strong>${shape.type.replaceAll("-"," ")}</strong>`;head.addEventListener("click",()=>{selectedShapeId=shape.id;selectedObjectId="";renderCanvas();renderShapeTools();});const controls=document.createElement("div");controls.className="shape-controls";const addControl=(label,type,value,oninput,attrs={})=>{const wrap=document.createElement("label");wrap.textContent=label;const input=document.createElement("input");input.type=type;input.value=value;Object.assign(input,attrs);input.addEventListener("input",()=>{oninput(input.value);save();});input.addEventListener("change",renderCanvas);wrap.append(input);controls.append(wrap);};appendShapeColorPicker(controls,shape);addControl("Width","range",shape.width??shape.size,v=>shape.width=Number(v),{min:24,max:600});addControl("Height","range",shape.height??shape.size,v=>shape.height=Number(v),{min:24,max:600});addControl("Opacity","range",shape.opacity,v=>shape.opacity=Number(v),{min:0,max:1,step:.05});addControl("Rotation","range",shape.rotation,v=>shape.rotation=Number(v),{min:-180,max:180});const blendLabel=document.createElement("label");blendLabel.textContent="Blending";const blend=document.createElement("select");blendOptions.forEach(mode=>blend.add(new Option(mode.replaceAll("-"," "),mode)));blend.value=shape.blend;blend.addEventListener("change",()=>{shape.blend=blend.value;save();renderCanvas();});blendLabel.append(blend);controls.append(blendLabel);const remove=document.createElement("button");remove.type="button";remove.className="button danger wide";remove.textContent="Delete shape";remove.addEventListener("click",()=>{site.shapes.splice(index,1);save();renderCanvas();renderShapeTools();});card.append(head,controls,remove);list.append(card);});}
 const textPresets={heading:{label:"Heading",text:"Your heading",fontSize:52},subheading:{label:"Subheading",text:"A supporting line",fontSize:32},caption:{label:"Caption",text:"Add a caption",fontSize:18},label:{label:"Label",text:"SECTION LABEL",fontSize:14},badge:{label:"Badge",text:"New",fontSize:20},plain:{label:"Plain text",text:"Your text",fontSize:24}};
-function addCanvasObject(type,x=50,y=50,preset="plain") {const definition=textPresets[preset]||textPresets.plain;const object={id:globalThis.crypto?.randomUUID?.()||`object-${Date.now()}`,type,x,y,width:type==="image"?300:preset==="badge"?140:320,height:type==="image"?190:preset==="badge"?54:100,rotation:0,color:type==="text"?(preset==="badge"?"#ffffff":site.palette.ink):site.palette.ink,background:type==="text"&&preset==="badge"?site.accent:"",opacity:1,blend:"normal",text:definition.text,fontSize:definition.fontSize,preset:type==="text"?preset:"plain",url:"",alt:""};site.objects.push(object);selectedObjectId=object.id;selectedShapeId="";save();renderCanvas();renderCanvasObjectTools();}
+function addCanvasObject(type,x=50,y=50,preset="plain") {const definition=textPresets[preset]||textPresets.plain;const object={id:globalThis.crypto?.randomUUID?.()||`object-${Date.now()}`,type,x,y,width:type==="image"?300:preset==="badge"?140:320,height:type==="image"?190:preset==="badge"?54:100,rotation:0,color:type==="text"?(preset==="badge"?"#ffffff":site.palette.ink):site.palette.ink,background:type==="text"&&preset==="badge"?site.accent:"",opacity:1,blend:"normal",z:3,text:definition.text,fontSize:definition.fontSize,preset:type==="text"?preset:"plain",url:"",alt:""};site.objects.push(object);selectedObjectId=object.id;selectedShapeId="";selectedContent=null;save();renderCanvas();renderCanvasObjectTools();renderInspector();}
 function renderCanvasObjectTools(){renderAddonToolTabs();const presets=$("#text-presets");presets.replaceChildren();Object.entries(textPresets).forEach(([key,item])=>{const button=document.createElement("button");button.type="button";button.className=`object-preset preset-${key}`;button.textContent=item.label;button.title=`Add ${item.label.toLowerCase()}`;button.addEventListener("click",()=>{if(Date.now()>=suppressPaletteClickUntil)addCanvasObject("text",50,50,key);});button.draggable=true;button.addEventListener("dragstart",event=>{event.dataTransfer?.setData("application/x-websiteforge-text",key);if(event.dataTransfer)event.dataTransfer.effectAllowed="copy";});presets.append(button);});const addImage=$("#add-image-object");addImage.onclick=()=>addCanvasObject("image");addImage.draggable=true;addImage.ondragstart=event=>{event.dataTransfer?.setData("application/x-websiteforge-image","image");if(event.dataTransfer)event.dataTransfer.effectAllowed="copy";};const renderList=(type,target)=>{const list=$(target);list.replaceChildren();site.objects.forEach((object,index)=>{if(object.type!==type)return;const card=document.createElement("div");card.className=`shape-card ${selectedObjectId===object.id?"selected":""}`;const head=document.createElement("div");head.className="shape-card-head object-card-head";head.textContent=type==="text"?`${textPresets[object.preset]?.label||"Text"}: ${object.text.slice(0,24)||"Text"}`:"Image frame";head.addEventListener("click",()=>{selectedObjectId=object.id;selectedShapeId="";renderCanvas();renderCanvasObjectTools();});card.append(head);const controls=document.createElement("div");controls.className="shape-controls object-controls";const addControl=(label,inputType,value,oninput,attrs={})=>{const wrap=document.createElement("label");wrap.textContent=label;const input=document.createElement(inputType==="textarea"?"textarea":"input");input.type=inputType==="textarea"?"text":inputType;input.value=value??"";Object.assign(input,attrs);if(inputType==="textarea"){input.rows=3;input.maxLength=500;}input.addEventListener("input",()=>{oninput(input.value);save();if(inputType==="range")input.setAttribute("aria-valuenow",input.value);renderCanvas();});input.addEventListener("change",()=>{renderCanvas();renderCanvasObjectTools();});wrap.append(input);controls.append(wrap);};const addSelect=(label,value,options,onchange)=>{const wrap=document.createElement("label");wrap.textContent=label;const select=document.createElement("select");options.forEach(([key,name])=>select.add(new Option(name,key)));select.value=value;select.addEventListener("change",()=>{onchange(select.value);save();renderCanvas();renderCanvasObjectTools();});wrap.append(select);controls.append(wrap);};if(type==="text"){addControl("Text","textarea",object.text,value=>object.text=value);addSelect("Text style",object.preset,Object.entries(textPresets).map(([key,item])=>[key,item.label]),value=>{object.preset=value;object.fontSize=textPresets[value].fontSize;if(value==="badge"){object.background=site.accent;object.color="#ffffff";}else if(object.preset!=="badge"){object.background="";}});addControl("Text size","range",object.fontSize,value=>object.fontSize=Number(value),{min:10,max:180});appendShapeColorPicker(controls,object);addControl("Width","range",object.width,value=>object.width=Number(value),{min:24,max:900});addControl("Height","range",object.height,value=>object.height=Number(value),{min:24,max:600});if(object.preset==="badge")addControl("Badge background","color",object.background||site.accent,value=>object.background=value);}
 else{addControl("Image URL (HTTPS)","url",object.url,value=>object.url=value,{placeholder:"https://example.com/image.jpg",maxLength:500});addControl("Alt text","text",object.alt,value=>object.alt=value,{maxLength:160});addControl("Width","range",object.width,value=>object.width=Number(value),{min:24,max:900});addControl("Height","range",object.height,value=>object.height=Number(value),{min:24,max:600});addControl("Frame color","color",object.background||"#d8d8d8",value=>object.background=value);}
 addControl("Opacity","range",object.opacity,value=>object.opacity=Number(value),{min:0,max:1,step:.05});addSelect("Blending",object.blend,blendOptions.map(mode=>[mode,mode.replaceAll("-"," ")]),value=>object.blend=value);const remove=document.createElement("button");remove.type="button";remove.className="button danger wide";remove.textContent=`Delete ${type==="text"?"text":"image frame"}`;remove.addEventListener("click",()=>{site.objects.splice(index,1);if(selectedObjectId===object.id)selectedObjectId="";save();renderCanvas();renderCanvasObjectTools();});card.append(controls,remove);list.append(card);});};renderList("text","#text-object-list");renderList("image","#image-object-list");}
@@ -436,14 +633,81 @@ async function checkAiAvailability() {
   }
 }
 function update() {
-  save(); $("#site-name").value = site.name; $("#site-tagline").value = site.tagline;
+  save(); $("#site-name").value = site.name; $("#site-tagline").value = site.tagline; $("#site-footer-note").value = site.footerNote || "";
   $("#font-select").value = site.font; $("#custom-accent").value = site.accent;
   [["paper-color", "paper"], ["ink-color", "ink"], ["muted-color", "muted"]].forEach(([id, key]) => $("#" + id).value = site.palette[key]);
   [["content-width", "contentWidth", "px"], ["section-spacing", "sectionSpacing", "px"], ["corner-radius", "cornerRadius", "px"], ["heading-scale", "headingScale", "×"]].forEach(([id, key, unit]) => { $("#" + id).value = site.design[key]; $("#" + id + "-value").textContent = `${site.design[key]}${unit}`; });
   $("#button-style").value = site.design.buttonStyle;
   renderList(); renderThemes(); renderInspector(); renderCanvas(); renderPlugins(); renderShapeTools(); renderCanvasObjectTools();
 }
-function select(id) { selectedId = id; selectedObjectId = ""; selectedShapeId = ""; renderList(); renderInspector(); renderCanvas(); }
+function select(id) { selectedId = id; selectedObjectId = ""; selectedShapeId = ""; selectedContent = null; renderList(); renderInspector(); renderCanvas(); }
+function restoreHistory(direction) {
+  const next = historyIndex + direction;
+  if (next < 0 || next >= history.length) return;
+  historyIndex = next; restoringHistory = true;
+  try { site = normalizeSite(JSON.parse(history[historyIndex])); selectedId = site.sections[0]?.id; selectedContent = null; selectedObjectId = ""; selectedShapeId = ""; update(); }
+  finally { restoringHistory = false; }
+}
+function deleteSelection() {
+  if (selectedContent) { const ref = contentRef(); if (ref) ref.target[ref.key] = ""; selectedContent = null; }
+  else if (selectedObjectId) { site.objects = site.objects.filter(item => item.id !== selectedObjectId); selectedObjectId = ""; }
+  else if (selectedShapeId) { site.shapes = site.shapes.filter(item => item.id !== selectedShapeId); selectedShapeId = ""; }
+  else return;
+  update();
+}
+function duplicateSelection() {
+  if (selectedContent) {
+    const ref = contentRef(); const element = document.querySelector(`[data-section-id="${selectedContent.sectionId}"] [data-content-key="${selectedContent.key}"]`);
+    const artboard = $("#site-preview .built-site");
+    if (!ref || !element || !artboard) return;
+    const rect = element.getBoundingClientRect(), page = artboard.getBoundingClientRect();
+    const x = (rect.left + rect.width / 2 - page.left) / page.width * 100 + 2;
+    const y = (rect.top + rect.height / 2 - page.top) / page.height * 100 + 2;
+    const image = ref.key === "imageUrl";
+    const fontSize = Math.max(10, Math.min(180, Math.round(parseFloat(getComputedStyle(element).fontSize) || 24)));
+    addCanvasObject(image ? "image" : "text", x, y, image ? "plain" : "caption");
+    const copy = site.objects.find(item => item.id === selectedObjectId);
+    if (image) { copy.url = ref.target[ref.key]; copy.alt = "Copied image"; }
+    else { copy.text = ref.target[ref.key]; copy.fontSize = fontSize; }
+    copy.width = Math.max(24, Math.min(900, Math.round(rect.width / zoom)));
+    copy.height = Math.max(24, Math.min(600, Math.round(rect.height / zoom)));
+  } else if (selectedObjectId) {
+    const original = site.objects.find(item => item.id === selectedObjectId); if (!original) return;
+    const copy = { ...structuredClone(original), id: freshContentId("object"), x: Math.min(100, original.x + 2), y: Math.min(100, original.y + 2) };
+    site.objects.push(copy); selectedObjectId = copy.id;
+  } else if (selectedShapeId) {
+    const original = site.shapes.find(item => item.id === selectedShapeId); if (!original) return;
+    const copy = { ...structuredClone(original), id: freshContentId("shape"), x: Math.min(100, original.x + 2), y: Math.min(100, original.y + 2) };
+    site.shapes.push(copy); selectedShapeId = copy.id;
+  } else return;
+  update();
+}
+function shiftLayer(direction) {
+  let item;
+  if (selectedContent) { const ref = contentRef(); if (!ref) return; ref.section.elementStyles ||= {}; item = ref.section.elementStyles[selectedContent.key] ||= {}; }
+  else if (selectedObjectId) item = site.objects.find(entry => entry.id === selectedObjectId);
+  else if (selectedShapeId) item = site.shapes.find(entry => entry.id === selectedShapeId);
+  if (!item) return;
+  item.z = Math.max(-20, Math.min(20, (Number(item.z) || 0) + direction));
+  save(); renderCanvas(); renderInspector();
+}
+async function uploadSelectedImage(file) {
+  if (!file || !/^image\/(png|jpeg|webp|gif)$/.test(file.type) || file.size > 15000000) { toast("Choose a PNG, JPG, WebP, or GIF under 15 MB."); return; }
+  try {
+    const bitmap = await createImageBitmap(file);
+    const scale = Math.min(1, 1600 / Math.max(bitmap.width, bitmap.height));
+    const canvas = document.createElement("canvas"); canvas.width = Math.max(1, Math.round(bitmap.width * scale)); canvas.height = Math.max(1, Math.round(bitmap.height * scale));
+    canvas.getContext("2d").drawImage(bitmap, 0, 0, canvas.width, canvas.height); bitmap.close?.();
+    const data = canvas.toDataURL("image/webp", 0.82);
+    if (data.length > 2000000) { toast("This image is too large to save in the browser. Try a smaller image."); return; }
+    const ref = selectedContent ? contentRef() : null;
+    const object = site.objects.find(item => item.id === selectedObjectId);
+    if (ref?.key === "imageUrl") ref.target.imageUrl = data;
+    else if (object?.type === "image") object.url = data;
+    else { addCanvasObject("image"); site.objects.find(item => item.id === selectedObjectId).url = data; }
+    save(); renderCanvas(); renderInspector(); toast("Image added to the canvas.");
+  } catch { toast("Could not read that image."); }
+}
 async function ai(action) {
   const prompt = $("#ai-prompt").value.trim();
   if (!prompt) { $("#ai-status").textContent = "Describe what you want AI to write first."; $("#ai-prompt").focus(); return; }
@@ -462,8 +726,35 @@ async function ai(action) {
 }
 
 document.querySelectorAll(".tab").forEach(tab => tab.addEventListener("click", () => setTab(tab.dataset.tab)));
+$("#undo-button").addEventListener("click", () => restoreHistory(-1));
+$("#redo-button").addEventListener("click", () => restoreHistory(1));
+$("#selection-duplicate").addEventListener("click", duplicateSelection);
+$("#selection-delete").addEventListener("click", deleteSelection);
+$("#selection-front").addEventListener("click", () => shiftLayer(1));
+$("#selection-back").addEventListener("click", () => shiftLayer(-1));
+$("#add-text-button").addEventListener("click", () => addCanvasObject("text", 50, 14, "heading"));
+$("#add-image-button").addEventListener("click", () => { selectedContent = null; selectedObjectId = ""; selectedShapeId = ""; $("#canvas-image-file").click(); });
+$("#add-shape-button").addEventListener("click", () => addShape("rounded-square", 50, 22));
+$("#open-templates-button").addEventListener("click", () => $("#template-dialog").showModal());
+$("#canvas-image-file").addEventListener("change", async event => { await uploadSelectedImage(event.target.files?.[0]); event.target.value = ""; });
+$("#canvas-zoom").addEventListener("input", event => { zoom = Number(event.target.value) / 100; $("#canvas-frame").style.zoom = String(zoom); $("#zoom-value").textContent = `${event.target.value}%`; });
+document.addEventListener("keydown", event => {
+  const editing = event.target.closest?.("input,textarea,select,[contenteditable=true]");
+  if (editing) return;
+  if ((event.ctrlKey || event.metaKey) && !event.altKey && event.key.toLowerCase() === "z") { event.preventDefault(); restoreHistory(event.shiftKey ? 1 : -1); return; }
+  if ((event.ctrlKey || event.metaKey) && !event.altKey && event.key.toLowerCase() === "y") { event.preventDefault(); restoreHistory(1); return; }
+  if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "d" && (selectedContent || selectedObjectId || selectedShapeId)) { event.preventDefault(); duplicateSelection(); return; }
+  if ((event.key === "Delete" || event.key === "Backspace") && (selectedContent || selectedObjectId || selectedShapeId)) { event.preventDefault(); deleteSelection(); return; }
+  if (!["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(event.key) || !(selectedContent || selectedObjectId || selectedShapeId)) return;
+  event.preventDefault();
+  const amount = event.shiftKey ? 10 : 1, dx = event.key === "ArrowLeft" ? -amount : event.key === "ArrowRight" ? amount : 0, dy = event.key === "ArrowUp" ? -amount : event.key === "ArrowDown" ? amount : 0;
+  if (selectedContent) { const ref = contentRef(); if (!ref) return; ref.section.elementStyles ||= {}; const layout = ref.section.elementStyles[selectedContent.key] ||= {}; layout.x = (Number(layout.x) || 0) + dx; layout.y = (Number(layout.y) || 0) + dy; }
+  else { const item = selectedObjectId ? site.objects.find(entry => entry.id === selectedObjectId) : site.shapes.find(entry => entry.id === selectedShapeId); if (!item) return; const rect = $("#site-preview .built-site").getBoundingClientRect(); item.x = Math.max(0, Math.min(100, item.x + dx * zoom / rect.width * 100)); item.y = Math.max(0, Math.min(100, item.y + dy * zoom / rect.height * 100)); }
+  save(); renderCanvas(); renderInspector();
+});
 $("#site-name").addEventListener("input", event => { site.name = event.target.value; save(); renderCanvas(); });
 $("#site-tagline").addEventListener("input", event => { site.tagline = event.target.value; save(); renderCanvas(); });
+$("#site-footer-note").addEventListener("input", event => { site.footerNote = event.target.value; save(); renderCanvas(); });
 $("#font-select").addEventListener("change", event => { site.font = event.target.value; update(); });
 $("#custom-accent").addEventListener("input", event => { site.accent = event.target.value; save(); renderCanvas(); renderThemes(); renderShapeTools(); });
 [["paper-color", "paper"], ["ink-color", "ink"], ["muted-color", "muted"]].forEach(([id, key]) => $("#" + id).addEventListener("input", event => { site.palette[key] = event.target.value; save(); renderCanvas(); renderThemes(); }));
