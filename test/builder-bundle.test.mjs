@@ -57,3 +57,20 @@ test("direct canvas edits survive normalization and standalone export", () => {
   assert.match(exported, /Custom footer/);
   assert.doesNotMatch(exported, /data-content-key=/);
 });
+
+test("shape motion and transform controls survive export", () => {
+  const site = template("portfolio");
+  site.shapes = [{ id: "test-shape", type: "square", x: 42, y: 38, width: 120, height: 130,
+    color: "#aaddaa", opacity: .8, blend: "multiply", rotation: 24,
+    motion: { enabled: true, speed: 2, x: 75, y: -30, fade: 40, scaleX: 125, scaleY: 80, hue: 45, rotation: 90 } }];
+  const normalized = normalizeSite(site);
+  assert.equal(normalized.shapes[0].motion.speed, 2);
+  assert.equal(normalized.shapes[0].motion.fade, 40);
+  assert.match(renderSite(normalized, true, "test-shape"), /class="shape-rotate-handle"/);
+  const exported = exportDocument(normalized);
+  assert.match(exported, /class="site-decoration site-motion"/);
+  assert.match(exported, /--motion-x:75px/);
+  assert.match(exported, /--motion-opacity-end:0\.48/);
+  assert.match(exported, /@keyframes wf-motion/);
+  assert.doesNotMatch(exported, /shape-rotate-handle/);
+});

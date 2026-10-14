@@ -1,4 +1,4 @@
-import { SECTION_LABELS, SECTION_TYPES, MAX_SECTIONS, SHAPE_TYPES, shapeSvgMarkup, THEMES, SITE_CSS, makeSection, normalizeSite, renderSite, template, exportDocument } from "./site-model.js";
+import { SECTION_LABELS, SECTION_TYPES, MAX_SECTIONS, SHAPE_TYPES, shapeSvgMarkup, THEMES, SITE_CSS, makeSection, normalizeSite, normalizeMotion, renderSite, template, exportDocument } from "./site-model.js";
 import { normalizePluginPack, createPluginSection } from "./plugin-model.js";
 import { SHORTCUT_DEFINITIONS, shortcutFromKeyboardEvent, normalizeShortcuts, defaultShortcuts } from "./shortcuts-model.js";
 
@@ -244,6 +244,37 @@ function selectionControl(form, label, type, value, onInput, options = {}) {
   wrap.append(input); form.append(wrap);
   return input;
 }
+function selectionGroup(form, title, open = false) {
+  const group = document.createElement("details"); group.className = "selection-group"; group.open = open;
+  const summary = document.createElement("summary"); summary.textContent = title;
+  group.append(summary); form.append(group); return group;
+}
+function selectionDropdown(form, label, value, choices, onChange) {
+  const wrap = document.createElement("label"); wrap.className = "control-group selection-control"; wrap.textContent = label;
+  const input = document.createElement("select");
+  choices.forEach(choice => input.add(new Option(choice.replaceAll("-", " "), choice)));
+  input.value = value;
+  input.addEventListener("change", () => { onChange(input.value); save(); renderCanvas(); });
+  wrap.append(input); form.append(wrap);
+}
+function motionControls(form, item) {
+  const group = selectionGroup(form, "Motion", false);
+  const motion = item.motion = normalizeMotion(item.motion);
+  const toggle = document.createElement("label"); toggle.className = "motion-toggle";
+  const checkbox = document.createElement("input"); checkbox.type = "checkbox"; checkbox.checked = motion.enabled;
+  checkbox.addEventListener("change", () => { motion.enabled = checkbox.checked; save(); renderCanvas(); });
+  toggle.append(checkbox, document.createTextNode(" Animate this element")); group.append(toggle);
+  const speed = selectionControl(group, `Move speed (${motion.speed}×)`, "range", motion.speed, value => { motion.speed = Number(value); }, { min: .25, max: 4, step: .25 });
+  speed.addEventListener("input", () => { speed.parentElement.firstChild.textContent = `Move speed (${motion.speed}×)`; });
+  selectionControl(group, "Move X (px)", "number", motion.x, value => { motion.x = Number(value) || 0; }, { min: -500, max: 500 });
+  selectionControl(group, "Move Y (px)", "number", motion.y, value => { motion.y = Number(value) || 0; }, { min: -500, max: 500 });
+  selectionControl(group, "Fade out (%)", "number", motion.fade, value => { motion.fade = Number(value) || 0; }, { min: 0, max: 100 });
+  selectionControl(group, "Size X (%)", "number", motion.scaleX, value => { motion.scaleX = Number(value) || 100; }, { min: 25, max: 300 });
+  selectionControl(group, "Size Y (%)", "number", motion.scaleY, value => { motion.scaleY = Number(value) || 100; }, { min: 25, max: 300 });
+  selectionControl(group, "Color hue shift (°)", "number", motion.hue, value => { motion.hue = Number(value) || 0; }, { min: -180, max: 180 });
+  selectionControl(group, "Rotation change (°)", "number", motion.rotation, value => { motion.rotation = Number(value) || 0; }, { min: -360, max: 360 });
+  const hint = document.createElement("p"); hint.className = "helper"; hint.textContent = "Motion loops in the preview and exported website. It pauses while the element is selected."; group.append(hint);
+}
 function renderSelectionToolbar() {
   const chosen = selectedContent || selectedObjectId || selectedShapeId;
   const bar = $("#selection-toolbar");
@@ -318,13 +349,21 @@ function renderInspector() {
     if (!item) { selectedObjectId = ""; selectedShapeId = ""; return renderInspector(); }
     $("#inspector-actions").hidden = true;
     $("#inspector-title").textContent = object?.type === "text" ? "Text" : object?.type === "image" ? "Image" : "Shape";
-    $("#inspector-description").textContent = "Drag on the canvas or adjust the selected layer here.";
+    $("#inspector-description").textContent = "Drag to move, use edge handles to resize, or drag the round handle above to rotate.";
     if (object?.type === "text") { selectionControl(form, "Text", "textarea", object.text, value => { object.text = value; }, { maxLength: 500 }); selectionControl(form, "Font size (px)", "number", object.fontSize, value => { object.fontSize = Number(value); }, { min: 10, max: 180 }); }
     if (object?.type === "image") { selectionControl(form, "Image URL (HTTPS)", "url", object.url, value => { object.url = value; }, { maxLength: 500 }); selectionControl(form, "Alt text", "text", object.alt, value => { object.alt = value; }, { maxLength: 160 }); const upload = document.createElement("button"); upload.type = "button"; upload.className = "button subtle wide"; upload.textContent = "Upload image"; upload.addEventListener("click", () => $("#canvas-image-file").click()); form.append(upload); }
-    if (object?.type === "text" || shape) selectionControl(form, "Color", "color", item.color, value => { item.color = value; });
-    selectionControl(form, "Width (px)", "number", item.width ?? item.size, value => { item.width = Number(value); }, { min: 24, max: 900 });
-    selectionControl(form, "Height (px)", "number", item.height ?? item.size, value => { item.height = Number(value); }, { min: 24, max: 600 });
-    selectionControl(form, "Rotation (degrees)", "number", item.rotation, value => { item.rotation = Number(value); }, { min: -360, max: 360 });
+    const transform = selectionGroup(form, "Position & size", true);
+    selectionControl(transform, "X position (%)", "number", item.x, value => { item.x = Number(value) || 0; }, { min: 0, max: 100, step: .1 });
+    selectionControl(transform, "Y position (%)", "number", item.y, value => { item.y = Number(value) || 0; }, { min: 0, max: 100, step: .1 });
+    selectionControl(transform, "Width (px)", "number", item.width ?? item.size, value => { item.width = Number(value); }, { min: 24, max: object ? 900 : 600 });
+    selectionControl(transform, "Height (px)", "number", item.height ?? item.size, value => { item.height = Number(value); }, { min: 24, max: 600 });
+    selectionControl(transform, "Rotation (degrees)", "number", item.rotation, value => { item.rotation = Number(value) || 0; }, { min: -360, max: 360 });
+    const appearance = selectionGroup(form, "Color & blending");
+    if (object?.type === "text" || shape) selectionControl(appearance, "Color", "color", item.color, value => { item.color = value; });
+    if (object?.type === "image") selectionControl(appearance, "Frame color", "color", item.background || "#d8d8d8", value => { item.background = value; });
+    selectionControl(appearance, "Opacity (%)", "range", Math.round(item.opacity * 100), value => { item.opacity = Number(value) / 100; }, { min: 0, max: 100, step: 1 });
+    selectionDropdown(appearance, "Blending", item.blend, blendOptions, value => { item.blend = value; });
+    motionControls(form, item);
     return;
   }
   $("#inspector-actions").hidden = !section;
@@ -431,14 +470,24 @@ function renderCanvas() {
       event.preventDefault(); event.stopPropagation();
       const shape = site.shapes.find(item => item.id === element.dataset.shapeId); if (!shape) return;
       selectedShapeId = shape.id; selectedObjectId = ""; selectedContent = null; setRailPanel("edit");
-      document.querySelectorAll(".shape-resize-handle").forEach(existing => { if (existing.parentElement !== element) existing.remove(); });
-      if (!element.querySelector(".shape-resize-handle")) element.insertAdjacentHTML("beforeend", '<rect class="shape-selection-box" x="1" y="1" width="98" height="98"/><rect class="shape-resize-handle" data-resize="n" x="35" y="-3" width="30" height="6" rx="3"/><rect class="shape-resize-handle" data-resize="e" x="97" y="35" width="6" height="30" rx="3"/><rect class="shape-resize-handle" data-resize="s" x="35" y="97" width="30" height="6" rx="3"/><rect class="shape-resize-handle" data-resize="w" x="-3" y="35" width="6" height="30" rx="3"/><circle class="shape-resize-handle" data-resize="nw" cx="3" cy="3" r="4"/><circle class="shape-resize-handle" data-resize="ne" cx="97" cy="3" r="4"/><circle class="shape-resize-handle" data-resize="se" cx="97" cy="97" r="5"/><circle class="shape-resize-handle" data-resize="sw" cx="3" cy="97" r="4"/>');
+      element.classList.remove("site-motion");
+      document.querySelectorAll(".shape-resize-handle,.shape-rotate-handle,.shape-rotate-stem,.shape-selection-box").forEach(existing => { if (existing.parentElement !== element) existing.remove(); });
+      if (!element.querySelector(".shape-resize-handle")) element.insertAdjacentHTML("beforeend", '<rect class="shape-selection-box" x="1" y="1" width="98" height="98"/><rect class="shape-resize-handle" data-resize="n" x="35" y="-3" width="30" height="6" rx="3"/><rect class="shape-resize-handle" data-resize="e" x="97" y="35" width="6" height="30" rx="3"/><rect class="shape-resize-handle" data-resize="s" x="35" y="97" width="30" height="6" rx="3"/><rect class="shape-resize-handle" data-resize="w" x="-3" y="35" width="6" height="30" rx="3"/><circle class="shape-resize-handle" data-resize="nw" cx="3" cy="3" r="4"/><circle class="shape-resize-handle" data-resize="ne" cx="97" cy="3" r="4"/><circle class="shape-resize-handle" data-resize="se" cx="97" cy="97" r="5"/><circle class="shape-resize-handle" data-resize="sw" cx="3" cy="97" r="4"/><path class="shape-rotate-stem" d="M50 0V-12"/><circle class="shape-rotate-handle" cx="50" cy="-17" r="7"/>');
       const resizeDirection = event.target.closest(".shape-resize-handle")?.dataset.resize || "";
+      const rotating = Boolean(event.target.closest(".shape-rotate-handle"));
       const startX = event.clientX, startY = event.clientY;
       const startWidth = shape.width ?? shape.size, startHeight = shape.height ?? shape.size;
+      const center = element.getBoundingClientRect();
+      const centerX = center.left + center.width / 2, centerY = center.top + center.height / 2;
+      const startAngle = Math.atan2(startY - centerY, startX - centerX), startRotation = shape.rotation;
       element.setPointerCapture(event.pointerId);
       const moveShape = e => {
-        if (resizeDirection) {
+        if (rotating) {
+          const angle = Math.atan2(e.clientY - centerY, e.clientX - centerX);
+          const delta = Math.atan2(Math.sin(angle - startAngle), Math.cos(angle - startAngle));
+          shape.rotation = Math.max(-360, Math.min(360, Math.round(startRotation + delta * 180 / Math.PI)));
+          element.style.transform = `translate(-50%,-50%) rotate(${shape.rotation}deg)`;
+        } else if (resizeDirection) {
           const dx = (e.clientX - startX) / zoom, dy = (e.clientY - startY) / zoom;
           if (resizeDirection.includes("e")) shape.width = Math.max(24, Math.min(600, startWidth + dx));
           else if (resizeDirection.includes("w")) shape.width = Math.max(24, Math.min(600, startWidth - dx));
@@ -452,7 +501,7 @@ function renderCanvas() {
           element.style.left = `${shape.x}%`; element.style.top = `${shape.y}%`;
         }
       };
-      const stopShape = () => { element.removeEventListener("pointermove", moveShape); save(); renderShapeTools(); };
+      const stopShape = () => { element.removeEventListener("pointermove", moveShape); save(); renderShapeTools(); renderInspector(); };
       element.addEventListener("pointermove", moveShape);
       element.addEventListener("pointerup", stopShape, { once: true });
       element.addEventListener("pointercancel", stopShape, { once: true });
@@ -477,17 +526,27 @@ function renderCanvas() {
       event.preventDefault(); event.stopPropagation();
       const object = site.objects.find(item => item.id === element.dataset.objectId); if (!object) return;
       if (selectedObjectId !== object.id) {
-        document.querySelectorAll(".canvas-object-selected").forEach(previous => { previous.classList.remove("canvas-object-selected"); previous.querySelectorAll(".object-selection-box,.object-resize-handle").forEach(handle => handle.remove()); });
+        document.querySelectorAll(".canvas-object-selected").forEach(previous => { previous.classList.remove("canvas-object-selected"); previous.querySelectorAll(".object-selection-box,.object-resize-handle,.object-rotate-handle").forEach(handle => handle.remove()); });
         selectedObjectId = object.id; selectedShapeId = ""; selectedContent = null; setRailPanel("edit");
         element.classList.add("canvas-object-selected");
-        element.insertAdjacentHTML("beforeend", `<span class="object-selection-box"></span>${["n","e","s","w","nw","ne","se","sw"].map(direction => `<span class="object-resize-handle" data-resize="${direction}" aria-label="Resize ${direction}"></span>`).join("")}`);
+        element.insertAdjacentHTML("beforeend", `<span class="object-selection-box"></span>${["n","e","s","w","nw","ne","se","sw"].map(direction => `<span class="object-resize-handle" data-resize="${direction}" aria-label="Resize ${direction}"></span>`).join("")}<span class="object-rotate-handle" aria-label="Rotate element"></span>`);
         renderCanvasObjectTools(); renderInspector(); renderLayerList();
       }
+      element.classList.remove("site-motion");
       const resizeDirection = event.target.closest(".object-resize-handle")?.dataset.resize || "";
+      const rotating = Boolean(event.target.closest(".object-rotate-handle"));
       const startX = event.clientX, startY = event.clientY, startWidth = object.width, startHeight = object.height;
+      const center = element.getBoundingClientRect();
+      const centerX = center.left + center.width / 2, centerY = center.top + center.height / 2;
+      const startAngle = Math.atan2(startY - centerY, startX - centerX), startRotation = object.rotation;
       element.setPointerCapture(event.pointerId);
       const moveObject = e => {
-        if (resizeDirection) {
+        if (rotating) {
+          const angle = Math.atan2(e.clientY - centerY, e.clientX - centerX);
+          const delta = Math.atan2(Math.sin(angle - startAngle), Math.cos(angle - startAngle));
+          object.rotation = Math.max(-360, Math.min(360, Math.round(startRotation + delta * 180 / Math.PI)));
+          element.style.transform = `translate(-50%,-50%) rotate(${object.rotation}deg)`;
+        } else if (resizeDirection) {
           const dx = (e.clientX - startX) / zoom, dy = (e.clientY - startY) / zoom;
           if (resizeDirection.includes("e")) object.width = Math.max(24, Math.min(900, startWidth + dx));
           else if (resizeDirection.includes("w")) object.width = Math.max(24, Math.min(900, startWidth - dx));
