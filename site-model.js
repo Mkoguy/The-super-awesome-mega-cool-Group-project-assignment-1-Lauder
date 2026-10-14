@@ -19,12 +19,14 @@ const choice = (value, allowed, fallback) => allowed.includes(value) ? value : f
 const BLEND_MODES = ["normal", "multiply", "screen", "overlay", "darken", "lighten", "color-dodge", "color-burn", "hard-light", "soft-light", "difference", "exclusion", "hue", "saturation", "color", "luminosity"];
 export const DEFAULT_MOTION = { enabled: false, speed: 1, x: 0, y: 0, fade: 0, scaleX: 100, scaleY: 100, hue: 0, rotation: 0 };
 export function normalizeMotion(input) {
+  const scaleX = input?.scaleX != null && Number(input.scaleX) <= 3 ? Number(input.scaleX) * 100 : input?.scaleX;
+  const scaleY = input?.scaleY != null && Number(input.scaleY) <= 3 ? Number(input.scaleY) * 100 : input?.scaleY;
   return {
     enabled: input?.enabled === true,
     speed: number(input?.speed, 1, .25, 4),
-    x: number(input?.x, 0, -500, 500), y: number(input?.y, 0, -500, 500),
-    fade: number(input?.fade, 0, 0, 100),
-    scaleX: number(input?.scaleX, 100, 25, 300), scaleY: number(input?.scaleY, 100, 25, 300),
+    x: number(input?.x ?? input?.moveX, 0, -500, 500), y: number(input?.y ?? input?.moveY, 0, -500, 500),
+    fade: number(input?.fade ?? (input?.opacity != null ? (1 - Number(input.opacity)) * 100 : 0), 0, 0, 100),
+    scaleX: number(scaleX, 100, 25, 300), scaleY: number(scaleY, 100, 25, 300),
     hue: number(input?.hue, 0, -180, 180), rotation: number(input?.rotation, 0, -360, 360)
   };
 }
@@ -118,6 +120,10 @@ function safeUrl(value, image = false) {
   } catch { /* Invalid destinations are handled below. */ }
   return image ? "" : "#";
 }
+function safeWebsiteAddress(value) {
+  const address = safeUrl(value);
+  return /^https?:\/\//i.test(address) ? address : "";
+}
 export const escapeHtml = (value) => String(value ?? "").replace(/[&<>"']/g, character => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[character]);
 
 export function normalizeSite(input) {
@@ -147,7 +153,7 @@ export function normalizeSite(input) {
     const size = number(item.size, 120, 24, 600);
     return { id: /^[a-zA-Z0-9_-]{1,80}$/.test(item.id) ? item.id : makeId(), type:item.type, x:number(item.x,50,0,100), y:number(item.y,50,0,100), size, width:number(item.width,size,24,600), height:number(item.height,size,24,600), color:color(item.color,"#f5b91b"), opacity:number(item.opacity,.8,0,1), blend:choice(item.blend,blends,"normal"), rotation:number(item.rotation,0,-360,360), z:number(item.z,2,-20,20), motion:normalizeMotion(item.motion) };
   });
-  const objects = (Array.isArray(input.objects) ? input.objects : []).slice(0, 100).filter(item => item && ["text", "image"].includes(item.type)).map(item => ({
+  const objects = (Array.isArray(input.objects) ? input.objects : []).slice(0, 100).filter(item => item && ["text", "image", "model3d"].includes(item.type)).map(item => ({
     id: /^[a-zA-Z0-9_-]{1,80}$/.test(item.id) ? item.id : makeId(), type: item.type,
     x: number(item.x, 50, 0, 100), y: number(item.y, 50, 0, 100),
     width: number(item.width, 240, 24, 900), height: number(item.height, 90, 24, 600),
@@ -155,9 +161,13 @@ export function normalizeSite(input) {
     opacity: number(item.opacity, 1, 0, 1), blend: choice(item.blend, blends, "normal"), z:number(item.z,3,-20,20), motion:normalizeMotion(item.motion),
     text: trim(item.text, 500), fontSize: number(item.fontSize, 42, 10, 180),
     preset: choice(item.preset, ["heading", "subheading", "caption", "label", "badge", "plain"], "plain"),
-    url: safeUrl(item.url, true), alt: trim(item.alt, 160)
+    url: safeUrl(item.url, true), alt: trim(item.alt, 160),
+    modelData: typeof item.modelData === "string" && item.modelData.length <= 2000000 && /^data:application\/json;base64,[A-Za-z0-9+/]+={0,2}$/.test(item.modelData) ? item.modelData : "",
+    modelFormat: choice(item.modelFormat, ["bbmodel", "obj", "stl", "glb"], "bbmodel"),
+    modelFileName: trim(item.modelFileName, 160), modelScale: number(item.modelScale, 1, .2, 3),
+    modelRotateX: number(item.modelRotateX, -25, -360, 360), modelRotateY: number(item.modelRotateY, 35, -360, 360), modelPixelArt: Boolean(item.modelPixelArt)
   }));
-  return { version: 2, name: trim(input.name, limits.name) || "My Artist Site", tagline: trim(input.tagline, limits.tagline), footerNote: typeof input.footerNote === "string" ? trim(input.footerNote, 120) : "Made with care ✳", theme, accent, palette, design, font: ["editorial", "modern", "playful"].includes(input.font) ? input.font : "modern", sections, shapes, objects };
+  return { version: 2, name: trim(input.name, limits.name) || "My Artist Site", address: safeWebsiteAddress(input.address), logoUrl: safeUrl(input.logoUrl, true), tagline: trim(input.tagline, limits.tagline), footerNote: typeof input.footerNote === "string" ? trim(input.footerNote, 120) : "Made with care ✳", theme, accent, palette, design, font: ["editorial", "modern", "playful"].includes(input.font) ? input.font : "modern", sections, shapes, objects };
 }
 
 const mark = (section, attrs = "") => `<p class="site-eyebrow"${attrs}>${escapeHtml(section.eyebrow)}</p>`;
@@ -201,6 +211,26 @@ export function renderSection(section, editable = false) {
   return `<section class="${classes}" style="${style}"${attrs}>${content}</section>`;
 }
 
+function renderModelPreview(object) {
+  let faces = {};
+  if (object.modelFormat === "bbmodel" && object.modelData) {
+    try {
+      const bytes = Uint8Array.from(atob(object.modelData.split(",")[1]), character => character.charCodeAt(0));
+      const model = JSON.parse(new TextDecoder().decode(bytes));
+      const cube = model.elements?.find(element => element.type === "cube") || model.elements?.[0];
+      for (const side of ["front", "back", "left", "right", "top", "bottom"]) {
+        const sourceSide = ({ front: "south", back: "north", left: "west", right: "east", top: "up", bottom: "down" })[side];
+        const textureIndex = cube?.faces?.[sourceSide]?.texture;
+        const source = model.textures?.[textureIndex]?.source;
+        faces[side] = safeUrl(source, true);
+      }
+    } catch { /* A model without usable textures still gets an editable preview. */ }
+  }
+  const colorValue = color(object.color, "#ff8b35");
+  const sides = ["front", "back", "left", "right", "top", "bottom"].map(side => `<span class="model3d-face model3d-${side}" style="${faces[side] ? `background-image:url('${escapeHtml(faces[side])}');` : `background-color:${colorValue};`}"></span>`).join("");
+  return `<div class="model3d-preview" style="--model-x:${number(object.modelRotateX,-25,-360,360)}deg;--model-y:${number(object.modelRotateY,35,-360,360)}deg;--model-scale:${number(object.modelScale,1,.2,3)}"><div class="model3d-cube">${sides}</div></div><span class="model3d-caption">${escapeHtml(object.modelFileName || "3D model")}</span>`;
+}
+
 export function renderSite(site, editable = false, selectedShapeId = "", selectedObjectId = "") {
   const theme = THEMES[site.theme] || THEMES.clay;
   const palette = site.palette || theme;
@@ -222,13 +252,14 @@ export function renderSite(site, editable = false, selectedShapeId = "", selecte
     const motion = motionStyle(object, editable, selected);
     const style = `left:${object.x}%;top:${object.y}%;width:${object.width}px;height:${object.height}px;transform:translate(-50%,-50%) rotate(${object.rotation}deg);color:${color(object.color,"#27272b")};opacity:${number(object.opacity,1,0,1)};mix-blend-mode:${choice(object.blend,BLEND_MODES,"normal")};z-index:${number(object.z,3,-20,20)};${object.background ? `background:${color(object.background)};` : ""}${motion.style}`;
     const imageUrl = object.type === "image" ? safeUrl(object.url, true) : "";
-    const content = object.type === "image"
+    const content = object.type === "model3d" ? renderModelPreview(object) : object.type === "image"
       ? imageUrl ? `<img src="${escapeHtml(imageUrl)}" alt="${escapeHtml(object.alt)}" draggable="false">` : `<span class="image-object-empty">Add an HTTPS image URL</span>`
       : `<span class="text-object-content preset-${object.preset}" style="font-size:${number(object.fontSize,42,10,180)}px">${escapeHtml(object.text || "Your text")}</span>`;
     return `<div class="site-canvas-object canvas-object-${object.type}${object.type === "text" ? ` preset-frame-${object.preset}` : ""}${editable ? " editor-canvas-object" : ""}${selected ? " canvas-object-selected" : ""}${motion.className}" ${editAttrs} style="${style}">${content}${handles}</div>`;
   }).join("");
   const siteAttr = key => editable ? ` data-site-key="${key}" tabindex="0"` : "";
-  return `<div class="built-site font-${site.font} button-${choice(design.buttonStyle, ["solid", "outline", "pill"], "solid")}" style="${style}">${shapes}${objects}<header class="site-nav"><div class="site-brand"><span aria-hidden="true">✳</span><strong${siteAttr("name")}>${escapeHtml(site.name)}</strong></div><nav>${nav}</nav><span class="nav-tagline"${siteAttr("tagline")}>${escapeHtml(site.tagline)}</span></header>${site.sections.map(section => renderSection(section, editable)).join("")}<footer class="site-footer"><strong${siteAttr("name")}>${escapeHtml(site.name)}</strong><span${siteAttr("tagline")}>${escapeHtml(site.tagline)}</span><small${siteAttr("footerNote")}>${escapeHtml(site.footerNote ?? "Made with care ✳")}</small></footer></div>`;
+  const logo = safeUrl(site.logoUrl, true);
+  return `<div class="built-site font-${site.font} button-${choice(design.buttonStyle, ["solid", "outline", "pill"], "solid")}" style="${style}">${shapes}${objects}<header class="site-nav"><div class="site-brand">${logo ? `<img class="site-logo" src="${escapeHtml(logo)}" alt="">` : `<span aria-hidden="true">✳</span>`}<strong${siteAttr("name")}>${escapeHtml(site.name)}</strong></div><nav>${nav}</nav><span class="nav-tagline"${siteAttr("tagline")}>${escapeHtml(site.tagline)}</span></header>${site.sections.map(section => renderSection(section, editable)).join("")}<footer class="site-footer"><strong${siteAttr("name")}>${escapeHtml(site.name)}</strong><span${siteAttr("tagline")}>${escapeHtml(site.tagline)}</span><small${siteAttr("footerNote")}>${escapeHtml(site.footerNote ?? "Made with care ✳")}</small></footer></div>`;
 }
 
 export const SITE_CSS = `
@@ -237,11 +268,15 @@ export const SITE_CSS = `
 @media(max-width:540px){.site-nav nav{display:none}.nav-tagline{display:block;margin-left:auto}.built-section{padding:55px 6%}.built-section h1{font-size:48px}.built-section h2{font-size:37px}.hero-art{height:290px}.card-grid,.event-grid{grid-template-columns:1fr}.card-art{height:240px}.site-footer{flex-wrap:wrap}.site-footer small{margin-left:0}}
 .built-site .site-nav,.built-site .site-footer{padding-inline:max(6%,calc((100% - var(--content-width))/2))}.built-site .built-section{padding:var(--section-space) max(6%,calc((100% - var(--content-width))/2))}.built-site .spacing-compact{padding-block:calc(var(--section-space) * .6)}.built-site .spacing-roomy{padding-block:calc(var(--section-space) * 1.4)}.built-site .built-section h1{font-size:clamp(34px,calc(6vw * var(--heading-scale)),130px)}.built-site .built-section h2{font-size:clamp(28px,calc(4vw * var(--heading-scale)),92px)}.built-site .hero-art,.built-site .card-art,.built-site .site-card,.built-site .site-button{border-radius:var(--corner-radius)}.built-site .align-center{text-align:center}.built-site .align-center .site-body{margin-inline:auto}.built-site .align-center .site-content>div:first-child{margin-inline:auto}.built-site.button-outline .site-button{background:transparent;border:2px solid var(--site-accent);color:var(--site-accent)!important}.built-site.button-pill .site-button{border-radius:999px}.built-site .section-cta.button-outline .site-button{border-color:white;color:white!important}.plugin-faq{max-width:760px;margin:auto}.plugin-faq details{border-bottom:1px solid color-mix(in srgb,var(--site-ink) 18%,transparent);padding:20px 0}.plugin-faq summary{cursor:pointer;font-size:18px;font-weight:700}.plugin-faq details p{color:var(--site-muted);line-height:1.7;margin:14px 0 0}.plugin-quotes{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:20px}.plugin-quotes blockquote{margin:0;padding:28px;border:1px solid color-mix(in srgb,var(--site-ink) 15%,transparent);border-radius:var(--corner-radius);background:color-mix(in srgb,var(--site-accent) 7%,white)}.plugin-quotes blockquote p{font-size:18px;line-height:1.5}.plugin-quotes cite{color:var(--site-accent);font-size:12px;font-style:normal;font-weight:700}.section-plugin .site-content{min-height:320px}.section-plugin .site-button{margin-top:24px}@media(max-width:540px){.built-site .built-section{padding-inline:6%}.built-site .built-section h1{font-size:clamp(34px,calc(11vw * var(--heading-scale)),65px)}.built-site .built-section h2{font-size:clamp(28px,calc(8vw * var(--heading-scale)),48px)}}
 .built-site .section-intro,.built-site .section-features,.built-site .section-events{background:color-mix(in srgb,var(--site-paper) 92%,var(--site-ink) 8%)}.built-site .plugin-quotes blockquote{background:color-mix(in srgb,var(--site-accent) 7%,var(--site-paper))}.built-site.button-outline .section-cta .site-button{border-color:white;color:white!important}
+.built-site .site-logo{display:block;width:32px;height:32px;object-fit:contain;flex:none}
 .built-site .link-grid{display:grid;gap:14px;max-width:760px;margin:auto}.built-site .link-card{display:grid;grid-template-columns:1fr auto;gap:4px 16px;padding:20px 24px;border:1px solid color-mix(in srgb,var(--site-ink) 20%,transparent);border-radius:var(--corner-radius);background:color-mix(in srgb,var(--site-paper) 85%,white)}.built-site .link-card:hover{border-color:var(--site-accent);transform:translateY(-2px)}.built-site .link-card strong{font-size:18px}.built-site .link-card span{grid-column:1;color:var(--site-muted);font-size:13px}.built-site .link-card b{grid-column:2;grid-row:1/3;align-self:center;color:var(--site-accent);font-size:20px}
 .site-decoration{position:absolute;z-index:1;overflow:visible;pointer-events:none}.site-canvas-object{position:absolute;z-index:2;display:flex;align-items:center;justify-content:center;overflow:visible;box-sizing:border-box}.canvas-object-text{padding:4px 8px}.canvas-object-text.preset-frame-badge{border-radius:999px}.text-object-content{display:block;width:100%;white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.2}.preset-heading{font-weight:800;letter-spacing:-.055em;line-height:1.02}.preset-subheading{font-weight:600;letter-spacing:-.025em}.preset-caption{font-weight:400;line-height:1.5}.preset-label{font-weight:800;letter-spacing:.18em;text-transform:uppercase}.preset-badge{width:auto;padding:8px 16px;border-radius:999px;font-weight:800;text-align:center}.canvas-object-image{overflow:hidden;background:#e3e3e3}.canvas-object-image img{display:block;width:100%;height:100%;object-fit:cover}.image-object-empty{display:grid;width:100%;height:100%;place-items:center;padding:14px;background:linear-gradient(135deg,#e9e9e9,#d3d3d3);color:#555;font-size:13px;text-align:center}
+.canvas-object-model3d{flex-direction:column;gap:8px;background:color-mix(in srgb,var(--site-paper) 85%,var(--site-ink) 15%);border-radius:8px;perspective:500px}.model3d-preview{position:relative;width:100%;height:75%;display:grid;place-items:center;transform-style:preserve-3d;pointer-events:none}.model3d-cube{position:relative;width:92px;height:92px;transform-style:preserve-3d;transform:rotateX(var(--model-x)) rotateY(var(--model-y)) scale(var(--model-scale))}.model3d-face{position:absolute;inset:0;background-size:cover;background-position:center;backface-visibility:hidden;border:1px solid #0002}.model3d-front{transform:translateZ(46px)}.model3d-back{transform:rotateY(180deg) translateZ(46px)}.model3d-left{transform:rotateY(-90deg) translateZ(46px)}.model3d-right{transform:rotateY(90deg) translateZ(46px)}.model3d-top{transform:rotateX(90deg) translateZ(46px)}.model3d-bottom{transform:rotateX(-90deg) translateZ(46px)}.model3d-caption{color:var(--site-muted);font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:90%;pointer-events:none}
 .built-site .site-motion{animation:wf-motion var(--motion-duration,2s) ease-in-out infinite alternate}@keyframes wf-motion{from{translate:0 0;scale:1 1;rotate:0deg;filter:hue-rotate(0deg);opacity:var(--motion-opacity-start,1)}to{translate:var(--motion-x,0px) var(--motion-y,0px);scale:var(--motion-scale-x,1) var(--motion-scale-y,1);rotate:var(--motion-rotation,0deg);filter:hue-rotate(var(--motion-hue,0deg));opacity:var(--motion-opacity-end,1)}}@media(prefers-reduced-motion:reduce){.built-site .site-motion{animation:none}}
 `;
 
 export function exportDocument(site) {
-  return `<!doctype html>\n<html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="description" content="${escapeHtml(site.tagline)}"><title>${escapeHtml(site.name)}</title><style>body{margin:0}${SITE_CSS}</style></head><body>${renderSite(site)}</body></html>`;
+  const icon = safeUrl(site.logoUrl, true);
+  const address = safeWebsiteAddress(site.address);
+  return `<!doctype html>\n<html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="description" content="${escapeHtml(site.tagline)}">${icon ? `<link rel="icon" href="${escapeHtml(icon)}">` : ""}${address ? `<link rel="canonical" href="${escapeHtml(address)}">` : ""}<title>${escapeHtml(site.name)}</title><style>body{margin:0}${SITE_CSS}</style></head><body>${renderSite(site)}</body></html>`;
 }

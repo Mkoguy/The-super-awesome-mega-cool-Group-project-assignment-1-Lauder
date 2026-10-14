@@ -1,0 +1,15 @@
+{
+  "format": "websiteforge-plugin",
+  "version": 1,
+  "id": "websiteforge.3d-models",
+  "name": "3D Model Studio",
+  "author": "WebsiteForge",
+  "description": "Import Blockbench BBMODEL, OBJ, STL, or GLB models, resize their frames, adjust the model color and view, and use Motion Effects to animate each frame while scrolling.",
+  "homepage": "",
+  "sections": [],
+  "themes": [],
+  "features": [
+    "3d-models"
+  ],
+  "templates": []
+}

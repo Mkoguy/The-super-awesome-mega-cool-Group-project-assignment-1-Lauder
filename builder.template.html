@@ -43,7 +43,7 @@
           <button type="button" class="rail-button" data-rail="text" title="Text"><span class="rail-icon">T</span><span>Text</span></button>
           <button type="button" class="rail-button" data-rail="uploads" title="Uploads"><span class="rail-icon">↑</span><span>Uploads</span></button>
           <button type="button" class="rail-button" data-rail="design" title="Design"><span class="rail-icon">◉</span><span>Design</span></button>
-          <button type="button" class="rail-button" data-rail="site" title="Site details"><span class="rail-icon">⌂</span><span>Site</span></button>
+          <button type="button" class="rail-button" data-rail="site" title="Website settings"><span class="rail-icon">⌂</span><span>Website</span></button>
           <button type="button" class="rail-button" data-rail="layers" title="Layers"><span class="rail-icon">☷</span><span>Layers</span></button>
           <button type="button" class="rail-button" data-rail="pages" title="Pages"><span class="rail-icon">▣</span><span>Pages</span></button>
           <button type="button" class="rail-button" data-rail="edit" title="Edit selection"><span class="rail-icon">✎</span><span>Edit</span></button>
@@ -66,13 +66,15 @@
             <p class="helper">Double-click text to type. Drag any selected element or its corner handle.</p>
             <div id="canvas-toolbox" class="canvas-toolbox"></div>
             </details>
-            <details class="drawer-section" id="drawer-site"><summary>Website details</summary>
+            <details class="drawer-section" id="drawer-site"><summary>Website settings</summary>
             <div class="control-group"><label for="site-name">Website name</label><input id="site-name" type="text" maxlength="70" placeholder="Your studio name" /></div>
+            <div class="control-group"><label for="site-address">Website address</label><input id="site-address" type="url" maxlength="500" placeholder="https://example.com" /><p class="helper">Use the address where you plan to publish this site. Exporting does not publish it.</p></div>
+            <div class="control-group"><label for="site-logo-url">Website logo and browser icon URL</label><input id="site-logo-url" type="url" maxlength="500" placeholder="https://example.com/logo.png" /><button type="button" class="button subtle wide" id="site-logo-upload-button">Upload logo image</button><input id="site-logo-file" type="file" accept="image/png,image/jpeg,image/webp,image/gif" hidden /><p id="site-logo-status" class="helper">Shown beside the website name and used as the exported browser icon.</p></div>
             <div class="control-group"><label for="site-tagline">Short tagline</label><input id="site-tagline" type="text" maxlength="120" placeholder="Artist & maker" /></div>
             <div class="control-group"><label for="site-footer-note">Footer note</label><input id="site-footer-note" type="text" maxlength="120" placeholder="Made with care" /></div>
             </details>
             <details class="drawer-section" id="drawer-templates"><summary>Templates</summary>
-            <div class="control-group"><label for="template-select">Starting template</label><div class="template-row"><select id="template-select"><option value="portfolio">Artist portfolio</option><option value="events">Event landing page</option><option value="shop">Creative shop</option><option value="commissions">Commissions & services</option><option value="links">Simple link hub</option></select><button type="button" class="button subtle" id="apply-template-button">Use</button></div><button type="button" class="button ghost wide" id="browse-template-button">Browse template gallery</button><p class="helper">Applying a template replaces the current page.</p></div>
+            <div class="control-group"><label for="template-select">Starting template</label><div class="template-row"><select id="template-select"><option value="portfolio">Artist portfolio</option><option value="events">Event landing page</option><option value="shop">Creative shop</option><option value="commissions">Commissions & services</option><option value="links">Simple link hub</option></select><button type="button" class="button subtle" id="apply-template-button">Use</button></div><button type="button" class="button ghost wide" id="browse-template-button">Browse template gallery</button><button type="button" class="button subtle wide" id="imported-project-button">Open design from attached ZIP</button><p class="helper">Applying a template replaces the current page.</p></div>
             </details>
             <details class="drawer-section" id="drawer-pages"><summary>Page sections</summary>
             <div class="section-title"><h2>Page sections</h2><span id="section-count" class="count">0</span></div>
@@ -132,11 +134,18 @@
             <button type="button" class="button ghost wide" id="rewrite-section-button">✦ Rewrite selected section</button>
             <p id="ai-status" class="helper ai-status" role="status">AI tools need the local server and an OpenAI API key. Add your key in <a href="settings.html">Settings</a>. Manual editing works anytime.</p><p class="helper">Generating a page sends your prompt and current site content to OpenAI. Review the draft before publishing.</p>
           </section>
+          <section class="tab-panel rail-panel" id="panel-templates" role="tabpanel" hidden></section>
+          <section class="tab-panel rail-panel" id="panel-elements" role="tabpanel" hidden></section>
+          <section class="tab-panel rail-panel" id="panel-text" role="tabpanel" hidden></section>
+          <section class="tab-panel rail-panel" id="panel-uploads" role="tabpanel" hidden></section>
+          <section class="tab-panel rail-panel" id="panel-site" role="tabpanel" hidden></section>
+          <section class="tab-panel rail-panel" id="panel-layers" role="tabpanel" hidden></section>
+          <section class="tab-panel rail-panel" id="panel-pages" role="tabpanel" hidden></section>
           <div class="sidebar-foot"><span class="footer-star">✳</span> Made for artists, makers & dreamers.</div>
         </aside>
         <main class="stage" aria-label="Website preview workspace">
           <div class="stage-toolbar"><div><span class="eyebrow">PAGE CANVAS</span><strong id="canvas-title">Your website</strong></div><div class="stage-controls"><button type="button" class="icon-button" id="undo-button" aria-label="Undo" title="Undo (Ctrl+Z)">↶</button><button type="button" class="icon-button" id="redo-button" aria-label="Redo" title="Redo (Ctrl+Y)">↷</button><div class="viewport-switch" aria-label="Preview width"><button type="button" class="icon-button active" id="desktop-button" aria-label="Desktop preview" title="Desktop preview">▣</button><button type="button" class="icon-button" id="mobile-button" aria-label="Mobile preview" title="Mobile preview">▯</button></div><button type="button" class="button ghost" id="preview-button">Preview</button></div></div>
-          <div id="selection-toolbar" class="selection-toolbar" hidden><span id="selection-label">Element</span><button type="button" class="button ghost small" id="selection-duplicate">Duplicate</button><button type="button" class="button ghost small" id="selection-front">Bring forward</button><button type="button" class="button ghost small" id="selection-back">Send backward</button><button type="button" class="button danger small" id="selection-delete">Delete</button></div>
+          <div id="selection-toolbar" class="selection-toolbar" hidden><span id="selection-label">Element</span><button type="button" class="button ghost small" id="selection-edit-text">Edit text</button><button type="button" class="button ghost small" id="selection-duplicate">Duplicate</button><button type="button" class="button ghost small" id="selection-front">Bring forward</button><button type="button" class="button ghost small" id="selection-back">Send backward</button><button type="button" class="button danger small" id="selection-delete">Delete</button></div>
           <div class="canvas-area"><div id="canvas-frame" class="canvas-frame"><div id="site-preview" class="site-preview"></div></div></div>
           <div class="page-strip"><div class="page-strip-heading"><span>Page sections</span><span id="page-strip-count">0</span></div><div id="page-strip-list" class="page-strip-list" aria-label="Page sections"></div><button type="button" class="page-strip-add" id="page-strip-add" aria-label="Add section" title="Add section">+</button></div>
           <div class="canvas-tip"><span>Double-click text to edit. Drag to move, or select a layer in the left panel.</span><label for="canvas-zoom">Zoom <input id="canvas-zoom" type="range" min="50" max="150" step="10" value="100" /><output id="zoom-value">100%</output></label></div>

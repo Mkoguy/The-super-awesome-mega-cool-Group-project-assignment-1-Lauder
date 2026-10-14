@@ -28,6 +28,10 @@ Manual editing, local saving, and exports work without an API key. Project chang
 
 ## Customize your site
 
+Use the **Website** tab in the left toolbar to change the website name, planned address, logo/browser icon, tagline, and footer note. The address is saved in project backups and added as the canonical URL in exported HTML; entering it does not publish the website. You can paste an HTTPS logo URL or upload a PNG, JPG, WebP, or GIF. The uploaded logo is stored in the project and appears beside the site name and as the exported browser icon.
+
+The left toolbar opens a separate panel for Templates, Elements, Text, Uploads, Design, Website, Layers, Pages, and Edit. Double-click text on the canvas to edit it in place. Layers lists page text, images, floating objects, and shapes with selection and stacking controls. The design supplied in `examples/websiteforge-import/` can be opened from the Templates panel; save your current project first if you want to keep it.
+
 The **Design** tab controls the full palette, font, content width, section spacing, corner radius, heading scale, and button style. Select any section for its text, images, alignment, spacing, and optional background and text-color overrides. The five templates can be browsed in a visual gallery. The Links section provides editable destination URLs for link hub pages. All site settings are included in the standalone HTML export. Older WebsiteForge project JSON files still import.
 
 The built-in **Drawing menu**, **Text tool**, and **Image frame tool** packs add draggable shapes, text, and images to the canvas. You can move, resize, and style them in the editor; they are included in project backups and website exports. **Template Studio** can save a section or the whole page as a shareable JSON template pack. Install these packs from the **Plugins** tab.

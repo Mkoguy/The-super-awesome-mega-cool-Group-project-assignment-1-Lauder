@@ -74,3 +74,31 @@ test("shape motion and transform controls survive export", () => {
   assert.match(exported, /@keyframes wf-motion/);
   assert.doesNotMatch(exported, /shape-rotate-handle/);
 });
+
+test("website settings survive project normalization and standalone export", () => {
+  const site = template("portfolio");
+  site.name = "Mira & Co";
+  site.address = "https://example.com/studio";
+  site.logoUrl = "data:image/png;base64,aGVsbG8=";
+  const normalized = normalizeSite(site);
+  const exported = exportDocument(normalized);
+  assert.equal(normalized.address, site.address);
+  assert.equal(normalized.logoUrl, site.logoUrl);
+  assert.match(exported, /<title>Mira &amp; Co<\/title>/);
+  assert.match(exported, /<link rel="canonical" href="https:\/\/example\.com\/studio">/);
+  assert.match(exported, /<link rel="icon" href="data:image\/png;base64,aGVsbG8=">/);
+  assert.match(exported, /class="site-logo"/);
+  site.address = "javascript:alert(1)";
+  site.logoUrl = "javascript:alert(1)";
+  assert.doesNotMatch(exportDocument(normalizeSite(site)), /javascript:alert/);
+});
+
+test("the attached project opens with its sections and canvas elements", async () => {
+  const raw = JSON.parse(await readFile(new URL("../examples/websiteforge-import/websiteforge-project.json", import.meta.url), "utf8"));
+  const site = normalizeSite(raw);
+  assert.equal(site.sections.length, 6);
+  assert.equal(site.shapes.length, 1);
+  assert.equal(site.objects.length, 6);
+  assert.ok(site.objects.some(object => object.type === "model3d" && object.modelFileName === "azalea_log.bbmodel"));
+  assert.match(exportDocument(site), /azalea_log\.bbmodel/);
+});

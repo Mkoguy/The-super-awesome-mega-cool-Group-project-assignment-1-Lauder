@@ -1,14 +1,54 @@
-import { SECTION_LABELS, SECTION_TYPES, MAX_SECTIONS, SHAPE_TYPES, shapeSvgMarkup, THEMES, SITE_CSS, makeSection, normalizeSite, normalizeMotion, renderSite, template, exportDocument } from "./site-model.js";
-import { normalizePluginPack, createPluginSection } from "./plugin-model.js";
-import { SHORTCUT_DEFINITIONS, shortcutFromKeyboardEvent, normalizeShortcuts, defaultShortcuts } from "./shortcuts-model.js";
+import {
+  exportDocument,
+  makeSection,
+  MAX_SECTIONS,
+  normalizeMotion,
+  normalizeSite,
+  renderSite,
+  SECTION_LABELS,
+  SECTION_TYPES,
+  SHAPE_TYPES,
+  shapeSvgMarkup,
+  SITE_CSS,
+  template,
+  THEMES
+} from "./site-model.js";
+import {createPluginSection, normalizePluginPack} from "./plugin-model.js";
+import {
+  defaultShortcuts,
+  normalizeShortcuts,
+  SHORTCUT_DEFINITIONS,
+  shortcutFromKeyboardEvent
+} from "./shortcuts-model.js";
 
 const siteStyles = document.createElement("style"); siteStyles.textContent = SITE_CSS; document.head.append(siteStyles);
 
 const $ = selector => document.querySelector(selector);
-for (const id of ["addon-tool-tabs", "shape-tools", "text-tools", "image-tools", "template-tools"]) $("#canvas-toolbox").append($("#" + id));
-$("#addon-tool-tabs").setAttribute("aria-label", "Canvas tools");
-document.querySelectorAll(".drawer-section").forEach(section => section.name = "builder-drawer");
-$(".sidebar").insertBefore($(".inspector"), $(".sidebar-foot"));
+const sidebar = $(".sidebar");
+const panelDefinitions = [
+  ["templates", "Templates", "Choose a starting point or add a saved design.", ["drawer-templates", "template-tools"]],
+  ["elements", "Elements", "Add shapes and other canvas elements.", ["drawer-add", "shape-tools"]],
+  ["text", "Text", "Add text, then double-click it on the canvas to type.", ["text-tools"]],
+  ["uploads", "Uploads", "Add an image frame or upload an image.", ["image-tools"]],
+  ["site", "Website settings", "Set the website name, address, and logo.", ["drawer-site"]],
+  ["layers", "Layers", "Select and arrange what is on your page.", ["drawer-layers"]],
+  ["pages", "Pages", "Add and reorder website sections.", ["drawer-pages"]]
+];
+for (const [name, title, description, ids] of panelDefinitions) {
+  const panel = $("#panel-" + name);
+  const heading = document.createElement("div"); heading.className = "rail-panel-heading";
+  const label = document.createElement("h2"); label.textContent = title;
+  const help = document.createElement("p"); help.textContent = description;
+  heading.append(label, help); panel.append(heading);
+  for (const id of ids) panel.append($("#" + id));
+}
+$("#panel-text .rail-panel-heading").after($("#add-text-button"));
+$("#panel-uploads .rail-panel-heading").after($("#add-image-button"));
+$("#panel-uploads").append($("#canvas-image-file"));
+$("#panel-templates .rail-panel-heading").after($("#open-templates-button"));
+$("#panel-text").append($("#drawer-add .helper"));
+$("#addon-tool-tabs").hidden = true;
+sidebar.append($(".inspector"));
 $(".inspector").hidden = true;
 const uploadToolButton = document.createElement("button");
 uploadToolButton.type = "button"; uploadToolButton.className = "button subtle wide"; uploadToolButton.textContent = "↑ Upload image";
@@ -89,6 +129,16 @@ function applyTemplate(name) {
   if ($("#template-dialog").open) $("#template-dialog").close();
   update(); toast("Template applied.");
 }
+async function openImportedProject() {
+  if (!confirm("Open the design from the attached ZIP? This replaces the page currently open in this browser. Use Save project first if you want a backup.")) return;
+  try {
+    const source = bundledCatalog?.importedProject || await fetch("examples/websiteforge-import/websiteforge-project.json").then(response => { if (!response.ok) throw new Error("Saved design is unavailable."); return response.json(); });
+    site = normalizeSite(source);
+    selectedId = site.sections[0]?.id; selectedContent = null; selectedObjectId = ""; selectedShapeId = "";
+    if ($("#template-dialog").open) $("#template-dialog").close();
+    update(); setRailPanel("pages"); toast("Saved design opened in WebsiteForge.");
+  } catch (error) { toast(error.message || "Could not open the saved design."); }
+}
 function renderTemplateGallery() {
   const gallery = $("#template-gallery"); gallery.replaceChildren();
   for (const [id, name, description] of templateChoices) {
@@ -100,6 +150,9 @@ function renderTemplateGallery() {
     const detail = document.createElement("small"); detail.textContent = description;
     card.append(preview, title, author, detail); card.addEventListener("click", () => applyTemplate(id)); gallery.append(card);
   }
+  const imported = document.createElement("button"); imported.type = "button"; imported.className = "template-card template-card-imported";
+  imported.innerHTML = '<span class="template-miniature" aria-hidden="true"><span class="mini-nav"></span><span class="mini-heading"></span><span class="mini-copy"></span><span class="mini-accent"></span></span><strong>Saved design from ZIP</strong><small class="template-author">Your attached project</small><small>Open its six sections, images, text, shapes, and 3D model.</small>';
+  imported.addEventListener("click", openImportedProject); gallery.append(imported);
   const shared = installed.flatMap(pack => (pack.templates || []).map(saved => ({ pack, saved })));
   shared.forEach(({ pack, saved }, index) => {
     const card = document.createElement("article"); card.className = `template-card template-card-installed template-card-community template-tone-${index % 5}`;
@@ -122,11 +175,15 @@ function applyWorkspaceMode() {
   document.body.classList.toggle("workspace-light", installedLightMode && lightModeEnabled);
 }
 function setTab(name) {
-  activeTab = name;
-  $("#header-context").textContent = ({ build: "Build workspace", design: "Design studio", plugins: "Plugin library", ai: "AI tools" })[name] || "Build workspace";
-  document.querySelectorAll("[data-header-for]").forEach(group => group.hidden = group.dataset.headerFor !== name);
+  setRailPanel(name === "build" ? "pages" : name);
+}
+function setRailPanel(name) {
+  activeRail = name;
+  activeTab = ["design", "plugins", "ai"].includes(name) ? name : "build";
+  $("#header-context").textContent = ({ templates: "Templates", elements: "Elements", text: "Text", uploads: "Uploads", design: "Design studio", site: "Website settings", layers: "Layers", pages: "Pages", edit: "Edit selection", plugins: "Plugin library", ai: "AI tools" })[name] || "Build workspace";
+  document.querySelectorAll("[data-header-for]").forEach(group => group.hidden = group.dataset.headerFor !== activeTab);
   document.querySelectorAll(".tab").forEach(tab => {
-    const current = tab.dataset.tab === name;
+    const current = tab.dataset.tab === activeTab;
     tab.classList.toggle("active", current);
     tab.setAttribute("aria-selected", String(current));
   });
@@ -135,24 +192,20 @@ function setTab(name) {
     panel.hidden = !current;
     panel.classList.toggle("active", current);
   });
-}
-function setRailPanel(name) {
-  activeRail = name;
   document.querySelectorAll(".rail-button").forEach(button => {
     const active = button.dataset.rail === name;
     button.classList.toggle("active", active);
     button.setAttribute("aria-current", active ? "true" : "false");
   });
-  const tab = ["design", "plugins", "ai"].includes(name) ? name : "build";
-  setTab(tab);
-  const editing = name === "edit";
-  $(".inspector").hidden = !editing;
-  if (editing) $("#panel-build").hidden = true;
-  const tool = ({ elements: "drawing-menu", text: "text-tool", uploads: "image-tool" })[name];
-  if (tool) { activeAddonTool = tool; renderAddonToolTabs(); }
-  const drawer = ({ templates: "drawer-templates", elements: "drawer-add", text: "drawer-add", uploads: "drawer-add", layers: "drawer-layers", pages: "drawer-pages", site: "drawer-site", design: "drawer-mood" })[name];
-  document.querySelectorAll(".drawer-section").forEach(section => section.open = section.id === drawer);
-  const sidebar = $(".sidebar");
+  $(".inspector").hidden = name !== "edit";
+  const panel = $("#panel-" + name);
+  if (["templates", "elements", "site", "layers", "pages"].includes(name)) {
+    const drawer = panel?.querySelector("details.drawer-section");
+    if (drawer) drawer.open = true;
+  } else if (name === "design" && !panel?.querySelector("details.drawer-section[open]")) {
+    const drawer = panel?.querySelector("details.drawer-section");
+    if (drawer) drawer.open = true;
+  }
   sidebar.scrollTop = 0;
 }
 function renderList() {
@@ -279,41 +332,69 @@ function renderSelectionToolbar() {
   const chosen = selectedContent || selectedObjectId || selectedShapeId;
   const bar = $("#selection-toolbar");
   bar.hidden = !chosen;
-  if (chosen) $("#selection-label").textContent = selectedContent ? selectedContent.key.replace(/^item-\d+-/, "Item ").replace(/([A-Z])/g, " $1") : selectedObjectId ? (site.objects.find(item => item.id === selectedObjectId)?.type === "image" ? "Image" : "Text") : "Shape";
+  const selectedObject = site.objects.find(item => item.id === selectedObjectId);
+  $("#selection-edit-text").hidden = !(selectedContent && !/imageUrl|linkUrl/.test(selectedContent.key) || selectedObject?.type === "text");
+  if (chosen) $("#selection-label").textContent = selectedContent ? selectedContent.key.replace(/^item-\d+-/, "Item ").replace(/([A-Z])/g, " $1") : selectedObjectId ? ({ image: "Image", text: "Text", model3d: "3D model" })[selectedObject?.type] || "Element" : "Shape";
 }
 function renderLayerList() {
   const list = $("#layer-list"); if (!list) return;
   list.replaceChildren();
   let count = 0;
-  site.sections.forEach(section => {
-    const group = document.createElement("div"); group.className = "layer-group";
-    const title = document.createElement("strong"); title.textContent = SECTION_LABELS[section.type] || "Section"; group.append(title);
-    const add = (key, label, value) => {
-      if (!value) return;
-      const button = document.createElement("button"); button.type = "button"; button.className = `layer-row ${selectedContent?.sectionId === section.id && selectedContent.key === key ? "selected" : ""}`;
-      button.textContent = label; button.addEventListener("click", () => { selectContent(section.id, key); document.querySelector(`[data-section-id="${section.id}"] [data-content-key="${key}"]`)?.scrollIntoView({ block: "center", behavior: "smooth" }); });
-      group.append(button); count++;
-    };
-    add("eyebrow", `Text · ${section.eyebrow}`, section.eyebrow);
-    add("title", `Title · ${section.title}`, section.title);
-    add("body", `Body · ${section.body}`, section.body);
-    add("buttonText", `Button · ${section.buttonText}`, section.buttonText);
-    if (section.type === "hero") add("artLabel", `Art label · ${section.artLabel || "ARTIST / MAKER / DREAMER"}`, section.artLabel || "ARTIST / MAKER / DREAMER");
-    if (section.imageUrl) add("imageUrl", "Image", section.imageUrl);
-    section.items.forEach((item, index) => { add(`item-${index}-title`, `Item ${index + 1} · ${item.title}`, item.title); add(`item-${index}-body`, `Body · ${item.body}`, item.body); if (item.imageUrl) add(`item-${index}-imageUrl`, `Image ${index + 1}`, item.imageUrl); });
+  const row = (parent, label, active, choose, item) => {
+    const wrapper = document.createElement("div"); wrapper.className = "layer-entry";
+    const button = document.createElement("button"); button.type = "button"; button.className = `layer-row ${active ? "selected" : ""}`;
+    button.textContent = label; button.title = label; button.addEventListener("click", choose); wrapper.append(button);
+    if (item) for (const [direction, symbol, title] of [[-1, "↓", "Send backward"], [1, "↑", "Bring forward"]]) {
+      const move = document.createElement("button"); move.type = "button"; move.className = "layer-order"; move.textContent = symbol; move.title = title;
+      move.setAttribute("aria-label", `${title}: ${label}`);
+      move.disabled = direction < 0 ? Number(item.z || 0) <= -20 : Number(item.z || 0) >= 20;
+      move.addEventListener("click", () => { item.z = Math.max(-20, Math.min(20, (Number(item.z) || 0) + direction)); save(); renderCanvas(); });
+      wrapper.append(move);
+    }
+    parent.append(wrapper); count++;
+  };
+  const floating = document.createElement("details"); floating.className = "layer-group"; floating.open = Boolean(selectedObjectId || selectedShapeId);
+  const floatingTitle = document.createElement("summary"); floatingTitle.textContent = "Floating elements · top to bottom"; floating.append(floatingTitle);
+  const floatingItems = [
+    ...site.objects.map((item, index) => ({ item, index, kind: "object" })),
+    ...site.shapes.map((item, index) => ({ item, index, kind: "shape" }))
+  ].sort((a, b) => (Number(b.item.z) || 0) - (Number(a.item.z) || 0) || b.index - a.index);
+  for (const { item, kind } of floatingItems) {
+    const label = kind === "shape" ? `Shape · ${item.type.replaceAll("-", " ")}` : item.type === "image" ? `Image · ${item.alt || "Image frame"}` : item.type === "model3d" ? `3D model · ${item.modelFileName || "Model"}` : `Text · ${item.text || "Untitled"}`;
+    row(floating, label, kind === "shape" ? selectedShapeId === item.id : selectedObjectId === item.id,
+      () => kind === "shape" ? selectCanvasShape(item.id, true) : selectCanvasObject(item.id, true), item);
+  }
+  if (floatingItems.length) list.append(floating);
+  site.sections.forEach((section, index) => {
+    const group = document.createElement("details"); group.className = "layer-group"; group.open = selectedId === section.id && !selectedObjectId && !selectedShapeId;
+    const summary = document.createElement("summary"); summary.textContent = `${index + 1}. ${SECTION_LABELS[section.type] || "Section"}`; group.append(summary);
+    const title = document.createElement("button"); title.type = "button"; title.className = `layer-section ${selectedId === section.id && !selectedContent && !selectedObjectId && !selectedShapeId ? "selected" : ""}`;
+    title.textContent = "Select section";
+    title.addEventListener("click", () => { select(section.id, true); $("#site-preview [data-section-id=\"" + section.id + "\"]")?.scrollIntoView({ block: "center", behavior: "smooth" }); });
+    group.append(title); count++;
+    $("#site-preview [data-section-id=\"" + section.id + "\"]")?.querySelectorAll("[data-content-key]").forEach(element => {
+      const key = element.dataset.contentKey;
+      const name = key.replace(/^item-(\d+)-/, (_, number) => `Item ${Number(number) + 1} `).replace(/([A-Z])/g, " $1").trim();
+      const label = `${/imageUrl/i.test(key) ? "Image" : /linkUrl/i.test(key) ? "Link" : "Text"} · ${name}${/imageUrl|linkUrl/i.test(key) ? "" : `: ${(element.textContent || "Empty").trim().slice(0, 35)}`}`;
+      section.elementStyles ||= {};
+      const layerStyle = section.elementStyles[key] ||= {};
+      row(group, label, selectedContent?.sectionId === section.id && selectedContent.key === key, () => {
+        selectContent(section.id, key, true);
+        $("#site-preview [data-section-id=\"" + section.id + "\"] [data-content-key=\"" + key + "\"]")?.scrollIntoView({ block: "center", behavior: "smooth" });
+      }, layerStyle);
+    });
     list.append(group);
   });
-  site.objects.forEach(object => { const button = document.createElement("button"); button.type = "button"; button.className = `layer-row ${selectedObjectId === object.id ? "selected" : ""}`; button.textContent = `${object.type === "image" ? "Image" : "Text"} · ${object.text?.slice(0, 28) || object.alt || "Untitled"}`; button.addEventListener("click", () => selectCanvasObject(object.id)); list.append(button); count++; });
-  site.shapes.forEach(shape => { const button = document.createElement("button"); button.type = "button"; button.className = `layer-row ${selectedShapeId === shape.id ? "selected" : ""}`; button.textContent = `Shape · ${shape.type.replaceAll("-", " ")}`; button.addEventListener("click", () => selectCanvasShape(shape.id)); list.append(button); count++; });
   $("#layer-count").textContent = String(count);
 }
-function selectContent(sectionId, key) {
+function selectContent(sectionId, key, keepPanel = false) {
   selectedId = sectionId; selectedContent = { sectionId, key }; selectedObjectId = ""; selectedShapeId = "";
-  setRailPanel("edit"); renderList(); renderInspector(); renderCanvas();
+  if (!keepPanel) setRailPanel("edit"); renderList(); renderInspector(); renderCanvas();
 }
-function selectCanvasObject(id) { selectedObjectId = id; selectedShapeId = ""; selectedContent = null; setRailPanel("edit"); renderInspector(); renderCanvas(); renderCanvasObjectTools(); }
-function selectCanvasShape(id) { selectedShapeId = id; selectedObjectId = ""; selectedContent = null; setRailPanel("edit"); renderInspector(); renderCanvas(); renderShapeTools(); }
+function selectCanvasObject(id, keepPanel = false) { selectedObjectId = id; selectedShapeId = ""; selectedContent = null; if (!keepPanel) setRailPanel("edit"); renderInspector(); renderCanvas(); renderCanvasObjectTools(); }
+function selectCanvasShape(id, keepPanel = false) { selectedShapeId = id; selectedObjectId = ""; selectedContent = null; if (!keepPanel) setRailPanel("edit"); renderInspector(); renderCanvas(); renderShapeTools(); }
 function startInlineEdit(element, sectionId, key) {
+  if (element.isContentEditable) return;
   selectedContent = { sectionId, key }; const ref = contentRef(); if (!ref) return;
   element.textContent = ref.target[ref.key] || "";
   element.contentEditable = "true"; element.classList.add("inline-editing"); element.focus();
@@ -321,6 +402,16 @@ function startInlineEdit(element, sectionId, key) {
   const selection = window.getSelection(); selection.removeAllRanges(); selection.addRange(range);
   element.addEventListener("keydown", event => { if (event.key === "Escape") { event.preventDefault(); element.textContent = ref.target[ref.key] || ""; element.blur(); } else if (event.key === "Enter" && !event.shiftKey) { event.preventDefault(); element.blur(); } }, { once: false });
   element.addEventListener("blur", () => { ref.target[ref.key] = element.textContent.trim(); element.contentEditable = "false"; save(); renderCanvas(); renderInspector(); }, { once: true });
+}
+function startObjectInlineEdit(element, object) {
+  if (object?.type !== "text") return;
+  const textNode = element?.querySelector(".text-object-content");
+  if (!textNode || textNode.isContentEditable) return;
+  textNode.contentEditable = "true"; textNode.classList.add("inline-editing"); textNode.focus();
+  const range = document.createRange(); range.selectNodeContents(textNode);
+  const selection = window.getSelection(); selection.removeAllRanges(); selection.addRange(range);
+  textNode.addEventListener("keydown", event => { if (event.key === "Escape") { event.preventDefault(); textNode.textContent = object.text; textNode.blur(); } else if (event.key === "Enter" && !event.shiftKey) { event.preventDefault(); textNode.blur(); } });
+  textNode.addEventListener("blur", () => { object.text = textNode.textContent.trim().slice(0, 500); textNode.contentEditable = "false"; save(); renderCanvas(); renderInspector(); }, { once: true });
 }
 function renderInspector() {
   const section = selected(); const form = $("#inspector-form"); form.replaceChildren();
@@ -348,10 +439,11 @@ function renderInspector() {
     const item = object || shape;
     if (!item) { selectedObjectId = ""; selectedShapeId = ""; return renderInspector(); }
     $("#inspector-actions").hidden = true;
-    $("#inspector-title").textContent = object?.type === "text" ? "Text" : object?.type === "image" ? "Image" : "Shape";
+    $("#inspector-title").textContent = object?.type === "text" ? "Text" : object?.type === "image" ? "Image" : object?.type === "model3d" ? "3D model" : "Shape";
     $("#inspector-description").textContent = "Drag to move, use edge handles to resize, or drag the round handle above to rotate.";
     if (object?.type === "text") { selectionControl(form, "Text", "textarea", object.text, value => { object.text = value; }, { maxLength: 500 }); selectionControl(form, "Font size (px)", "number", object.fontSize, value => { object.fontSize = Number(value); }, { min: 10, max: 180 }); }
     if (object?.type === "image") { selectionControl(form, "Image URL (HTTPS)", "url", object.url, value => { object.url = value; }, { maxLength: 500 }); selectionControl(form, "Alt text", "text", object.alt, value => { object.alt = value; }, { maxLength: 160 }); const upload = document.createElement("button"); upload.type = "button"; upload.className = "button subtle wide"; upload.textContent = "Upload image"; upload.addEventListener("click", () => $("#canvas-image-file").click()); form.append(upload); }
+    if (object?.type === "model3d") { selectionControl(form, "Model name", "text", object.modelFileName, value => { object.modelFileName = value; }, { maxLength: 160 }); selectionControl(form, "Model scale", "number", object.modelScale, value => { object.modelScale = Number(value) || 1; }, { min: .2, max: 3, step: .1 }); selectionControl(form, "Rotate model X (degrees)", "number", object.modelRotateX, value => { object.modelRotateX = Number(value) || 0; }, { min: -360, max: 360 }); selectionControl(form, "Rotate model Y (degrees)", "number", object.modelRotateY, value => { object.modelRotateY = Number(value) || 0; }, { min: -360, max: 360 }); }
     const transform = selectionGroup(form, "Position & size", true);
     selectionControl(transform, "X position (%)", "number", item.x, value => { item.x = Number(value) || 0; }, { min: 0, max: 100, step: .1 });
     selectionControl(transform, "Y position (%)", "number", item.y, value => { item.y = Number(value) || 0; }, { min: 0, max: 100, step: .1 });
@@ -359,7 +451,7 @@ function renderInspector() {
     selectionControl(transform, "Height (px)", "number", item.height ?? item.size, value => { item.height = Number(value); }, { min: 24, max: 600 });
     selectionControl(transform, "Rotation (degrees)", "number", item.rotation, value => { item.rotation = Number(value) || 0; }, { min: -360, max: 360 });
     const appearance = selectionGroup(form, "Color & blending");
-    if (object?.type === "text" || shape) selectionControl(appearance, "Color", "color", item.color, value => { item.color = value; });
+    if (object?.type === "text" || object?.type === "model3d" || shape) selectionControl(appearance, "Color", "color", item.color, value => { item.color = value; });
     if (object?.type === "image") selectionControl(appearance, "Frame color", "color", item.background || "#d8d8d8", value => { item.background = value; });
     selectionControl(appearance, "Opacity (%)", "range", Math.round(item.opacity * 100), value => { item.opacity = Number(value) / 100; }, { min: 0, max: 100, step: 1 });
     selectionDropdown(appearance, "Blending", item.blend, blendOptions, value => { item.blend = value; });
@@ -429,6 +521,7 @@ function renderCanvas() {
       if (event.button !== 0) return;
       event.stopPropagation();
       if (element.isContentEditable) return;
+      if (event.detail >= 2 && !/imageUrl|linkUrl/.test(key)) { event.preventDefault(); startInlineEdit(element, sectionId, key); return; }
       event.preventDefault();
       selectedId = sectionId; selectedContent = { sectionId, key }; selectedObjectId = ""; selectedShapeId = ""; setRailPanel("edit");
       document.querySelectorAll(".content-selected").forEach(node => node.classList.remove("content-selected"));
@@ -463,7 +556,7 @@ function renderCanvas() {
       element.addEventListener("pointerup", finish, { once: true });
       element.addEventListener("pointercancel", finish, { once: true });
     });
-    element.addEventListener("dblclick", event => { event.preventDefault(); event.stopPropagation(); if (!/imageUrl|linkUrl/.test(key)) startInlineEdit(element, sectionId, key); });
+    element.addEventListener("dblclick", event => { event.preventDefault(); event.stopPropagation(); if (!/imageUrl|linkUrl/.test(key) && !element.isContentEditable) startInlineEdit(element, sectionId, key); });
   });
   document.querySelectorAll(".editor-decoration").forEach(element => {
     element.addEventListener("pointerdown", event => {
@@ -513,18 +606,13 @@ function renderCanvas() {
       const object = site.objects.find(item => item.id === element.dataset.objectId);
       if (object?.type !== "text") return;
       event.preventDefault(); event.stopPropagation();
-      const textNode = element.querySelector(".text-object-content");
-      if (!textNode) return;
-      textNode.contentEditable = "true"; textNode.classList.add("inline-editing"); textNode.focus();
-      const range = document.createRange(); range.selectNodeContents(textNode);
-      const selection = window.getSelection(); selection.removeAllRanges(); selection.addRange(range);
-      textNode.addEventListener("keydown", e => { if (e.key === "Escape") { textNode.textContent = object.text; textNode.blur(); } else if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); textNode.blur(); } });
-      textNode.addEventListener("blur", () => { object.text = textNode.textContent.trim(); save(); renderCanvas(); renderInspector(); }, { once: true });
+      startObjectInlineEdit(element, object);
     });
     element.addEventListener("pointerdown", event => {
       if (event.target.closest("[contenteditable=true]")) return;
       event.preventDefault(); event.stopPropagation();
       const object = site.objects.find(item => item.id === element.dataset.objectId); if (!object) return;
+      if (event.detail >= 2 && object.type === "text") { startObjectInlineEdit(element, object); return; }
       if (selectedObjectId !== object.id) {
         document.querySelectorAll(".canvas-object-selected").forEach(previous => { previous.classList.remove("canvas-object-selected"); previous.querySelectorAll(".object-selection-box,.object-resize-handle,.object-rotate-handle").forEach(handle => handle.remove()); });
         selectedObjectId = object.id; selectedShapeId = ""; selectedContent = null; setRailPanel("edit");
@@ -578,7 +666,11 @@ function appendShapeColorPicker(parent,shape){const state=hexToHsv(shape.color),
 const shapeDropZone=$("#canvas-frame");
 shapeDropZone.addEventListener("dragover",event=>{const types=Array.from(event.dataTransfer?.types||[]);if(types.some(type=>["application/x-websiteforge-shape","application/x-websiteforge-text","application/x-websiteforge-image"].includes(type))){event.preventDefault();event.dataTransfer.dropEffect="copy";}});
 shapeDropZone.addEventListener("drop",event=>{const shapeType=event.dataTransfer?.getData("application/x-websiteforge-shape");const textPreset=event.dataTransfer?.getData("application/x-websiteforge-text");const imageType=event.dataTransfer?.getData("application/x-websiteforge-image");if(!shapeOptions.includes(shapeType)&&!textPresets[textPreset]&&!imageType)return;event.preventDefault();const canvas=$("#site-preview")?.querySelector(".built-site");if(!canvas)return;const rect=canvas.getBoundingClientRect();const x=Math.max(0,Math.min(100,(event.clientX-rect.left)/rect.width*100));const y=Math.max(0,Math.min(100,(event.clientY-rect.top)/rect.height*100));suppressPaletteClickUntil=Date.now()+500;if(shapeOptions.includes(shapeType))addShape(shapeType,x,y);else addCanvasObject(textPreset?"text":"image",x,y,textPreset||"plain");});
-function renderAddonToolTabs(){const definitions=[{feature:"drawing-menu",label:"Drawing",panel:"#shape-tools"},{feature:"text-tool",label:"Text",panel:"#text-tools"},{feature:"image-tool",label:"Image",panel:"#image-tools"},{feature:"template-studio",label:"Templates",panel:"#template-tools"}];const available=definitions.filter(definition=>definition.feature!=="template-studio"||installed.some(pack=>pack.features.includes(definition.feature)));if(!available.some(definition=>definition.feature===activeAddonTool))activeAddonTool=available[0]?.feature||"";const tabs=$("#addon-tool-tabs");tabs.replaceChildren();tabs.hidden=!available.length;available.forEach(definition=>{const button=document.createElement("button");button.type="button";button.className=`addon-tool-tab ${activeAddonTool===definition.feature?"active":""}`;button.textContent=definition.label;button.setAttribute("aria-selected",String(activeAddonTool===definition.feature));button.addEventListener("click",()=>{activeAddonTool=definition.feature;renderAddonToolTabs();});tabs.append(button);});definitions.forEach(definition=>{const panel=$(definition.panel);panel.hidden=!available.some(item=>item.feature===definition.feature)||activeAddonTool!==definition.feature;});}
+function renderAddonToolTabs(){
+  $("#addon-tool-tabs").hidden = true;
+  for (const id of ["shape-tools", "text-tools", "image-tools"]) $("#" + id).hidden = false;
+  $("#template-tools").hidden = !installed.some(pack => pack.features.includes("template-studio"));
+}
 function renderShapeTools(){renderAddonToolTabs();const groups={"Basic shapes":["square","rectangle","rounded-square","circle","ellipse","triangle","inverted-triangle","right-triangle","diamond","cross","plus"],Polygons:["trapezoid","parallelogram","pentagon","hexagon","heptagon","octagon","nonagon","decagon"],Stars:["star-3","star-4","star-5","star-6","star-8","star-10","star-12","starburst"],Arrows:["arrow-right","arrow-left","arrow-up","arrow-down","double-arrow","chevron"],Symbols:["heart","lightning","moon","cloud","speech-bubble","line","curve","zigzag","pie","arc","ring"],Flowchart:["flow-terminal","flow-process","flow-decision","flow-document","flow-data","flow-delay","flow-display","flow-preparation","flow-database","flow-manual-input","flow-stored-data"]};const palette=$("#shape-palette");palette.replaceChildren();Object.entries(groups).forEach(([group,types])=>{const wrapper=document.createElement("div");wrapper.className="shape-group";const title=document.createElement("div");title.className="shape-group-title";title.textContent=group;wrapper.append(title);const row=document.createElement("div");row.className="shape-picks";types.forEach((type,index)=>{const button=document.createElement("button");button.type="button";button.className="shape-pick";button.title=type.replaceAll("-"," ");button.setAttribute("aria-label",`Add ${button.title}`);button.innerHTML=`<svg viewBox="0 0 100 100" aria-hidden="true">${shapeSvgMarkup(type,site.accent)}</svg>`;if(index>=5)button.hidden=true;button.addEventListener("click",()=>{if(Date.now()>=suppressPaletteClickUntil)addShape(type);});button.draggable=true;button.addEventListener("dragstart",event=>{event.dataTransfer?.setData("application/x-websiteforge-shape",type);if(event.dataTransfer)event.dataTransfer.effectAllowed="copy";});row.append(button);});wrapper.append(row);if(types.length>5){const more=document.createElement("button");more.type="button";more.className="button ghost small shape-more";more.textContent="Add more…";more.addEventListener("click",()=>{const expand=more.dataset.expanded!=="true";row.querySelectorAll("button").forEach(button=>button.hidden=!expand&&Array.from(row.children).indexOf(button)>=5);more.dataset.expanded=String(expand);more.textContent=expand?"Show less":"Add more…";});wrapper.append(more);}palette.append(wrapper);});const list=$("#shape-list");list.replaceChildren();$("#shape-count").textContent=String(site.shapes.length);site.shapes.forEach((shape,index)=>{const card=document.createElement("div");card.className=`shape-card ${selectedShapeId===shape.id?"selected":""}`;const head=document.createElement("div");head.className="shape-card-head";head.innerHTML=`<strong>${shape.type.replaceAll("-"," ")}</strong>`;head.addEventListener("click",()=>{selectedShapeId=shape.id;selectedObjectId="";renderCanvas();renderShapeTools();});const controls=document.createElement("div");controls.className="shape-controls";const addControl=(label,type,value,oninput,attrs={})=>{const wrap=document.createElement("label");wrap.textContent=label;const input=document.createElement("input");input.type=type;input.value=value;Object.assign(input,attrs);input.addEventListener("input",()=>{oninput(input.value);save();});input.addEventListener("change",renderCanvas);wrap.append(input);controls.append(wrap);};appendShapeColorPicker(controls,shape);addControl("Width","range",shape.width??shape.size,v=>shape.width=Number(v),{min:24,max:600});addControl("Height","range",shape.height??shape.size,v=>shape.height=Number(v),{min:24,max:600});addControl("Opacity","range",shape.opacity,v=>shape.opacity=Number(v),{min:0,max:1,step:.05});addControl("Rotation","range",shape.rotation,v=>shape.rotation=Number(v),{min:-180,max:180});const blendLabel=document.createElement("label");blendLabel.textContent="Blending";const blend=document.createElement("select");blendOptions.forEach(mode=>blend.add(new Option(mode.replaceAll("-"," "),mode)));blend.value=shape.blend;blend.addEventListener("change",()=>{shape.blend=blend.value;save();renderCanvas();});blendLabel.append(blend);controls.append(blendLabel);const remove=document.createElement("button");remove.type="button";remove.className="button danger wide";remove.textContent="Delete shape";remove.addEventListener("click",()=>{site.shapes.splice(index,1);save();renderCanvas();renderShapeTools();});card.append(head,controls,remove);list.append(card);});}
 const textPresets={heading:{label:"Heading",text:"Your heading",fontSize:52},subheading:{label:"Subheading",text:"A supporting line",fontSize:32},caption:{label:"Caption",text:"Add a caption",fontSize:18},label:{label:"Label",text:"SECTION LABEL",fontSize:14},badge:{label:"Badge",text:"New",fontSize:20},plain:{label:"Plain text",text:"Your text",fontSize:24}};
 function addCanvasObject(type,x=50,y=50,preset="plain") {const definition=textPresets[preset]||textPresets.plain;const object={id:globalThis.crypto?.randomUUID?.()||`object-${Date.now()}`,type,x,y,width:type==="image"?300:preset==="badge"?140:320,height:type==="image"?190:preset==="badge"?54:100,rotation:0,color:type==="text"?(preset==="badge"?"#ffffff":site.palette.ink):site.palette.ink,background:type==="text"&&preset==="badge"?site.accent:"",opacity:1,blend:"normal",z:3,text:definition.text,fontSize:definition.fontSize,preset:type==="text"?preset:"plain",url:"",alt:""};site.objects.push(object);selectedObjectId=object.id;selectedShapeId="";selectedContent=null;setRailPanel("edit");save();renderCanvas();renderCanvasObjectTools();renderInspector();}
@@ -745,14 +837,14 @@ async function checkAiAvailability() {
   }
 }
 function update() {
-  save(); $("#site-name").value = site.name; $("#site-tagline").value = site.tagline; $("#site-footer-note").value = site.footerNote || "";
+  save(); $("#site-name").value = site.name; $("#site-address").value = site.address || ""; $("#site-logo-url").value = /^https:\/\//i.test(site.logoUrl || "") ? site.logoUrl : ""; $("#site-logo-status").textContent = site.logoUrl?.startsWith("data:image/") ? "Uploaded logo is saved with this project and used in the exported site." : "Shown beside the website name and used as the exported browser icon."; $("#site-tagline").value = site.tagline; $("#site-footer-note").value = site.footerNote || "";
   $("#font-select").value = site.font; $("#custom-accent").value = site.accent;
   [["paper-color", "paper"], ["ink-color", "ink"], ["muted-color", "muted"]].forEach(([id, key]) => $("#" + id).value = site.palette[key]);
   [["content-width", "contentWidth", "px"], ["section-spacing", "sectionSpacing", "px"], ["corner-radius", "cornerRadius", "px"], ["heading-scale", "headingScale", "×"]].forEach(([id, key, unit]) => { $("#" + id).value = site.design[key]; $("#" + id + "-value").textContent = `${site.design[key]}${unit}`; });
   $("#button-style").value = site.design.buttonStyle;
   renderList(); renderThemes(); renderInspector(); renderCanvas(); renderPlugins(); renderShapeTools(); renderCanvasObjectTools();
 }
-function select(id) { selectedId = id; selectedObjectId = ""; selectedShapeId = ""; selectedContent = null; setRailPanel("edit"); renderList(); renderInspector(); renderCanvas(); }
+function select(id, keepPanel = false) { selectedId = id; selectedObjectId = ""; selectedShapeId = ""; selectedContent = null; if (!keepPanel) setRailPanel("edit"); renderList(); renderInspector(); renderCanvas(); }
 function restoreHistory(direction) {
   const next = historyIndex + direction;
   if (next < 0 || next >= history.length) return;
@@ -957,6 +1049,15 @@ $("#reset-all-shortcuts").addEventListener("click", () => { shortcuts = defaultS
 $("#undo-button").addEventListener("click", () => restoreHistory(-1));
 $("#redo-button").addEventListener("click", () => restoreHistory(1));
 $("#selection-duplicate").addEventListener("click", duplicateSelection);
+$("#selection-edit-text").addEventListener("click", () => {
+  if (selectedContent && !/imageUrl|linkUrl/.test(selectedContent.key)) {
+    const element = $("#site-preview [data-section-id=\"" + selectedContent.sectionId + "\"] [data-content-key=\"" + selectedContent.key + "\"]");
+    if (element) startInlineEdit(element, selectedContent.sectionId, selectedContent.key);
+  } else if (selectedObjectId) {
+    const object = site.objects.find(item => item.id === selectedObjectId);
+    startObjectInlineEdit($("#site-preview [data-object-id=\"" + selectedObjectId + "\"]"), object);
+  }
+});
 $("#selection-delete").addEventListener("click", deleteSelection);
 $("#selection-front").addEventListener("click", () => shiftLayer(1));
 $("#selection-back").addEventListener("click", () => shiftLayer(-1));
@@ -964,6 +1065,7 @@ $("#add-text-button").addEventListener("click", () => addCanvasObject("text", 50
 $("#add-image-button").addEventListener("click", () => { selectedContent = null; selectedObjectId = ""; selectedShapeId = ""; $("#canvas-image-file").click(); });
 $("#add-shape-button").addEventListener("click", () => addShape("rounded-square", 50, 22));
 $("#open-templates-button").addEventListener("click", () => $("#template-dialog").showModal());
+$("#imported-project-button").addEventListener("click", openImportedProject);
 $("#canvas-image-file").addEventListener("change", async event => { await uploadSelectedImage(event.target.files?.[0]); event.target.value = ""; });
 $("#canvas-zoom").addEventListener("input", event => { zoom = Number(event.target.value) / 100; $("#canvas-frame").style.zoom = String(zoom); $("#zoom-value").textContent = `${event.target.value}%`; });
 const shortcutHandlers = {
@@ -992,6 +1094,23 @@ document.addEventListener("keydown", event => {
   if (action && shortcutHandlers[action]?.()) event.preventDefault();
 });
 $("#site-name").addEventListener("input", event => { site.name = event.target.value; save(); renderCanvas(); });
+$("#site-address").addEventListener("change", event => { site.address = event.target.value.trim(); save(); });
+$("#site-logo-url").addEventListener("change", event => { site.logoUrl = event.target.value.trim(); save(); renderCanvas(); });
+$("#site-logo-upload-button").addEventListener("click", () => $("#site-logo-file").click());
+$("#site-logo-file").addEventListener("change", async event => {
+  const file = event.target.files?.[0]; event.target.value = "";
+  if (!file) return;
+  if (!/^image\/(png|jpeg|webp|gif)$/.test(file.type) || file.size > 15000000) { toast("Choose a PNG, JPG, WebP, or GIF under 15 MB."); return; }
+  try {
+    const bitmap = await createImageBitmap(file);
+    const scale = Math.min(1, 256 / Math.max(bitmap.width, bitmap.height));
+    const canvas = document.createElement("canvas"); canvas.width = Math.max(1, Math.round(bitmap.width * scale)); canvas.height = Math.max(1, Math.round(bitmap.height * scale));
+    canvas.getContext("2d").drawImage(bitmap, 0, 0, canvas.width, canvas.height); bitmap.close?.();
+    site.logoUrl = canvas.toDataURL("image/png");
+    if (site.logoUrl.length > 2000000) throw new Error("Logo is too large to save.");
+    save(); update(); toast("Website logo and browser icon updated.");
+  } catch { toast("Could not read that logo image."); }
+});
 $("#site-tagline").addEventListener("input", event => { site.tagline = event.target.value; save(); renderCanvas(); });
 $("#site-footer-note").addEventListener("input", event => { site.footerNote = event.target.value; save(); renderCanvas(); });
 $("#font-select").addEventListener("change", event => { site.font = event.target.value; update(); });
