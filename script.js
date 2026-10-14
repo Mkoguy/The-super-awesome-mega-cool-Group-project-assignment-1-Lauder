@@ -2,6 +2,7 @@ import {
   exportDocument,
   makeSection,
   MAX_SECTIONS,
+  mountModelViewers,
   normalizeMotion,
   normalizeSite,
   renderSite,
@@ -30,6 +31,8 @@ const panelDefinitions = [
   ["elements", "Elements", "Add shapes and other canvas elements.", ["drawer-add", "shape-tools"]],
   ["text", "Text", "Add text, then double-click it on the canvas to type.", ["text-tools"]],
   ["uploads", "Uploads", "Add an image frame or upload an image.", ["image-tools"]],
+  ["models", "3D Model Studio", "Add and edit OBJ, GLB, STL, or Blockbench models.", ["model-tools"]],
+  ["motion", "Motion effects", "Animate selected elements as the page scrolls.", ["motion-tools"]],
   ["site", "Website settings", "Set the website name, address, and logo.", ["drawer-site"]],
   ["layers", "Layers", "Select and arrange what is on your page.", ["drawer-layers"]],
   ["pages", "Pages", "Add and reorder website sections.", ["drawer-pages"]]
@@ -45,6 +48,7 @@ for (const [name, title, description, ids] of panelDefinitions) {
 $("#panel-text .rail-panel-heading").after($("#add-text-button"));
 $("#panel-uploads .rail-panel-heading").after($("#add-image-button"));
 $("#panel-uploads").append($("#canvas-image-file"));
+$("#panel-models").append($("#canvas-model-file"));
 $("#panel-templates .rail-panel-heading").after($("#open-templates-button"));
 $("#panel-text").append($("#drawer-add .helper"));
 $("#addon-tool-tabs").hidden = true;
@@ -52,42 +56,96 @@ sidebar.append($(".inspector"));
 $(".inspector").hidden = true;
 const uploadToolButton = document.createElement("button");
 uploadToolButton.type = "button"; uploadToolButton.className = "button subtle wide"; uploadToolButton.textContent = "↑ Upload image";
-uploadToolButton.addEventListener("click", () => { selectedContent = null; selectedObjectId = ""; selectedShapeId = ""; $("#canvas-image-file").click(); });
+uploadToolButton.addEventListener("click", () => { selectedContent = null; selectedObjectId = ""; selectedShapeId = ""; selectedShapeIds.clear(); $("#canvas-image-file").click(); });
 $("#add-image-object").after(uploadToolButton);
 const storageKey = "websiteforge-project-v1";
 const pluginStorageKey = "websiteforge-plugins-v1";
 const workspaceModeKey = "websiteforge-workspace-mode-v1";
+const templateAuthorKey = "websiteforge-template-author-v1";
 const shortcutStorageKey = "websiteforge-shortcuts-v1";
 const bundledCatalog = globalThis.websiteForgeBuiltins || null;
 let site;
 try { site = normalizeSite(JSON.parse(localStorage.getItem(storageKey))); }
 catch { site = template(); }
 let installed = [];
-try { installed = JSON.parse(localStorage.getItem(pluginStorageKey) || "[]").map(normalizePluginPack).slice(0, 20); }
+try {
+  const savedPacks = JSON.parse(localStorage.getItem(pluginStorageKey) || "[]");
+  const coreToolPacks = new Set(["websiteforge.drawing-menu", "websiteforge.text-tool", "websiteforge.image-tool"]);
+  const currentPacks = savedPacks.filter(pack => !coreToolPacks.has(pack?.id));
+  installed = currentPacks.map(normalizePluginPack).slice(0, 20);
+  if (currentPacks.length !== savedPacks.length) { try { localStorage.setItem(pluginStorageKey, JSON.stringify(installed)); } catch { /* The installed list still works for this session. */ } }
+}
 catch { installed = []; }
+const coreFeatures = new Set(["drawing-menu", "text-tool", "image-tool", "3d-models", "motion-controls"]);
+const hasInstalledFeature = feature => coreFeatures.has(feature) || installed.some(pack => pack.features.includes(feature));
 let lightModeEnabled = false;
 try { lightModeEnabled = localStorage.getItem(workspaceModeKey) === "light"; }
 catch { /* Browser storage may be unavailable for local files. */ }
 let selectedId = site.sections[0]?.id;
-let selectedShapeId = "";
-let selectedObjectId = "";
+let selectedShapeId = hasInstalledFeature("motion-controls") ? site.shapes[0]?.id || "" : "";
+let selectedShapeIds = new Set(selectedShapeId ? [selectedShapeId] : []);
+let selectedObjectId = !selectedShapeId && hasInstalledFeature("motion-controls") ? site.objects[0]?.id || "" : "";
 let selectedContent = null;
-let activeAddonTool = "";
+let activeAddonTool = hasInstalledFeature("motion-controls") ? "motion-controls" : "";
 let suppressPaletteClickUntil = 0;
+let pendingModelReplacementId = "";
+let pendingModelResourceId = "";
 let activeTab = "build";
-let activeRail = "templates";
+let activeRail = hasInstalledFeature("motion-controls") ? "motion" : "templates";
 let toastTimer;
 let zoom = 1;
 let history = [JSON.stringify(site)];
 let historyIndex = 0;
 let restoringHistory = false;
+let projectChangedDuringStartup = false;
+let largeProjectSaveTimer = 0;
 let shortcuts;
 try { shortcuts = normalizeShortcuts(JSON.parse(localStorage.getItem(shortcutStorageKey))); }
 catch { shortcuts = defaultShortcuts(); }
 let copiedElement = null;
+const templateAuthorInput = $("#template-author");
+if (templateAuthorInput) {
+  try { templateAuthorInput.value = localStorage.getItem(templateAuthorKey) || ""; }
+  catch { /* Creator name can still be entered for this session. */ }
+  templateAuthorInput.addEventListener("input", event => { try { localStorage.setItem(templateAuthorKey, event.target.value.slice(0, 70)); } catch { /* Keep the name in the field for this session. */ } });
+}
 
+function openProjectDatabase() {
+  return new Promise((resolve, reject) => {
+    if (!("indexedDB" in window)) { reject(new Error("This browser does not support large project storage.")); return; }
+    const request = indexedDB.open("websiteforge-projects", 1);
+    request.onupgradeneeded = () => { if (!request.result.objectStoreNames.contains("projects")) request.result.createObjectStore("projects", { keyPath: "key" }); };
+    request.onsuccess = () => resolve(request.result); request.onerror = () => reject(request.error || new Error("Could not open project storage."));
+  });
+}
+async function storeLargeProject(snapshot, savedAt) {
+  const database = await openProjectDatabase();
+  return new Promise((resolve, reject) => {
+    const transaction = database.transaction("projects", "readwrite");
+    transaction.objectStore("projects").put({ key: storageKey, snapshot, savedAt });
+    transaction.oncomplete = () => { database.close(); resolve(); };
+    transaction.onerror = () => { database.close(); reject(transaction.error || new Error("Could not save the large project.")); };
+    transaction.onabort = () => { database.close(); reject(transaction.error || new Error("Could not save the large project.")); };
+  });
+}
+async function restoreLargeProject(localSavedAt) {
+  try {
+    const database = await openProjectDatabase();
+    const entry = await new Promise((resolve, reject) => {
+      const request = database.transaction("projects", "readonly").objectStore("projects").get(storageKey);
+      request.onsuccess = () => resolve(request.result); request.onerror = () => reject(request.error);
+    });
+    database.close();
+    if (!entry || entry.savedAt <= localSavedAt || projectChangedDuringStartup) return;
+    site = normalizeSite(JSON.parse(entry.snapshot));
+    selectedId = site.sections[0]?.id; selectedShapeId = ""; selectedShapeIds.clear(); selectedObjectId = ""; selectedContent = null;
+    history = [JSON.stringify(site)]; historyIndex = 0; update();
+    $("#save-status").textContent = "Saved on this device";
+  } catch { /* IndexedDB is an optional fallback for models that exceed local storage limits. */ }
+}
 function save() {
   const snapshot = JSON.stringify(site);
+  const savedAt = Date.now(); projectChangedDuringStartup = true;
   if (!restoringHistory && snapshot !== history[historyIndex]) {
     history = history.slice(0, historyIndex + 1);
     history.push(snapshot);
@@ -96,8 +154,16 @@ function save() {
   }
   if ($("#undo-button")) $("#undo-button").disabled = historyIndex === 0;
   if ($("#redo-button")) $("#redo-button").disabled = historyIndex === history.length - 1;
-  try { localStorage.setItem(storageKey, snapshot); $("#save-status").textContent = "Saved on this device"; }
-  catch { $("#save-status").textContent = "Could not save on this device"; }
+  try { localStorage.setItem(storageKey, snapshot); localStorage.setItem(storageKey + "-savedAt", String(savedAt)); $("#save-status").textContent = "Saved on this device"; }
+  catch { $("#save-status").textContent = "Saving large project…"; }
+  if (site.objects.some(object => object.type === "model3d")) {
+    clearTimeout(largeProjectSaveTimer);
+    largeProjectSaveTimer = window.setTimeout(() => {
+      storeLargeProject(snapshot, savedAt).then(() => {
+        if (savedAt > (Number(localStorage.getItem(storageKey + "-savedAt")) || 0)) $("#save-status").textContent = "Saved on this device";
+      }).catch(() => { if (savedAt > (Number(localStorage.getItem(storageKey + "-savedAt")) || 0)) $("#save-status").textContent = "Download Save project ZIP to keep this large model"; });
+    }, 350);
+  }
 }
 function toast(message) {
   const element = $("#toast");
@@ -108,12 +174,83 @@ function toast(message) {
 }
 function download(name, content, type) {
   const link = document.createElement("a");
-  link.href = URL.createObjectURL(new Blob([content], { type }));
+  const blob = content instanceof Blob ? content : new Blob([content], { type });
+  link.href = URL.createObjectURL(blob);
   link.download = name;
   document.body.append(link);
   link.click();
   link.remove();
   setTimeout(() => URL.revokeObjectURL(link.href), 60000);
+}
+function zipCrc32(bytes) {
+  let crc = 0xffffffff;
+  for (const byte of bytes) {
+    crc ^= byte;
+    for (let bit = 0; bit < 8; bit++) crc = (crc >>> 1) ^ (crc & 1 ? 0xedb88320 : 0);
+  }
+  return (crc ^ 0xffffffff) >>> 0;
+}
+function createStoredZip(entries) {
+  const encoder = new TextEncoder();
+  const localParts = [], centralParts = [];
+  let offset = 0;
+  for (const entry of entries) {
+    const name = encoder.encode(entry.name);
+    const data = encoder.encode(entry.content);
+    const crc = zipCrc32(data);
+    const local = new Uint8Array(30 + name.length);
+    const localView = new DataView(local.buffer);
+    localView.setUint32(0, 0x04034b50, true); localView.setUint16(4, 20, true);
+    localView.setUint16(6, 0x0800, true); localView.setUint16(8, 0, true);
+    localView.setUint16(10, 0, true); localView.setUint16(12, 0x0021, true);
+    localView.setUint32(14, crc, true); localView.setUint32(18, data.length, true); localView.setUint32(22, data.length, true);
+    localView.setUint16(26, name.length, true); localView.setUint16(28, 0, true); local.set(name, 30);
+    const central = new Uint8Array(46 + name.length);
+    const centralView = new DataView(central.buffer);
+    centralView.setUint32(0, 0x02014b50, true); centralView.setUint16(4, 20, true); centralView.setUint16(6, 20, true);
+    centralView.setUint16(8, 0x0800, true); centralView.setUint16(10, 0, true);
+    centralView.setUint16(12, 0, true); centralView.setUint16(14, 0x0021, true);
+    centralView.setUint32(16, crc, true); centralView.setUint32(20, data.length, true); centralView.setUint32(24, data.length, true);
+    centralView.setUint16(28, name.length, true); centralView.setUint16(30, 0, true); centralView.setUint16(32, 0, true);
+    centralView.setUint16(34, 0, true); centralView.setUint16(36, 0, true); centralView.setUint32(38, 0, true);
+    centralView.setUint32(42, offset, true); central.set(name, 46);
+    localParts.push(local, data); centralParts.push(central);
+    offset += local.length + data.length;
+  }
+  const centralSize = centralParts.reduce((sum, part) => sum + part.length, 0);
+  const end = new Uint8Array(22);
+  const endView = new DataView(end.buffer);
+  endView.setUint32(0, 0x06054b50, true); endView.setUint16(4, 0, true); endView.setUint16(6, 0, true);
+  endView.setUint16(8, entries.length, true); endView.setUint16(10, entries.length, true);
+  endView.setUint32(12, centralSize, true); endView.setUint32(16, offset, true); endView.setUint16(20, 0, true);
+  return new Blob([...localParts, ...centralParts, end], { type: "application/zip" });
+}
+async function readStoredZip(file) {
+  if (file.size > 100000000) throw new Error("Project ZIPs must be 100 MB or smaller.");
+  const bytes = new Uint8Array(await file.arrayBuffer());
+  const view = new DataView(bytes.buffer);
+  const decoder = new TextDecoder();
+  const files = new Map();
+  let offset = 0;
+  while (offset + 4 <= bytes.length && view.getUint32(offset, true) === 0x04034b50) {
+    if (offset + 30 > bytes.length) throw new Error("This ZIP is incomplete.");
+    const flags = view.getUint16(offset + 6, true);
+    const method = view.getUint16(offset + 8, true);
+    const compressedSize = view.getUint32(offset + 18, true);
+    const nameLength = view.getUint16(offset + 26, true);
+    const extraLength = view.getUint16(offset + 28, true);
+    if ((flags & 0x0008) || method !== 0) throw new Error("Choose a WebsiteForge ZIP made with Save project.");
+    const nameStart = offset + 30;
+    const dataStart = nameStart + nameLength + extraLength;
+    const dataEnd = dataStart + compressedSize;
+    if (dataEnd > bytes.length) throw new Error("This ZIP is incomplete.");
+    const name = decoder.decode(bytes.subarray(nameStart, nameStart + nameLength));
+    const data = bytes.subarray(dataStart, dataEnd);
+    if (zipCrc32(data) !== view.getUint32(offset + 14, true)) throw new Error("A file in this ZIP is damaged.");
+    if (name && !name.endsWith("/")) files.set(name, decoder.decode(data));
+    offset = dataEnd;
+  }
+  return files;
 }
 function selected() { return site.sections.find(section => section.id === selectedId); }
 const templateChoices = [
@@ -141,14 +278,30 @@ async function openImportedProject() {
 }
 function renderTemplateGallery() {
   const gallery = $("#template-gallery"); gallery.replaceChildren();
+  const savedGallery = $("#saved-template-gallery"); savedGallery.replaceChildren();
   for (const [id, name, description] of templateChoices) {
-    const card = document.createElement("button"); card.type = "button"; card.className = `template-card template-card-${id}`;
+    const card = document.createElement("article"); card.className = `template-card template-card-starter template-card-${id}`;
     const preview = document.createElement("span"); preview.className = "template-miniature"; preview.setAttribute("aria-hidden", "true");
     preview.innerHTML = '<span class="mini-nav"></span><span class="mini-heading"></span><span class="mini-copy"></span><span class="mini-accent"></span><span class="mini-row"></span>';
     const title = document.createElement("strong"); title.textContent = name;
     const author = document.createElement("small"); author.className = "template-author"; author.textContent = "by WebsiteForge";
     const detail = document.createElement("small"); detail.textContent = description;
-    card.append(preview, title, author, detail); card.addEventListener("click", () => applyTemplate(id)); gallery.append(card);
+    const actions = document.createElement("div"); actions.className = "template-card-actions";
+    const add = document.createElement("button"); add.type = "button"; add.className = "button subtle template-add-button"; add.textContent = "Add to page";
+    add.addEventListener("click", () => {
+      const starter = template(id);
+      addTemplateToSite({
+        name,
+        sections: starter.sections,
+        shapes: starter.shapes,
+        objects: starter.objects,
+        style: { theme: starter.theme, accent: starter.accent, palette: starter.palette, font: starter.font, design: starter.design }
+      });
+    });
+    const use = document.createElement("button"); use.type = "button"; use.className = "button ghost template-use-button"; use.textContent = "Use as starter";
+    use.addEventListener("click", () => applyTemplate(id));
+    actions.append(add, use);
+    card.append(preview, title, author, detail, actions); gallery.append(card);
   }
   const imported = document.createElement("button"); imported.type = "button"; imported.className = "template-card template-card-imported";
   imported.innerHTML = '<span class="template-miniature" aria-hidden="true"><span class="mini-nav"></span><span class="mini-heading"></span><span class="mini-copy"></span><span class="mini-accent"></span></span><strong>Saved design from ZIP</strong><small class="template-author">Your attached project</small><small>Open its six sections, images, text, shapes, and 3D model.</small>';
@@ -156,6 +309,7 @@ function renderTemplateGallery() {
   const shared = installed.flatMap(pack => (pack.templates || []).map(saved => ({ pack, saved })));
   shared.forEach(({ pack, saved }, index) => {
     const card = document.createElement("article"); card.className = `template-card template-card-installed template-card-community template-tone-${index % 5}`;
+    card.dataset.templateId = saved.id;
     const preview = document.createElement("span"); preview.className = "template-miniature"; preview.setAttribute("aria-hidden", "true");
     preview.innerHTML = '<span class="mini-nav"></span><span class="mini-heading"></span><span class="mini-copy"></span><span class="mini-accent"></span><span class="mini-row"></span>';
     const title = document.createElement("strong"); title.textContent = saved.name;
@@ -163,12 +317,9 @@ function renderTemplateGallery() {
     const detail = document.createElement("small"); detail.textContent = saved.description || pack.description || "Reusable page template.";
     const add = document.createElement("button"); add.type = "button"; add.className = "button subtle template-add-button"; add.textContent = "Add to page";
     add.addEventListener("click", () => addTemplateToSite(saved));
-    card.append(preview, title, author, detail, add); gallery.append(card);
+    card.append(preview, title, author, detail, add); savedGallery.append(card);
   });
-  const galleryCount = gallery.children.length;
-  if (galleryCount === templateChoices.length) {
-    const note = document.createElement("p"); note.className = "template-gallery-empty"; note.textContent = "Install a template pack from Plugins to see shared templates here."; gallery.append(note);
-  }
+  $("#template-gallery-empty").hidden = shared.length > 0;
 }
 function applyWorkspaceMode() {
   const installedLightMode = installed.some(pack => pack.id === "websiteforge.light-mode" && pack.features.includes("workspace-light-mode"));
@@ -180,7 +331,7 @@ function setTab(name) {
 function setRailPanel(name) {
   activeRail = name;
   activeTab = ["design", "plugins", "ai"].includes(name) ? name : "build";
-  $("#header-context").textContent = ({ templates: "Templates", elements: "Elements", text: "Text", uploads: "Uploads", design: "Design studio", site: "Website settings", layers: "Layers", pages: "Pages", edit: "Edit selection", plugins: "Plugin library", ai: "AI tools" })[name] || "Build workspace";
+  $("#header-context").textContent = ({ templates: "Templates", elements: "Elements", text: "Text", uploads: "Uploads", design: "Design studio", site: "Website settings", layers: "Layers", pages: "Pages", edit: "Edit selection", plugins: "Plugin library", models: "3D Model Studio", motion: "Motion effects", ai: "AI tools" })[name] || "Build workspace";
   document.querySelectorAll("[data-header-for]").forEach(group => group.hidden = group.dataset.headerFor !== activeTab);
   document.querySelectorAll(".tab").forEach(tab => {
     const current = tab.dataset.tab === activeTab;
@@ -297,36 +448,13 @@ function selectionControl(form, label, type, value, onInput, options = {}) {
   wrap.append(input); form.append(wrap);
   return input;
 }
-function selectionGroup(form, title, open = false) {
-  const group = document.createElement("details"); group.className = "selection-group"; group.open = open;
-  const summary = document.createElement("summary"); summary.textContent = title;
-  group.append(summary); form.append(group); return group;
-}
-function selectionDropdown(form, label, value, choices, onChange) {
-  const wrap = document.createElement("label"); wrap.className = "control-group selection-control"; wrap.textContent = label;
-  const input = document.createElement("select");
-  choices.forEach(choice => input.add(new Option(choice.replaceAll("-", " "), choice)));
-  input.value = value;
-  input.addEventListener("change", () => { onChange(input.value); save(); renderCanvas(); });
-  wrap.append(input); form.append(wrap);
-}
-function motionControls(form, item) {
-  const group = selectionGroup(form, "Motion", false);
-  const motion = item.motion = normalizeMotion(item.motion);
-  const toggle = document.createElement("label"); toggle.className = "motion-toggle";
-  const checkbox = document.createElement("input"); checkbox.type = "checkbox"; checkbox.checked = motion.enabled;
-  checkbox.addEventListener("change", () => { motion.enabled = checkbox.checked; save(); renderCanvas(); });
-  toggle.append(checkbox, document.createTextNode(" Animate this element")); group.append(toggle);
-  const speed = selectionControl(group, `Move speed (${motion.speed}×)`, "range", motion.speed, value => { motion.speed = Number(value); }, { min: .25, max: 4, step: .25 });
-  speed.addEventListener("input", () => { speed.parentElement.firstChild.textContent = `Move speed (${motion.speed}×)`; });
-  selectionControl(group, "Move X (px)", "number", motion.x, value => { motion.x = Number(value) || 0; }, { min: -500, max: 500 });
-  selectionControl(group, "Move Y (px)", "number", motion.y, value => { motion.y = Number(value) || 0; }, { min: -500, max: 500 });
-  selectionControl(group, "Fade out (%)", "number", motion.fade, value => { motion.fade = Number(value) || 0; }, { min: 0, max: 100 });
-  selectionControl(group, "Size X (%)", "number", motion.scaleX, value => { motion.scaleX = Number(value) || 100; }, { min: 25, max: 300 });
-  selectionControl(group, "Size Y (%)", "number", motion.scaleY, value => { motion.scaleY = Number(value) || 100; }, { min: 25, max: 300 });
-  selectionControl(group, "Color hue shift (°)", "number", motion.hue, value => { motion.hue = Number(value) || 0; }, { min: -180, max: 180 });
-  selectionControl(group, "Rotation change (°)", "number", motion.rotation, value => { motion.rotation = Number(value) || 0; }, { min: -360, max: 360 });
-  const hint = document.createElement("p"); hint.className = "helper"; hint.textContent = "Motion loops in the preview and exported website. It pauses while the element is selected."; group.append(hint);
+function selectionCheckbox(form, label, value, onChange) {
+  const wrap = document.createElement("label"); wrap.className = "control-group selection-control selection-checkbox";
+  const input = document.createElement("input"); input.type = "checkbox"; input.checked = value !== false;
+  const caption = document.createElement("span"); caption.textContent = label;
+  input.addEventListener("change", () => { onChange(input.checked); save(); renderCanvas(); });
+  wrap.append(input, caption); form.append(wrap);
+  return input;
 }
 function renderSelectionToolbar() {
   const chosen = selectedContent || selectedObjectId || selectedShapeId;
@@ -339,6 +467,10 @@ function renderSelectionToolbar() {
 function renderLayerList() {
   const list = $("#layer-list"); if (!list) return;
   list.replaceChildren();
+  const shapeEditorInstalled = hasInstalledFeature("drawing-menu");
+  if (!shapeEditorInstalled && selectedShapeIds.size > 1) selectedShapeIds = new Set(selectedShapeId ? [selectedShapeId] : []);
+  const filter = $("#layer-search")?.value.trim().toLocaleLowerCase() || "";
+  const matches = value => !filter || String(value || "").toLocaleLowerCase().includes(filter);
   let count = 0;
   const row = (parent, label, active, choose, item) => {
     const wrapper = document.createElement("div"); wrapper.className = "layer-entry";
@@ -484,8 +616,68 @@ function renderInspector() {
   }
   form.append(choiceField("Text alignment", "alignment", section.alignment, [["left", "Left"], ["center", "Center"]]), choiceField("Vertical spacing", "spacing", section.spacing, [["compact", "Compact"], ["normal", "Normal"], ["roomy", "Roomy"]]), field("Background override (hex, optional)", "background", section.background, { max: 7 }), field("Text color override (hex, optional)", "textColor", section.textColor, { max: 7 }));
 }
+let screenMotionFrameQueued = false;
+function updateScreenPositionMotion() {
+  if (!hasInstalledFeature("motion-controls")) return;
+  if (screenMotionFrameQueued) return;
+  screenMotionFrameQueued = true;
+  requestAnimationFrame(() => {
+    screenMotionFrameQueued = false;
+    if (!hasInstalledFeature("motion-controls")) return;
+    const viewport = $("#site-preview")?.closest(".canvas-area");
+    const viewportRect = viewport?.getBoundingClientRect();
+    const viewportTop = viewportRect?.top || 0;
+    const viewportHeight = viewport?.clientHeight || window.innerHeight || 1;
+    document.querySelectorAll("#site-preview .motion-screen").forEach(item => {
+      const root = item.closest(".built-site");
+      if (!root) return;
+      const rootRect = root.getBoundingClientRect();
+      const anchorY = rootRect.top + rootRect.height * (Number(item.dataset.canvasY) || 0) / 100;
+      const styles = getComputedStyle(item);
+      const value = name => Number.parseFloat(styles.getPropertyValue(name)) || 0;
+      const centerY = Math.max(0, Math.min(100, value("--motion-center-y")));
+      const baseY = viewportTop + viewportHeight * centerY / 100;
+      const travel = anchorY < baseY ? baseY - viewportTop : viewportTop + viewportHeight - baseY;
+      const raw = Math.max(0, Math.min(1, Math.abs(baseY - anchorY) / Math.max(1, travel)));
+      const eased = raw * raw * (3 - 2 * raw);
+      const speed = value("--motion-speed") || 1;
+      const progress = Math.pow(eased, 1 / speed);
+      item.style.setProperty("--motion-current-x", `${value("--motion-x") * progress}px`);
+      item.style.setProperty("--motion-current-y", `${value("--motion-y") * progress}px`);
+      item.style.setProperty("--motion-current-scale-x", String(1 + (value("--motion-scale-x") - 1) * progress));
+      item.style.setProperty("--motion-current-scale-y", String(1 + (value("--motion-scale-y") - 1) * progress));
+      item.style.setProperty("--motion-current-hue", `${value("--motion-hue") * progress}deg`);
+      item.style.setProperty("--motion-current-rotation", `${value("--motion-rotation") * progress}deg`);
+      const baseOpacity = value("--base-opacity");
+      item.style.setProperty("--motion-current-opacity", String(baseOpacity + (value("--motion-opacity") - baseOpacity) * progress));
+      item.classList.add("motion-position-active");
+    });
+  });
+}
+document.addEventListener("scroll", updateScreenPositionMotion, { capture: true, passive: true });
+window.addEventListener("resize", () => { positionCanvasItems(); updateScreenPositionMotion(); }, { passive: true });
+function positionCanvasItems(root = $("#site-preview .built-site")) {
+  if (!root) return;
+  const pageHeight = root.getBoundingClientRect().height / zoom;
+  root.querySelectorAll("[data-canvas-y]").forEach(item => { item.style.top = `${pageHeight * (Number(item.dataset.canvasY) || 0) / 100}px`; });
+}
 function renderCanvas() {
+  if (!hasInstalledFeature("drawing-menu") && selectedShapeIds.size > 1) selectedShapeIds = new Set(selectedShapeId ? [selectedShapeId] : []);
+  selectedShapeIds = new Set([...selectedShapeIds].filter(id => site.shapes.some(shape => shape.id === id)));
+  if (selectedShapeId && site.shapes.some(shape => shape.id === selectedShapeId)) selectedShapeIds.add(selectedShapeId);
+  else if (selectedShapeId) selectedShapeId = [...selectedShapeIds].at(-1) || "";
   $("#site-preview").innerHTML = renderSite(site, true, selectedShapeId, selectedObjectId);
+  mountModelViewers($("#site-preview"));
+  document.querySelectorAll("#site-preview .model3d-viewer").forEach(stage => {
+    stage.addEventListener("modelselect", event => { if (event.detail?.objectId && selectedObjectId !== event.detail.objectId) selectCanvasObject(event.detail.objectId); });
+    stage.addEventListener("modelviewchange", event => {
+      const object = site.objects.find(item => item.id === stage.closest("[data-object-id]")?.dataset.objectId);
+      if (object?.type !== "model3d") return;
+      object.modelRotateX = event.detail.rotateX; object.modelRotateY = event.detail.rotateY; save();
+    });
+  });
+  positionCanvasItems();
+  document.querySelectorAll("#site-preview .editor-decoration").forEach(element => element.classList.toggle("multi-selected", hasInstalledFeature("drawing-menu") && selectedShapeIds.has(element.dataset.shapeId)));
   document.querySelectorAll("#site-preview [data-site-key]").forEach(element => {
     element.classList.add("editor-content");
     element.title = "Double-click to edit";
@@ -523,7 +715,7 @@ function renderCanvas() {
       if (element.isContentEditable) return;
       if (event.detail >= 2 && !/imageUrl|linkUrl/.test(key)) { event.preventDefault(); startInlineEdit(element, sectionId, key); return; }
       event.preventDefault();
-      selectedId = sectionId; selectedContent = { sectionId, key }; selectedObjectId = ""; selectedShapeId = ""; setRailPanel("edit");
+      selectedId = sectionId; selectedContent = { sectionId, key }; selectedObjectId = ""; selectedShapeId = ""; selectedShapeIds.clear(); renderMotionTools(); setRailPanel("edit");
       document.querySelectorAll(".content-selected").forEach(node => node.classList.remove("content-selected"));
       element.classList.add("content-selected");
       if (!element.querySelector(".content-resize-handle")) { const handle = document.createElement("span"); handle.className = "content-resize-handle"; element.append(handle); }
@@ -562,23 +754,34 @@ function renderCanvas() {
     element.addEventListener("pointerdown", event => {
       event.preventDefault(); event.stopPropagation();
       const shape = site.shapes.find(item => item.id === element.dataset.shapeId); if (!shape) return;
-      selectedShapeId = shape.id; selectedObjectId = ""; selectedContent = null; setRailPanel("edit");
-      element.classList.remove("site-motion");
-      document.querySelectorAll(".shape-resize-handle,.shape-rotate-handle,.shape-rotate-stem,.shape-selection-box").forEach(existing => { if (existing.parentElement !== element) existing.remove(); });
-      if (!element.querySelector(".shape-resize-handle")) element.insertAdjacentHTML("beforeend", '<rect class="shape-selection-box" x="1" y="1" width="98" height="98"/><rect class="shape-resize-handle" data-resize="n" x="35" y="-3" width="30" height="6" rx="3"/><rect class="shape-resize-handle" data-resize="e" x="97" y="35" width="6" height="30" rx="3"/><rect class="shape-resize-handle" data-resize="s" x="35" y="97" width="30" height="6" rx="3"/><rect class="shape-resize-handle" data-resize="w" x="-3" y="35" width="6" height="30" rx="3"/><circle class="shape-resize-handle" data-resize="nw" cx="3" cy="3" r="4"/><circle class="shape-resize-handle" data-resize="ne" cx="97" cy="3" r="4"/><circle class="shape-resize-handle" data-resize="se" cx="97" cy="97" r="5"/><circle class="shape-resize-handle" data-resize="sw" cx="3" cy="97" r="4"/><path class="shape-rotate-stem" d="M50 0V-12"/><circle class="shape-rotate-handle" cx="50" cy="-17" r="7"/>');
-      const resizeDirection = event.target.closest(".shape-resize-handle")?.dataset.resize || "";
+      if ((event.ctrlKey || event.metaKey) && hasInstalledFeature("drawing-menu")) {
+        if (selectedShapeIds.has(shape.id)) selectedShapeIds.delete(shape.id); else selectedShapeIds.add(shape.id);
+        selectedShapeId = selectedShapeIds.has(shape.id) ? shape.id : [...selectedShapeIds].at(-1) || "";
+        selectedObjectId = ""; selectedContent = null;
+        renderCanvas(); renderShapeTools(); renderInspector();
+        return;
+      }
+      if (!hasInstalledFeature("drawing-menu") || selectedShapeIds.size < 2 || !selectedShapeIds.has(shape.id)) selectedShapeIds = new Set([shape.id]);
+      selectedShapeId = shape.id; selectedObjectId = ""; selectedContent = null;
+      if (hasInstalledFeature("motion-controls")) { activeAddonTool = "motion-controls"; setRailPanel("motion"); }
+      else { activeAddonTool = "drawing-menu"; setRailPanel("elements"); }
+      document.querySelectorAll(".shape-resize-handle").forEach(existing => { if (existing.parentElement !== element) existing.remove(); });
+      if (!element.querySelector(".shape-resize-handle")) element.insertAdjacentHTML("beforeend", '<rect class="shape-selection-box" x="1" y="1" width="98" height="98"/><rect class="shape-resize-handle" data-resize="n" x="35" y="-3" width="30" height="6" rx="3"/><rect class="shape-resize-handle" data-resize="e" x="97" y="35" width="6" height="30" rx="3"/><rect class="shape-resize-handle" data-resize="s" x="35" y="97" width="30" height="6" rx="3"/><rect class="shape-resize-handle" data-resize="w" x="-3" y="35" width="6" height="30" rx="3"/><circle class="shape-resize-handle" data-resize="nw" cx="3" cy="3" r="4"/><circle class="shape-resize-handle" data-resize="ne" cx="97" cy="3" r="4"/><circle class="shape-resize-handle" data-resize="se" cx="97" cy="97" r="5"/><circle class="shape-resize-handle" data-resize="sw" cx="3" cy="97" r="4"/><g class="shape-rotate-handle" aria-label="Rotate shape"><circle cx="103" cy="-15" r="8"/><text x="103" y="-11">↻</text></g>');
       const rotating = Boolean(event.target.closest(".shape-rotate-handle"));
+      const resizeDirection = event.target.closest(".shape-resize-handle")?.dataset.resize || "";
       const startX = event.clientX, startY = event.clientY;
       const startWidth = shape.width ?? shape.size, startHeight = shape.height ?? shape.size;
-      const center = element.getBoundingClientRect();
-      const centerX = center.left + center.width / 2, centerY = center.top + center.height / 2;
-      const startAngle = Math.atan2(startY - centerY, startX - centerX), startRotation = shape.rotation;
+      const startRect = element.getBoundingClientRect(), centerX = startRect.left + startRect.width / 2, centerY = startRect.top + startRect.height / 2;
+      const startAngle = Math.atan2(startY - centerY, startX - centerX) * 180 / Math.PI, startRotation = Number(shape.rotation) || 0;
+      const canvasRect = element.closest(".built-site").getBoundingClientRect();
+      const movingGroup = hasInstalledFeature("drawing-menu") && !rotating && !resizeDirection && selectedShapeIds.size > 1;
+      const groupStart = (movingGroup ? site.shapes.filter(item => selectedShapeIds.has(item.id)) : [shape]).map(item => ({ item, x: Number(item.x), y: Number(item.y), node: document.querySelector(`.editor-decoration[data-shape-id="${item.id}"]`) }));
       element.setPointerCapture(event.pointerId);
       const moveShape = e => {
         if (rotating) {
-          const angle = Math.atan2(e.clientY - centerY, e.clientX - centerX);
-          const delta = Math.atan2(Math.sin(angle - startAngle), Math.cos(angle - startAngle));
-          shape.rotation = Math.max(-360, Math.min(360, Math.round(startRotation + delta * 180 / Math.PI)));
+          let delta = Math.atan2(e.clientY - centerY, e.clientX - centerX) * 180 / Math.PI - startAngle;
+          if (delta > 180) delta -= 360; else if (delta < -180) delta += 360;
+          shape.rotation = Math.max(-360, Math.min(360, startRotation + delta));
           element.style.transform = `translate(-50%,-50%) rotate(${shape.rotation}deg)`;
         } else if (resizeDirection) {
           const dx = (e.clientX - startX) / zoom, dy = (e.clientY - startY) / zoom;
@@ -588,13 +791,11 @@ function renderCanvas() {
           else if (resizeDirection.includes("n")) shape.height = Math.max(24, Math.min(600, startHeight - dy));
           element.style.width = `${shape.width}px`; element.style.height = `${shape.height}px`;
         } else {
-          const currentRect = element.closest(".built-site").getBoundingClientRect();
-          shape.x = Math.max(0, Math.min(100, (e.clientX - currentRect.left) / currentRect.width * 100));
-          shape.y = Math.max(0, Math.min(100, (e.clientY - currentRect.top) / currentRect.height * 100));
-          element.style.left = `${shape.x}%`; element.style.top = `${shape.y}%`;
+          const dx = (e.clientX - startX) / canvasRect.width * 100, dy = (e.clientY - startY) / canvasRect.height * 100;
+          groupStart.forEach(({ item, x, y, node }) => { item.x = Math.max(0, Math.min(100, x + dx)); item.y = Math.max(0, Math.min(100, y + dy)); if (node) { node.style.left = `${item.x}%`; node.style.top = `${canvasRect.height * item.y / (100 * zoom)}px`; } });
         }
       };
-      const stopShape = () => { element.removeEventListener("pointermove", moveShape); save(); renderShapeTools(); renderInspector(); };
+      const stopShape = () => { element.removeEventListener("pointermove", moveShape); save(); renderCanvas(); renderShapeTools(); renderInspector(); renderLayerList(); };
       element.addEventListener("pointermove", moveShape);
       element.addEventListener("pointerup", stopShape, { once: true });
       element.addEventListener("pointercancel", stopShape, { once: true });
@@ -614,27 +815,17 @@ function renderCanvas() {
       const object = site.objects.find(item => item.id === element.dataset.objectId); if (!object) return;
       if (event.detail >= 2 && object.type === "text") { startObjectInlineEdit(element, object); return; }
       if (selectedObjectId !== object.id) {
-        document.querySelectorAll(".canvas-object-selected").forEach(previous => { previous.classList.remove("canvas-object-selected"); previous.querySelectorAll(".object-selection-box,.object-resize-handle,.object-rotate-handle").forEach(handle => handle.remove()); });
-        selectedObjectId = object.id; selectedShapeId = ""; selectedContent = null; setRailPanel("edit");
+        document.querySelectorAll(".canvas-object-selected").forEach(previous => { previous.classList.remove("canvas-object-selected"); previous.querySelectorAll(".object-selection-box,.object-resize-handle").forEach(handle => handle.remove()); });
+        selectedObjectId = object.id; selectedShapeId = ""; selectedShapeIds.clear(); selectedContent = null;
         element.classList.add("canvas-object-selected");
-        element.insertAdjacentHTML("beforeend", `<span class="object-selection-box"></span>${["n","e","s","w","nw","ne","se","sw"].map(direction => `<span class="object-resize-handle" data-resize="${direction}" aria-label="Resize ${direction}"></span>`).join("")}<span class="object-rotate-handle" aria-label="Rotate element"></span>`);
+        element.insertAdjacentHTML("beforeend", `<span class="object-selection-box"></span>${["n","e","s","w","nw","ne","se","sw"].map(direction => `<span class="object-resize-handle" data-resize="${direction}" aria-label="Resize ${direction}"></span>`).join("")}`);
         renderCanvasObjectTools(); renderInspector(); renderLayerList();
       }
-      element.classList.remove("site-motion");
       const resizeDirection = event.target.closest(".object-resize-handle")?.dataset.resize || "";
-      const rotating = Boolean(event.target.closest(".object-rotate-handle"));
       const startX = event.clientX, startY = event.clientY, startWidth = object.width, startHeight = object.height;
-      const center = element.getBoundingClientRect();
-      const centerX = center.left + center.width / 2, centerY = center.top + center.height / 2;
-      const startAngle = Math.atan2(startY - centerY, startX - centerX), startRotation = object.rotation;
       element.setPointerCapture(event.pointerId);
       const moveObject = e => {
-        if (rotating) {
-          const angle = Math.atan2(e.clientY - centerY, e.clientX - centerX);
-          const delta = Math.atan2(Math.sin(angle - startAngle), Math.cos(angle - startAngle));
-          object.rotation = Math.max(-360, Math.min(360, Math.round(startRotation + delta * 180 / Math.PI)));
-          element.style.transform = `translate(-50%,-50%) rotate(${object.rotation}deg)`;
-        } else if (resizeDirection) {
+        if (resizeDirection) {
           const dx = (e.clientX - startX) / zoom, dy = (e.clientY - startY) / zoom;
           if (resizeDirection.includes("e")) object.width = Math.max(24, Math.min(900, startWidth + dx));
           else if (resizeDirection.includes("w")) object.width = Math.max(24, Math.min(900, startWidth - dx));
@@ -645,7 +836,7 @@ function renderCanvas() {
           const rect = element.closest(".built-site").getBoundingClientRect();
           object.x = Math.max(0, Math.min(100, (e.clientX - rect.left) / rect.width * 100));
           object.y = Math.max(0, Math.min(100, (e.clientY - rect.top) / rect.height * 100));
-          element.style.left = `${object.x}%`; element.style.top = `${object.y}%`;
+          element.style.left = `${object.x}%`; element.style.top = `${rect.height * object.y / (100 * zoom)}px`;
         }
       };
       const stopObject = () => { element.removeEventListener("pointermove", moveObject); save(); renderCanvas(); renderCanvasObjectTools(); };
@@ -655,11 +846,11 @@ function renderCanvas() {
     });
   });
   $("#canvas-title").textContent = site.name;
-  renderSelectionToolbar(); renderLayerList(); renderPageStrip();
+  renderSelectionToolbar(); renderLayerList(); renderPageStrip(); updateScreenPositionMotion();
 }
 const shapeOptions=SHAPE_TYPES;
 const blendOptions=["normal","multiply","screen","overlay","darken","lighten","color-dodge","color-burn","hard-light","soft-light","difference","exclusion","hue","saturation","color","luminosity"];
-function addShape(type,x=50,y=50){const shape={id:globalThis.crypto?.randomUUID?.()||`shape-${Date.now()}`,type,x,y,size:120,width:120,height:120,color:site.accent,opacity:.8,blend:"normal",rotation:0,z:2};site.shapes.push(shape);selectedShapeId=shape.id;selectedObjectId="";selectedContent=null;setRailPanel("edit");save();renderCanvas();renderShapeTools();renderInspector();}
+function addShape(type,x=50,y=50){activeAddonTool=hasInstalledFeature("motion-controls")?"motion-controls":"drawing-menu";const shape={id:globalThis.crypto?.randomUUID?.()||`shape-${Date.now()}`,type,x,y,size:120,width:120,height:120,color:site.accent,opacity:.8,blend:"normal",rotation:0,z:2,motion:{enabled:false,speed:1,centerY:50,moveX:52,moveY:-34,scaleX:1.3,scaleY:.72,hue:90,rotation:18,opacity:.6}};site.shapes.push(shape);selectedShapeId=shape.id;selectedShapeIds=new Set([shape.id]);selectedObjectId="";selectedContent=null;setRailPanel(hasInstalledFeature("motion-controls")?"motion":"elements");save();renderCanvas();renderShapeTools();renderInspector();}
 function hexToHsv(hex){const value=hex.replace("#","");let r=parseInt(value.slice(0,2),16)/255,g=parseInt(value.slice(2,4),16)/255,b=parseInt(value.slice(4,6),16)/255;const max=Math.max(r,g,b),min=Math.min(r,g,b),delta=max-min;let h=0;if(delta){if(max===r)h=((g-b)/delta)%6;else if(max===g)h=(b-r)/delta+2;else h=(r-g)/delta+4;h=(h*60+360)%360;}return{h,s:max?delta/max:0,v:max};}
 function hsvToHex(h,s,v){const c=v*s,x=c*(1-Math.abs((h/60)%2-1)),m=v-c;let rgb=h<60?[c,x,0]:h<120?[x,c,0]:h<180?[0,c,x]:h<240?[0,x,c]:h<300?[x,0,c]:[c,0,x];return"#"+rgb.map(channel=>Math.round((channel+m)*255).toString(16).padStart(2,"0")).join("");}
 function appendShapeColorPicker(parent,shape){const state=hexToHsv(shape.color),wrap=document.createElement("div"),label=document.createElement("label"),hue=document.createElement("input"),field=document.createElement("div"),thumb=document.createElement("span");wrap.className="shape-color-picker";label.textContent="Color";hue.type="range";hue.min=0;hue.max=360;hue.value=state.h;hue.setAttribute("aria-label","Color hue");field.className="shape-color-field";field.tabIndex=0;field.setAttribute("role","slider");field.setAttribute("aria-label","Color saturation and brightness");thumb.className="shape-color-thumb";field.append(thumb);const paint=()=>{field.style.backgroundImage=`linear-gradient(to top,#000,transparent),linear-gradient(to right,#fff,hsl(${state.h} 100% 50%))`;thumb.style.left=`${state.s*100}%`;thumb.style.top=`${(1-state.v)*100}%`;field.setAttribute("aria-valuetext",shape.color);};const updateColor=()=>{shape.color=hsvToHex(state.h,state.s,state.v);paint();save();renderCanvas();};const pickPoint=event=>{const rect=field.getBoundingClientRect();state.s=Math.max(0,Math.min(1,(event.clientX-rect.left)/rect.width));state.v=1-Math.max(0,Math.min(1,(event.clientY-rect.top)/rect.height));updateColor();};hue.addEventListener("input",()=>{state.h=Number(hue.value);updateColor();});field.addEventListener("pointerdown",event=>{event.preventDefault();field.setPointerCapture(event.pointerId);pickPoint(event);const move=e=>pickPoint(e),stop=()=>{field.removeEventListener("pointermove",move);field.removeEventListener("pointerup",stop);field.removeEventListener("pointercancel",stop);};field.addEventListener("pointermove",move);field.addEventListener("pointerup",stop);field.addEventListener("pointercancel",stop);});field.addEventListener("keydown",event=>{const step=event.shiftKey ? 0.1 : 0.02;if(event.key==="ArrowLeft")state.s=Math.max(0,state.s-step);else if(event.key==="ArrowRight")state.s=Math.min(1,state.s+step);else if(event.key==="ArrowUp")state.v=Math.min(1,state.v+step);else if(event.key==="ArrowDown")state.v=Math.max(0,state.v-step);else return;event.preventDefault();updateColor();});paint();wrap.append(label,hue,field);parent.append(wrap);}
@@ -668,15 +859,234 @@ shapeDropZone.addEventListener("dragover",event=>{const types=Array.from(event.d
 shapeDropZone.addEventListener("drop",event=>{const shapeType=event.dataTransfer?.getData("application/x-websiteforge-shape");const textPreset=event.dataTransfer?.getData("application/x-websiteforge-text");const imageType=event.dataTransfer?.getData("application/x-websiteforge-image");if(!shapeOptions.includes(shapeType)&&!textPresets[textPreset]&&!imageType)return;event.preventDefault();const canvas=$("#site-preview")?.querySelector(".built-site");if(!canvas)return;const rect=canvas.getBoundingClientRect();const x=Math.max(0,Math.min(100,(event.clientX-rect.left)/rect.width*100));const y=Math.max(0,Math.min(100,(event.clientY-rect.top)/rect.height*100));suppressPaletteClickUntil=Date.now()+500;if(shapeOptions.includes(shapeType))addShape(shapeType,x,y);else addCanvasObject(textPreset?"text":"image",x,y,textPreset||"plain");});
 function renderAddonToolTabs(){
   $("#addon-tool-tabs").hidden = true;
-  for (const id of ["shape-tools", "text-tools", "image-tools"]) $("#" + id).hidden = false;
+  for (const id of ["shape-tools", "text-tools", "image-tools", "model-tools", "motion-tools"]) $("#" + id).hidden = false;
   $("#template-tools").hidden = !installed.some(pack => pack.features.includes("template-studio"));
 }
 function renderShapeTools(){renderAddonToolTabs();const groups={"Basic shapes":["square","rectangle","rounded-square","circle","ellipse","triangle","inverted-triangle","right-triangle","diamond","cross","plus"],Polygons:["trapezoid","parallelogram","pentagon","hexagon","heptagon","octagon","nonagon","decagon"],Stars:["star-3","star-4","star-5","star-6","star-8","star-10","star-12","starburst"],Arrows:["arrow-right","arrow-left","arrow-up","arrow-down","double-arrow","chevron"],Symbols:["heart","lightning","moon","cloud","speech-bubble","line","curve","zigzag","pie","arc","ring"],Flowchart:["flow-terminal","flow-process","flow-decision","flow-document","flow-data","flow-delay","flow-display","flow-preparation","flow-database","flow-manual-input","flow-stored-data"]};const palette=$("#shape-palette");palette.replaceChildren();Object.entries(groups).forEach(([group,types])=>{const wrapper=document.createElement("div");wrapper.className="shape-group";const title=document.createElement("div");title.className="shape-group-title";title.textContent=group;wrapper.append(title);const row=document.createElement("div");row.className="shape-picks";types.forEach((type,index)=>{const button=document.createElement("button");button.type="button";button.className="shape-pick";button.title=type.replaceAll("-"," ");button.setAttribute("aria-label",`Add ${button.title}`);button.innerHTML=`<svg viewBox="0 0 100 100" aria-hidden="true">${shapeSvgMarkup(type,site.accent)}</svg>`;if(index>=5)button.hidden=true;button.addEventListener("click",()=>{if(Date.now()>=suppressPaletteClickUntil)addShape(type);});button.draggable=true;button.addEventListener("dragstart",event=>{event.dataTransfer?.setData("application/x-websiteforge-shape",type);if(event.dataTransfer)event.dataTransfer.effectAllowed="copy";});row.append(button);});wrapper.append(row);if(types.length>5){const more=document.createElement("button");more.type="button";more.className="button ghost small shape-more";more.textContent="Add more…";more.addEventListener("click",()=>{const expand=more.dataset.expanded!=="true";row.querySelectorAll("button").forEach(button=>button.hidden=!expand&&Array.from(row.children).indexOf(button)>=5);more.dataset.expanded=String(expand);more.textContent=expand?"Show less":"Add more…";});wrapper.append(more);}palette.append(wrapper);});const list=$("#shape-list");list.replaceChildren();$("#shape-count").textContent=String(site.shapes.length);site.shapes.forEach((shape,index)=>{const card=document.createElement("div");card.className=`shape-card ${selectedShapeId===shape.id?"selected":""}`;const head=document.createElement("div");head.className="shape-card-head";head.innerHTML=`<strong>${shape.type.replaceAll("-"," ")}</strong>`;head.addEventListener("click",()=>{selectedShapeId=shape.id;selectedObjectId="";renderCanvas();renderShapeTools();});const controls=document.createElement("div");controls.className="shape-controls";const addControl=(label,type,value,oninput,attrs={})=>{const wrap=document.createElement("label");wrap.textContent=label;const input=document.createElement("input");input.type=type;input.value=value;Object.assign(input,attrs);input.addEventListener("input",()=>{oninput(input.value);save();});input.addEventListener("change",renderCanvas);wrap.append(input);controls.append(wrap);};appendShapeColorPicker(controls,shape);addControl("Width","range",shape.width??shape.size,v=>shape.width=Number(v),{min:24,max:600});addControl("Height","range",shape.height??shape.size,v=>shape.height=Number(v),{min:24,max:600});addControl("Opacity","range",shape.opacity,v=>shape.opacity=Number(v),{min:0,max:1,step:.05});addControl("Rotation","range",shape.rotation,v=>shape.rotation=Number(v),{min:-180,max:180});const blendLabel=document.createElement("label");blendLabel.textContent="Blending";const blend=document.createElement("select");blendOptions.forEach(mode=>blend.add(new Option(mode.replaceAll("-"," "),mode)));blend.value=shape.blend;blend.addEventListener("change",()=>{shape.blend=blend.value;save();renderCanvas();});blendLabel.append(blend);controls.append(blendLabel);const remove=document.createElement("button");remove.type="button";remove.className="button danger wide";remove.textContent="Delete shape";remove.addEventListener("click",()=>{site.shapes.splice(index,1);save();renderCanvas();renderShapeTools();});card.append(head,controls,remove);list.append(card);});}
 const textPresets={heading:{label:"Heading",text:"Your heading",fontSize:52},subheading:{label:"Subheading",text:"A supporting line",fontSize:32},caption:{label:"Caption",text:"Add a caption",fontSize:18},label:{label:"Label",text:"SECTION LABEL",fontSize:14},badge:{label:"Badge",text:"New",fontSize:20},plain:{label:"Plain text",text:"Your text",fontSize:24}};
-function addCanvasObject(type,x=50,y=50,preset="plain") {const definition=textPresets[preset]||textPresets.plain;const object={id:globalThis.crypto?.randomUUID?.()||`object-${Date.now()}`,type,x,y,width:type==="image"?300:preset==="badge"?140:320,height:type==="image"?190:preset==="badge"?54:100,rotation:0,color:type==="text"?(preset==="badge"?"#ffffff":site.palette.ink):site.palette.ink,background:type==="text"&&preset==="badge"?site.accent:"",opacity:1,blend:"normal",z:3,text:definition.text,fontSize:definition.fontSize,preset:type==="text"?preset:"plain",url:"",alt:""};site.objects.push(object);selectedObjectId=object.id;selectedShapeId="";selectedContent=null;setRailPanel("edit");save();renderCanvas();renderCanvasObjectTools();renderInspector();}
-function renderCanvasObjectTools(){renderAddonToolTabs();const presets=$("#text-presets");presets.replaceChildren();Object.entries(textPresets).forEach(([key,item])=>{const button=document.createElement("button");button.type="button";button.className=`object-preset preset-${key}`;button.textContent=item.label;button.title=`Add ${item.label.toLowerCase()}`;button.addEventListener("click",()=>{if(Date.now()>=suppressPaletteClickUntil)addCanvasObject("text",50,50,key);});button.draggable=true;button.addEventListener("dragstart",event=>{event.dataTransfer?.setData("application/x-websiteforge-text",key);if(event.dataTransfer)event.dataTransfer.effectAllowed="copy";});presets.append(button);});const addImage=$("#add-image-object");addImage.onclick=()=>addCanvasObject("image");addImage.draggable=true;addImage.ondragstart=event=>{event.dataTransfer?.setData("application/x-websiteforge-image","image");if(event.dataTransfer)event.dataTransfer.effectAllowed="copy";};const renderList=(type,target)=>{const list=$(target);list.replaceChildren();site.objects.forEach((object,index)=>{if(object.type!==type)return;const card=document.createElement("div");card.className=`shape-card ${selectedObjectId===object.id?"selected":""}`;const head=document.createElement("div");head.className="shape-card-head object-card-head";head.textContent=type==="text"?`${textPresets[object.preset]?.label||"Text"}: ${object.text.slice(0,24)||"Text"}`:"Image frame";head.addEventListener("click",()=>{selectedObjectId=object.id;selectedShapeId="";renderCanvas();renderCanvasObjectTools();});card.append(head);const controls=document.createElement("div");controls.className="shape-controls object-controls";const addControl=(label,inputType,value,oninput,attrs={})=>{const wrap=document.createElement("label");wrap.textContent=label;const input=document.createElement(inputType==="textarea"?"textarea":"input");input.type=inputType==="textarea"?"text":inputType;input.value=value??"";Object.assign(input,attrs);if(inputType==="textarea"){input.rows=3;input.maxLength=500;}input.addEventListener("input",()=>{oninput(input.value);save();if(inputType==="range")input.setAttribute("aria-valuenow",input.value);renderCanvas();});input.addEventListener("change",()=>{renderCanvas();renderCanvasObjectTools();});wrap.append(input);controls.append(wrap);};const addSelect=(label,value,options,onchange)=>{const wrap=document.createElement("label");wrap.textContent=label;const select=document.createElement("select");options.forEach(([key,name])=>select.add(new Option(name,key)));select.value=value;select.addEventListener("change",()=>{onchange(select.value);save();renderCanvas();renderCanvasObjectTools();});wrap.append(select);controls.append(wrap);};if(type==="text"){addControl("Text","textarea",object.text,value=>object.text=value);addSelect("Text style",object.preset,Object.entries(textPresets).map(([key,item])=>[key,item.label]),value=>{object.preset=value;object.fontSize=textPresets[value].fontSize;if(value==="badge"){object.background=site.accent;object.color="#ffffff";}else if(object.preset!=="badge"){object.background="";}});addControl("Text size","range",object.fontSize,value=>object.fontSize=Number(value),{min:10,max:180});appendShapeColorPicker(controls,object);addControl("Width","range",object.width,value=>object.width=Number(value),{min:24,max:900});addControl("Height","range",object.height,value=>object.height=Number(value),{min:24,max:600});if(object.preset==="badge")addControl("Badge background","color",object.background||site.accent,value=>object.background=value);}
-else{addControl("Image URL (HTTPS)","url",object.url,value=>object.url=value,{placeholder:"https://example.com/image.jpg",maxLength:500});addControl("Alt text","text",object.alt,value=>object.alt=value,{maxLength:160});addControl("Width","range",object.width,value=>object.width=Number(value),{min:24,max:900});addControl("Height","range",object.height,value=>object.height=Number(value),{min:24,max:600});addControl("Frame color","color",object.background||"#d8d8d8",value=>object.background=value);}
-addControl("Opacity","range",object.opacity,value=>object.opacity=Number(value),{min:0,max:1,step:.05});addSelect("Blending",object.blend,blendOptions.map(mode=>[mode,mode.replaceAll("-"," ")]),value=>object.blend=value);const remove=document.createElement("button");remove.type="button";remove.className="button danger wide";remove.textContent=`Delete ${type==="text"?"text":"image frame"}`;remove.addEventListener("click",()=>{site.objects.splice(index,1);if(selectedObjectId===object.id)selectedObjectId="";save();renderCanvas();renderCanvasObjectTools();});card.append(controls,remove);list.append(card);});};renderList("text","#text-object-list");renderList("image","#image-object-list");}
+function addCanvasObject(type, x = 50, y = 50, preset = "plain") {
+  if (type === "model3d" && !hasInstalledFeature("3d-models")) { setRailPanel("plugins"); pluginStatus("Install the 3D Model Studio add-on before adding a model."); return; }
+  activeAddonTool = type === "image" ? "image-tool" : type === "model3d" ? "3d-models" : "text-tool";
+  const definition = textPresets[preset] || textPresets.plain;
+  const object = {
+    id: globalThis.crypto?.randomUUID?.() || `object-${Date.now()}`, type, x, y,
+    width: type === "image" ? 300 : type === "model3d" ? 300 : preset === "badge" ? 140 : 320,
+    height: type === "image" ? 190 : type === "model3d" ? 280 : preset === "badge" ? 54 : 100,
+    rotation: 0, motion: { enabled: false, speed: 1, centerY: 50, moveX: 52, moveY: -34, scaleX: 1.3, scaleY: .72, hue: 90, rotation: 18, opacity: .6 },
+    color: type === "text" ? (preset === "badge" ? "#ffffff" : site.palette.ink) : site.accent,
+    background: type === "text" && preset === "badge" ? site.accent : "", opacity: 1, blend: "normal", z: 3,
+    text: definition.text, fontSize: definition.fontSize, preset: type === "text" ? preset : "plain", url: "", alt: "",
+    modelData: "", modelResources: {}, modelFormat: "obj", modelFileName: "", modelScale: 1, modelRotateX: 18, modelRotateY: -28, modelPixelArt: true
+  };
+  site.objects.push(object); selectedObjectId = object.id; selectedShapeId = ""; selectedShapeIds.clear(); selectedContent = null;
+  setRailPanel(type === "image" ? "uploads" : type === "model3d" ? "models" : "text");
+  save(); renderCanvas(); renderCanvasObjectTools(); renderInspector();
+}
+async function uploadCanvasModel(file, selectedFiles = []) {
+  const files = Array.from(selectedFiles || []).filter(Boolean);
+  const isModelFile = candidate => candidate && ["obj", "stl", "glb", "bbmodel"].includes(candidate.name.split(".").pop().toLowerCase());
+  const primary = files.find(isModelFile) || (isModelFile(file) ? file : null);
+  if (!primary) {
+    const target = site.objects.find(item => item.id === pendingModelResourceId && item.type === "model3d");
+    if (target && files.length) await uploadModelResources(target, files);
+    else if (files.length) toast("Select a model first, then choose its .mtl and texture files.");
+    pendingModelResourceId = "";
+    return;
+  }
+  const extension = primary.name.split(".").pop().toLowerCase();
+  if (!["obj", "stl", "glb", "bbmodel"].includes(extension)) { toast("Choose an OBJ, STL, GLB, or Blockbench BBMODEL file."); return; }
+  const selected = files.length ? files : [primary];
+  if (selected.some(candidate => candidate.size > 20000000) || selected.reduce((total, candidate) => total + candidate.size, 0) > 20000000) { toast("Keep the model and its companion materials and textures under 20 MB total."); return; }
+  try {
+    const toDataUrl = async (candidate, asText = false) => {
+      const bytes = new Uint8Array(await candidate.arrayBuffer()); let binary = "";
+      for (let offset = 0; offset < bytes.length; offset += 0x8000) binary += String.fromCharCode(...bytes.subarray(offset, offset + 0x8000));
+      const ext = candidate.name.split(".").pop().toLowerCase();
+      const mime = asText ? "text/plain" : ext === "obj" || ext === "mtl" ? "text/plain" : ext === "stl" ? "model/stl" : ext === "glb" ? "model/gltf-binary" : ext === "bbmodel" ? "application/json" : ({ png:"image/png", jpg:"image/jpeg", jpeg:"image/jpeg", webp:"image/webp", gif:"image/gif", bmp:"image/bmp", avif:"image/avif" }[ext] || candidate.type || "application/octet-stream");
+      return `data:${mime};base64,${btoa(binary)}`;
+    };
+    const data = await toDataUrl(primary);
+    const resources = {};
+    if (extension === "obj" || extension === "glb") {
+      for (const companion of selected) {
+        if (companion === primary) continue;
+        const ext = companion.name.split(".").pop().toLowerCase();
+        if ((extension === "obj" && ext === "mtl") || ["png", "jpg", "jpeg", "webp", "gif", "bmp", "avif"].includes(ext)) resources[companion.name.slice(0, 180)] = await toDataUrl(companion, ext === "mtl");
+      }
+    }
+    let object = site.objects.find(item => item.id === pendingModelReplacementId && item.type === "model3d");
+    if (!object) { addCanvasObject("model3d"); object = site.objects.find(item => item.id === selectedObjectId); }
+    if (!object) return;
+    object.modelData = data; object.modelResources = resources; object.modelFormat = extension; object.modelFileName = primary.name.slice(0, 120); pendingModelReplacementId = "";
+    pendingModelResourceId = "";
+    save(); renderCanvas(); renderCanvasObjectTools(); renderInspector(); setRailPanel("models");
+    const companionNote = extension === "obj" && !Object.keys(resources).some(name => name.toLowerCase().endsWith(".mtl")) ? " For OBJ color and textures, select its .mtl and image files at the same time." : "";
+    toast(`${primary.name} added. Drag the model to rotate it; Shift-drag moves the frame.${companionNote}`);
+  } catch { toast("Could not read that 3D model file."); }
+}
+async function uploadModelResources(object, files) {
+  const allowed = object.modelFormat === "obj"
+    ? new Set(["mtl", "png", "jpg", "jpeg", "webp", "gif", "bmp", "avif"])
+    : object.modelFormat === "glb"
+      ? new Set(["png", "jpg", "jpeg", "webp", "gif", "bmp", "avif"])
+      : new Set();
+  const resourcesToAdd = files.filter(file => allowed.has(file.name.split(".").pop().toLowerCase()));
+  if (!allowed.size) { toast("Extra color files are supported for OBJ materials and GLB textures."); return; }
+  if (!resourcesToAdd.length) { toast(object.modelFormat === "obj" ? "Choose the matching .mtl and its texture image files." : "Choose the GLB texture image files."); return; }
+  const addedBytes = resourcesToAdd.reduce((total, file) => total + file.size, 0);
+  const dataBytes = value => Math.floor(((value || "").split(",", 2)[1] || "").length * .75);
+  const existingBytes = dataBytes(object.modelData) + Object.values(object.modelResources || {}).reduce((total, value) => total + dataBytes(value), 0);
+  if (addedBytes + existingBytes > 20000000) { toast("Keep the model, materials, and textures under 20 MB total."); return; }
+  try {
+    const resources = { ...(object.modelResources || {}) };
+    for (const file of resourcesToAdd) {
+      const bytes = new Uint8Array(await file.arrayBuffer()); let binary = "";
+      for (let offset = 0; offset < bytes.length; offset += 0x8000) binary += String.fromCharCode(...bytes.subarray(offset, offset + 0x8000));
+      const extension = file.name.split(".").pop().toLowerCase();
+      const mime = extension === "mtl" ? "text/plain" : ({ png:"image/png", jpg:"image/jpeg", jpeg:"image/jpeg", webp:"image/webp", gif:"image/gif", bmp:"image/bmp", avif:"image/avif" }[extension] || file.type || "application/octet-stream");
+      resources[file.name.slice(0, 180)] = `data:${mime};base64,${btoa(binary)}`;
+    }
+    object.modelResources = resources;
+    save(); renderCanvas(); renderCanvasObjectTools(); renderInspector();
+    toast(`${resourcesToAdd.length} material/texture file${resourcesToAdd.length === 1 ? "" : "s"} added to ${object.modelFileName || "the model"}.`);
+  } catch { toast("Could not read those material or texture files."); }
+}
+function chooseModelResourceFiles(object) {
+  if (!object || object.type !== "model3d") { toast("Select a 3D model first."); return; }
+  if (!["obj", "glb"].includes(object.modelFormat)) { toast("Extra material and texture files are supported for OBJ and GLB models."); return; }
+  pendingModelReplacementId = ""; pendingModelResourceId = object.id;
+  $("#canvas-model-file").click();
+}
+function renderCanvasObjectTools() {
+  renderAddonToolTabs(); renderMotionTools();
+  const presets = $("#text-presets"); presets.replaceChildren();
+  Object.entries(textPresets).forEach(([key, item]) => {
+    const button = document.createElement("button"); button.type = "button"; button.className = `object-preset preset-${key}`; button.textContent = item.label; button.title = `Add ${item.label.toLowerCase()}`;
+    button.addEventListener("click", () => { if (Date.now() >= suppressPaletteClickUntil) addCanvasObject("text", 50, 50, key); });
+    button.draggable = true; button.addEventListener("dragstart", event => { event.dataTransfer?.setData("application/x-websiteforge-text", key); if (event.dataTransfer) event.dataTransfer.effectAllowed = "copy"; }); presets.append(button);
+  });
+  const addImage = $("#add-image-object"); addImage.onclick = () => addCanvasObject("image"); addImage.draggable = true;
+  addImage.ondragstart = event => { event.dataTransfer?.setData("application/x-websiteforge-image", "image"); if (event.dataTransfer) event.dataTransfer.effectAllowed = "copy"; };
+  $("#add-model-button").onclick = () => { pendingModelReplacementId = ""; pendingModelResourceId = ""; $("#canvas-model-file").click(); };
+  const selectedModel = site.objects.find(item => item.id === selectedObjectId && item.type === "model3d");
+  const resourcesButton = $("#add-model-resources-button");
+  resourcesButton.hidden = !selectedModel || !["obj", "glb"].includes(selectedModel.modelFormat);
+  resourcesButton.onclick = () => chooseModelResourceFiles(selectedModel);
+  $("#model-count").textContent = String(site.objects.filter(object => object.type === "model3d").length);
+  const renderList = (type, target) => {
+    const list = $(target); list.replaceChildren();
+    site.objects.forEach((object, index) => {
+      if (object.type !== type) return;
+      const card = document.createElement("div"); card.className = `shape-card ${selectedObjectId === object.id ? "selected" : ""}`;
+      const head = document.createElement("button"); head.type = "button"; head.className = "shape-card-head object-card-head";
+      head.textContent = type === "text" ? `${textPresets[object.preset]?.label || "Text"}: ${object.text.slice(0, 24) || "Text"}` : type === "image" ? "Image frame" : `3D model: ${object.modelFileName || "Choose a file"}`;
+      head.addEventListener("click", () => selectCanvasObject(object.id)); card.append(head);
+      const controls = document.createElement("div"); controls.className = "shape-controls object-controls";
+      const addControl = (label, inputType, value, oninput, attrs = {}) => {
+        const wrap = document.createElement("label"); wrap.textContent = label;
+        const input = document.createElement(inputType === "textarea" ? "textarea" : "input"); input.type = inputType === "textarea" ? "text" : inputType; input.value = value ?? ""; Object.assign(input, attrs);
+        if (inputType === "textarea") { input.rows = 3; input.maxLength = 500; }
+        input.addEventListener("input", () => { oninput(input.value); save(); if (inputType === "range") input.setAttribute("aria-valuenow", input.value); renderCanvas(); });
+        input.addEventListener("change", () => { renderCanvas(); renderCanvasObjectTools(); }); wrap.append(input); controls.append(wrap);
+      };
+      const addSelect = (label, value, options, onchange) => {
+        const wrap = document.createElement("label"); wrap.textContent = label; const select = document.createElement("select");
+        options.forEach(([key, name]) => select.add(new Option(name, key))); select.value = value;
+        select.addEventListener("change", () => { onchange(select.value); save(); renderCanvas(); renderCanvasObjectTools(); }); wrap.append(select); controls.append(wrap);
+      };
+      if (type === "text") {
+        addControl("Text", "textarea", object.text, value => object.text = value);
+        addSelect("Text style", object.preset, Object.entries(textPresets).map(([key, item]) => [key, item.label]), value => { object.preset = value; object.fontSize = textPresets[value].fontSize; if (value === "badge") { object.background = site.accent; object.color = "#ffffff"; } else if (object.preset !== "badge") object.background = ""; });
+        addControl("Text size", "range", object.fontSize, value => object.fontSize = Number(value), { min: 10, max: 180 }); appendShapeColorPicker(controls, object);
+        addControl("Width", "range", object.width, value => object.width = Number(value), { min: 24, max: 900 }); addControl("Height", "range", object.height, value => object.height = Number(value), { min: 24, max: 600 });
+        if (object.preset === "badge") addControl("Badge background", "color", object.background || site.accent, value => object.background = value);
+      } else if (type === "image") {
+        addControl("Image URL (HTTPS)", "url", object.url, value => object.url = value, { placeholder: "https://example.com/image.jpg", maxLength: 500 });
+        addControl("Alt text", "text", object.alt, value => object.alt = value, { maxLength: 160 });
+        addControl("Width", "range", object.width, value => object.width = Number(value), { min: 24, max: 900 }); addControl("Height", "range", object.height, value => object.height = Number(value), { min: 24, max: 600 });
+        addControl("Frame color", "color", object.background || "#d8d8d8", value => object.background = value);
+      } else {
+        const fileNote = document.createElement("p"); fileNote.className = "helper"; fileNote.textContent = object.modelFileName ? `${object.modelFileName} · ${object.modelFormat.toUpperCase()}${Object.keys(object.modelResources || {}).length ? ` · ${Object.keys(object.modelResources).length} material/texture files` : ""}` : "No model file loaded."; controls.append(fileNote);
+        const replace = document.createElement("button"); replace.type = "button"; replace.className = "button subtle wide"; replace.textContent = "Replace model file";
+        replace.addEventListener("click", () => { pendingModelReplacementId = object.id; $("#canvas-model-file").click(); }); controls.append(replace);
+        addControl("Model color", "color", object.color || site.accent, value => object.color = value);
+        const pixelLabel = document.createElement("label"); pixelLabel.className = "pixel-texture-setting";
+        const pixelToggle = document.createElement("input"); pixelToggle.type = "checkbox"; pixelToggle.checked = object.modelPixelArt !== false;
+        const pixelCaption = document.createElement("span"); pixelCaption.textContent = "Crisp pixel-art textures";
+        pixelToggle.addEventListener("change", () => { object.modelPixelArt = pixelToggle.checked; save(); renderCanvas(); });
+        pixelLabel.append(pixelToggle, pixelCaption); controls.append(pixelLabel);
+        addControl("Model zoom", "number", object.modelScale, value => object.modelScale = Number(value), { min: .2, max: 3, step: .1 });
+        addControl("Frame width", "number", object.width, value => object.width = Number(value), { min: 24, max: 900 });
+        addControl("Frame height", "number", object.height, value => object.height = Number(value), { min: 24, max: 600 });
+      }
+      addControl("Frame rotation", "number", object.rotation, value => object.rotation = Number(value), { min: -360, max: 360 });
+      addControl("Opacity", "range", object.opacity, value => object.opacity = Number(value), { min: 0, max: 1, step: .05 });
+      addSelect("Blending", object.blend, blendOptions.map(mode => [mode, mode.replaceAll("-", " ")]), value => object.blend = value);
+      const remove = document.createElement("button"); remove.type = "button"; remove.className = "button danger wide"; remove.textContent = `Delete ${type === "text" ? "text" : type === "image" ? "image frame" : "3D model"}`;
+      remove.addEventListener("click", () => { site.objects.splice(index, 1); if (selectedObjectId === object.id) selectedObjectId = ""; save(); renderCanvas(); renderCanvasObjectTools(); renderInspector(); });
+      card.append(controls, remove); list.append(card);
+    });
+  };
+  renderList("text", "#text-object-list"); renderList("image", "#image-object-list"); renderList("model3d", "#model-object-list");
+}
+function renderMotionTools() {
+  const body = $("#motion-controls-body");
+  if (!body || !site) return;
+  body.replaceChildren();
+  const item = site.shapes.find(shape => shape.id === selectedShapeId) || site.objects.find(object => object.id === selectedObjectId);
+  if (!item) {
+    const note = document.createElement("p"); note.className = "helper"; note.textContent = "Select a shape, text item, image frame, or 3D model frame on the canvas to set its screen-position motion, or add a sample shape to try the controls.";
+    const sample = document.createElement("button"); sample.type = "button"; sample.className = "button subtle wide"; sample.textContent = "Add a sample shape"; sample.addEventListener("click", () => addShape("circle"));
+    body.append(note, sample); return;
+  }
+  item.motion ||= { enabled: false, speed: 1, centerY: 50, moveX: 52, moveY: -34, scaleX: 1.3, scaleY: .72, hue: 90, rotation: 18, opacity: .6 };
+  const motion = item.motion;
+  const card = document.createElement("div"); card.className = "motion-card";
+  const heading = document.createElement("strong"); heading.textContent = `${item.type === "image" || item.type === "model3d" ? `${item.type === "model3d" ? "3D model" : "Image"} frame` : item.type === "text" ? "Text" : item.type.replaceAll("-", " ")} motion`;
+  const description = document.createElement("p"); description.textContent = "Set the screen line where the item has its unchanged base appearance. Its effects build as it moves away from that line in either direction.";
+  const toggleLabel = document.createElement("label"); toggleLabel.className = "motion-toggle";
+  const toggle = document.createElement("input"); toggle.type = "checkbox"; toggle.checked = motion.enabled;
+  toggle.addEventListener("change", () => { motion.enabled = toggle.checked; save(); renderCanvas(); });
+  toggleLabel.append(toggle, document.createTextNode("Enable screen-position motion"));
+  const addNumber = (parent, label, key, min, max, step = 1) => {
+    const wrap = document.createElement("label"); wrap.className = "motion-field"; wrap.textContent = label;
+    const input = document.createElement("input"); input.type = "number"; input.min = min; input.max = max; input.step = step; input.value = motion[key];
+    input.addEventListener("input", () => { const value = Number(input.value); if (!Number.isFinite(value)) return; motion[key] = Math.max(min, Math.min(max, value)); save(); renderCanvas(); });
+    wrap.append(input); parent.append(wrap);
+  };
+  const addRange = (parent, label, key, min, max, step, value, format, convert = Number) => {
+    const wrap = document.createElement("label"); wrap.className = "motion-field";
+    const head = document.createElement("span"); head.className = "motion-range-head";
+    const title = document.createElement("span"); title.textContent = label;
+    const output = document.createElement("output"); output.textContent = format(value);
+    head.append(title, output); const input = document.createElement("input"); input.type = "range"; input.min = min; input.max = max; input.step = step; input.value = value;
+    input.addEventListener("input", () => { motion[key] = convert(Number(input.value)); output.textContent = format(Number(input.value)); save(); renderCanvas(); });
+    wrap.append(head, input); parent.append(wrap);
+  };
+  card.append(heading, description, toggleLabel);
+  addRange(card, "Response speed", "speed", .25, 3, .05, motion.speed, value => `${value.toFixed(2)}×`);
+  addRange(card, "Center Y · base line", "centerY", 0, 100, 1, motion.centerY, value => `${Math.round(value)}%`);
+  const move = document.createElement("div"); move.className = "motion-pair";
+  addNumber(move, "Movement · X (px)", "moveX", -500, 500);
+  addNumber(move, "Movement · Y (px)", "moveY", -500, 500);
+  card.append(move);
+  const size = document.createElement("div"); size.className = "motion-pair";
+  addRange(size, "Size · X", "scaleX", 10, 300, 1, motion.scaleX * 100, value => `${Math.round(value)}%`, value => value / 100);
+  addRange(size, "Size · Y", "scaleY", 10, 300, 1, motion.scaleY * 100, value => `${Math.round(value)}%`, value => value / 100);
+  card.append(size);
+  addRange(card, "Color hue", "hue", -180, 180, 1, motion.hue, value => `${Math.round(value)}°`);
+  addRange(card, "Rotation", "rotation", -360, 360, 1, motion.rotation, value => `${Math.round(value)}°`);
+  addRange(card, "Fade opacity", "opacity", 0, 100, 1, motion.opacity * 100, value => `${Math.round(value)}%`, value => value / 100);
+  const preview = document.createElement("button"); preview.type = "button"; preview.className = "button subtle wide motion-preview-button"; preview.textContent = "Preview effect";
+  preview.addEventListener("click", () => {
+    const selector = selectedShapeId ? `[data-shape-id="${CSS.escape(selectedShapeId)}"]` : `[data-object-id="${CSS.escape(selectedObjectId)}"]`;
+    const canvasItem = document.querySelector(`#site-preview ${selector}`);
+    if (!canvasItem) return;
+    canvasItem.classList.remove("motion-preview"); void canvasItem.offsetWidth; canvasItem.classList.add("motion-preview");
+    window.setTimeout(() => canvasItem.classList.remove("motion-preview"), Math.round(700 / motion.speed) + 100);
+  });
+  card.append(preview); body.append(card);
+}
 function freshContentId(prefix) { return `${prefix}-${globalThis.crypto?.randomUUID?.() || `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`}`; }
 function addTemplateToSite(saved) {
   const sections = (saved.sections || []).map(section => { const { id, ...content } = structuredClone(section); return makeSection(section.type, content); });
@@ -686,15 +1096,16 @@ function addTemplateToSite(saved) {
   if (site.shapes.length + shapes.length > 80 || site.objects.length + objects.length > 100) { toast("This template has more shapes or canvas items than this page can hold."); return; }
   site.sections.push(...sections); site.shapes.push(...shapes); site.objects.push(...objects);
   if (saved.style) { site.theme = saved.style.theme; site.accent = saved.style.accent; site.palette = structuredClone(saved.style.palette); site.font = saved.style.font; site.design = structuredClone(saved.style.design); }
-  if (sections.length) { selectedId = sections[0].id; selectedShapeId = ""; selectedObjectId = ""; }
-  else if (shapes.length) { selectedShapeId = shapes[0].id; selectedObjectId = ""; }
-  else if (objects.length) { selectedObjectId = objects[0].id; selectedShapeId = ""; }
+  if (sections.length) { selectedId = sections[0].id; selectedShapeId = ""; selectedShapeIds.clear(); selectedObjectId = ""; }
+  else if (shapes.length) { selectedShapeId = shapes[0].id; selectedShapeIds = new Set([selectedShapeId]); selectedObjectId = ""; }
+  else if (objects.length) { selectedObjectId = objects[0].id; selectedShapeId = ""; selectedShapeIds.clear(); }
   if ($("#template-dialog").open) $("#template-dialog").close();
   update(); setTab("build"); toast(`${saved.name} added to your page.`);
 }
 function saveTemplatePack() {
   const name = $("#template-name").value.trim().slice(0, 70);
   const description = $("#template-description").value.trim().slice(0, 180);
+  const author = (templateAuthorInput?.value || "").trim().slice(0, 70) || "WebsiteForge creator";
   if (!name) { $("#template-status").textContent = "Enter a name for this template."; $("#template-name").focus(); return; }
   let sections = [], shapes = [], objects = [], style = null;
   if ($("#template-scope").value === "page") {
@@ -714,8 +1125,8 @@ function saveTemplatePack() {
   const packId = `websiteforge.template-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
   const pack = normalizePluginPack({
     format: "websiteforge-plugin", version: 1, id: packId, name,
-    author: site.name || "WebsiteForge creator",
-    description: description || `Reusable template shared from ${site.name || "WebsiteForge"}.`,
+    author,
+    description: description || `Reusable template shared by ${author}.`,
     sections: [], themes: [], features: [],
     templates: [{ id: freshContentId("template"), name, description, sections, shapes, objects, style }]
   });
@@ -724,6 +1135,12 @@ function saveTemplatePack() {
     installPack(pack);
     $("#template-status").textContent = `${name} is saved in Installed packs and downloaded. URLs in the saved sections and image frames are included.`;
     toast(`${name} saved and downloaded.`);
+    const savedTemplateId = pack.templates[0].id;
+    $("#template-dialog").showModal();
+    requestAnimationFrame(() => {
+      const savedCard = [...$("#saved-template-gallery").children].find(card => card.dataset.templateId === savedTemplateId);
+      savedCard?.scrollIntoView({ block: "nearest" });
+    });
   } catch (error) {
     $("#template-status").textContent = `${name} was downloaded. ${error.message || "It could not be added to this device's installed packs."}`;
     toast(`${name} downloaded.`);
@@ -774,17 +1191,10 @@ function renderPlugins() {
       toggle.addEventListener("click", () => { lightModeEnabled = !lightModeEnabled; try { localStorage.setItem(workspaceModeKey, lightModeEnabled ? "light" : "dark"); } catch { /* Keep the choice for this session. */ } applyWorkspaceMode(); renderPlugins(); pluginStatus(lightModeEnabled ? "Light mode is on for this editor." : "Dark mode is on for this editor."); });
       actions.append(toggle);
     }
-    if (pack.features.includes("drawing-menu")) {
-      const enabled = installed.some(item => item.id === "websiteforge.drawing-menu");
-      const toggle = document.createElement("button"); toggle.type = "button"; toggle.className = "button subtle";
-      toggle.textContent = enabled ? "Drawing menu enabled" : "Enable drawing menu";
-      toggle.disabled = enabled;
-      actions.append(toggle);
-    }
     const exportButton = document.createElement("button"); exportButton.type = "button"; exportButton.className = "button ghost"; exportButton.textContent = "Share JSON";
     exportButton.addEventListener("click", () => download(`${pack.id}.json`, JSON.stringify(pack, null, 2), "application/json")); actions.append(exportButton);
     const remove = document.createElement("button"); remove.type = "button"; remove.className = "button danger"; remove.textContent = "Uninstall";
-    remove.addEventListener("click", () => { installed = installed.filter(item => item.id !== pack.id); savePlugins(); applyWorkspaceMode(); renderPlugins(); renderShapeTools(); renderCanvasObjectTools(); renderTemplateGallery(); pluginStatus(`${pack.name} uninstalled. Existing sections stay on this website.`); }); actions.append(remove);
+    remove.addEventListener("click", () => { installed = installed.filter(item => item.id !== pack.id); savePlugins(); applyWorkspaceMode(); renderPlugins(); renderShapeTools(); renderCanvasObjectTools(); renderTemplateGallery(); renderCanvas(); renderLayerList(); if (pack.features.includes("motion-controls")) { if (activeRail === "motion") setRailPanel("plugins"); } pluginStatus(`${pack.name} uninstalled. Existing sections stay on this website.`); }); actions.append(remove);
     card.append(actions); list.append(card);
   });
 }
@@ -792,8 +1202,17 @@ function installPack(raw) {
   const pack = normalizePluginPack(raw);
   if (installed.length >= 20 && !installed.some(item => item.id === pack.id)) throw new Error("You can install up to 20 packs.");
   installed = [...installed.filter(item => item.id !== pack.id), pack];
-  if (pack.features.includes("template-studio")) activeAddonTool = "template-studio";
-  savePlugins(); applyWorkspaceMode(); renderPlugins(); renderShapeTools(); renderCanvasObjectTools(); renderTemplateGallery(); pluginStatus(`${pack.name} installed. Choose its options below.`);
+  if (pack.features.includes("template-studio")) activeAddonTool = "template-studio"; if (pack.features.includes("motion-controls")) activeAddonTool = "motion-controls";
+  if (pack.features.includes("motion-controls") && !selectedShapeId && !selectedObjectId) {
+    const firstItem = site.shapes[0] || site.objects[0];
+    if (firstItem) {
+      if (site.shapes.includes(firstItem)) selectedShapeId = firstItem.id;
+      else selectedObjectId = firstItem.id;
+      selectedContent = null;
+    }
+  }
+  savePlugins(); applyWorkspaceMode(); renderPlugins(); renderShapeTools(); renderCanvasObjectTools(); renderTemplateGallery(); renderCanvas(); renderLayerList(); pluginStatus(`${pack.name} installed. Choose its options below.`); if (pack.features.includes("motion-controls")) setRailPanel("motion"); else if (pack.features.includes("3d-models")) { activeAddonTool = "3d-models"; setRailPanel("models"); renderAddonToolTabs(); }
+  if (pack.features.includes("motion-controls")) { renderCanvas(); renderInspector(); }
 }
 async function fetchPack(rawUrl) {
   const url = new URL(rawUrl, location.href);
@@ -849,12 +1268,13 @@ function restoreHistory(direction) {
   const next = historyIndex + direction;
   if (next < 0 || next >= history.length) return;
   historyIndex = next; restoringHistory = true;
-  try { site = normalizeSite(JSON.parse(history[historyIndex])); selectedId = site.sections[0]?.id; selectedContent = null; selectedObjectId = ""; selectedShapeId = ""; update(); }
+  try { site = normalizeSite(JSON.parse(history[historyIndex])); selectedId = site.sections[0]?.id; selectedContent = null; selectedObjectId = ""; selectedShapeId = ""; selectedShapeIds.clear(); update(); }
   finally { restoringHistory = false; }
 }
 function deleteSelection() {
   if (selectedContent) { const ref = contentRef(); if (ref) ref.target[ref.key] = ""; selectedContent = null; }
   else if (selectedObjectId) { site.objects = site.objects.filter(item => item.id !== selectedObjectId); selectedObjectId = ""; }
+  else if (selectedShapeIds.size) { site.shapes = site.shapes.filter(item => !selectedShapeIds.has(item.id)); selectedShapeIds.clear(); selectedShapeId = ""; }
   else if (selectedShapeId) { site.shapes = site.shapes.filter(item => item.id !== selectedShapeId); selectedShapeId = ""; }
   else return;
   update();
@@ -882,7 +1302,7 @@ function duplicateSelection() {
   } else if (selectedShapeId) {
     const original = site.shapes.find(item => item.id === selectedShapeId); if (!original) return;
     const copy = { ...structuredClone(original), id: freshContentId("shape"), x: Math.min(100, original.x + 2), y: Math.min(100, original.y + 2) };
-    site.shapes.push(copy); selectedShapeId = copy.id;
+    site.shapes.push(copy); selectedShapeId = copy.id; selectedShapeIds = new Set([copy.id]);
   } else return;
   update();
 }
@@ -932,12 +1352,18 @@ function pasteSelection() {
     object.width = Math.max(24, Math.min(900, copy.width)); object.height = Math.max(24, Math.min(600, copy.height));
   } else if (copiedElement.kind === "object") {
     const object = { ...structuredClone(copiedElement.value), id: freshContentId("object"), x: Math.min(100, copiedElement.value.x + 3), y: Math.min(100, copiedElement.value.y + 3) };
-    site.objects.push(object); selectedObjectId = object.id; selectedShapeId = ""; selectedContent = null;
+    site.objects.push(object); selectedObjectId = object.id; selectedShapeId = ""; selectedShapeIds.clear(); selectedContent = null; activeAddonTool = hasInstalledFeature("motion-controls") ? "motion-controls" : object.type === "image" ? "image-tool" : "text-tool";
   } else {
     const shape = { ...structuredClone(copiedElement.value), id: freshContentId("shape"), x: Math.min(100, copiedElement.value.x + 3), y: Math.min(100, copiedElement.value.y + 3) };
-    site.shapes.push(shape); selectedShapeId = shape.id; selectedObjectId = ""; selectedContent = null;
+    site.shapes.push(shape); selectedShapeId = shape.id; selectedShapeIds = new Set([shape.id]); selectedObjectId = ""; selectedContent = null; activeAddonTool = hasInstalledFeature("motion-controls") ? "motion-controls" : "drawing-menu";
   }
-  setRailPanel("edit"); update(); toast("Element pasted.");
+  const pastedObject = site.objects.find(item => item.id === selectedObjectId);
+  const pastedPanel = selectedShapeId
+    ? (hasInstalledFeature("motion-controls") ? "motion" : "elements")
+    : pastedObject
+      ? (hasInstalledFeature("motion-controls") ? "motion" : pastedObject.type === "image" ? "uploads" : "text")
+      : "edit";
+  setRailPanel(pastedPanel); update(); toast("Element pasted.");
   return true;
 }
 function nudgeSelection(dx, dy) {
@@ -949,11 +1375,15 @@ function nudgeSelection(dx, dy) {
     layout.x = Math.max(-2000, Math.min(2000, (Number(layout.x) || 0) + dx));
     layout.y = Math.max(-2000, Math.min(2000, (Number(layout.y) || 0) + dy));
   } else {
-    const item = selectedObjectId ? site.objects.find(entry => entry.id === selectedObjectId) : site.shapes.find(entry => entry.id === selectedShapeId);
+    const items = selectedObjectId
+      ? [site.objects.find(entry => entry.id === selectedObjectId)].filter(Boolean)
+      : [...selectedShapeIds].map(id => site.shapes.find(entry => entry.id === id)).filter(Boolean);
     const rect = $("#site-preview .built-site")?.getBoundingClientRect();
-    if (!item || !rect) return false;
-    item.x = Math.max(0, Math.min(100, item.x + dx * zoom / rect.width * 100));
-    item.y = Math.max(0, Math.min(100, item.y + dy * zoom / rect.height * 100));
+    if (!items.length || !rect) return false;
+    items.forEach(item => {
+      item.x = Math.max(0, Math.min(100, item.x + dx * zoom / rect.width * 100));
+      item.y = Math.max(0, Math.min(100, item.y + dy * zoom / rect.height * 100));
+    });
   }
   save(); renderCanvas(); renderInspector();
   return true;
@@ -1067,7 +1497,8 @@ $("#add-shape-button").addEventListener("click", () => addShape("rounded-square"
 $("#open-templates-button").addEventListener("click", () => $("#template-dialog").showModal());
 $("#imported-project-button").addEventListener("click", openImportedProject);
 $("#canvas-image-file").addEventListener("change", async event => { await uploadSelectedImage(event.target.files?.[0]); event.target.value = ""; });
-$("#canvas-zoom").addEventListener("input", event => { zoom = Number(event.target.value) / 100; $("#canvas-frame").style.zoom = String(zoom); $("#zoom-value").textContent = `${event.target.value}%`; });
+$("#canvas-model-file").addEventListener("change", async event => { const files = Array.from(event.target.files || []); await uploadCanvasModel(files[0], files); event.target.value = ""; });
+$("#canvas-zoom").addEventListener("input", event => { zoom = Number(event.target.value) / 100; $("#canvas-frame").style.zoom = String(zoom); $("#zoom-value").textContent = `${event.target.value}%`; positionCanvasItems(); });
 const shortcutHandlers = {
   copy: copySelection, paste: pasteSelection,
   cut: () => { if (!copySelection()) return false; deleteSelection(); return true; },
@@ -1082,6 +1513,7 @@ const shortcutHandlers = {
   up: () => nudgeSelection(0, -1), down: () => nudgeSelection(0, 1), left: () => nudgeSelection(-1, 0), right: () => nudgeSelection(1, 0),
   upFast: () => nudgeSelection(0, -10), downFast: () => nudgeSelection(0, 10), leftFast: () => nudgeSelection(-10, 0), rightFast: () => nudgeSelection(10, 0),
   zoomIn: () => changeZoom(10), zoomOut: () => changeZoom(-10),
+  motion: () => { if (!hasInstalledFeature("motion-controls")) { setRailPanel("plugins"); pluginStatus("Install the Motion Effects pack from Plugins to use screen-position motion."); return true; } setRailPanel("motion"); renderMotionTools(); return true; },
   preview: () => { $("#preview-button").click(); return true; },
   save: () => { $("#export-json-button").click(); return true; },
   export: () => { $("#export-html-button").click(); return true; },
@@ -1123,12 +1555,36 @@ $("#browse-template-button").addEventListener("click", () => $("#template-dialog
 $("#add-template-button").addEventListener("click", () => $("#template-dialog").showModal());
 $("#close-template-dialog").addEventListener("click", () => $("#template-dialog").close());
 $("#save-template-pack").addEventListener("click", saveTemplatePack);
+$("#upload-template-button").addEventListener("click", () => $("#template-pack-file").click());
+$("#template-pack-file").addEventListener("change", async event => {
+  const file = event.target.files?.[0];
+  if (!file) return;
+  const status = $("#template-upload-status");
+  status.hidden = false;
+  try {
+    if (file.size > 1000000) throw new Error("Template packs must be 1 MB or smaller.");
+    const pack = normalizePluginPack(JSON.parse(await file.text()));
+    if (!pack.templates.length) throw new Error("This file does not contain a template. Choose a WebsiteForge template pack.");
+    const firstTemplateId = pack.templates[0].id;
+    installPack(pack);
+    $("#template-dialog").showModal();
+    status.textContent = `${pack.name} uploaded. Choose Add to page below to use a template.`;
+    requestAnimationFrame(() => {
+      const firstCard = [...$("#saved-template-gallery").children].find(card => card.dataset.templateId === firstTemplateId);
+      firstCard?.scrollIntoView({ block: "nearest" });
+    });
+  } catch (error) {
+    status.textContent = error.message || "Could not upload this template pack.";
+  } finally {
+    event.target.value = "";
+  }
+});
 $("#add-section").addEventListener("change", event => { if (!SECTION_TYPES.includes(event.target.value)) return; if (site.sections.length >= MAX_SECTIONS) { toast(`This site can have up to ${MAX_SECTIONS} sections.`); event.target.value = ""; return; } const section = makeSection(event.target.value); site.sections.push(section); selectedId = section.id; event.target.value = ""; update(); });
 
 $("#duplicate-section-button").addEventListener("click", () => { const section = selected(); if (!section) return; if (site.sections.length >= MAX_SECTIONS) { toast(`This site can have up to ${MAX_SECTIONS} sections.`); return; } const { id, ...content } = structuredClone(section); const copy = makeSection(section.type, content); site.sections.splice(site.sections.indexOf(section) + 1, 0, copy); selectedId = copy.id; update(); });
 $("#delete-section-button").addEventListener("click", () => { if (site.sections.length === 1) { toast("Keep at least one section."); return; } site.sections = site.sections.filter(section => section.id !== selectedId); selectedId = site.sections[0].id; update(); });
-$("#desktop-button").addEventListener("click", () => { $("#canvas-frame").classList.remove("mobile"); $("#desktop-button").classList.add("active"); $("#mobile-button").classList.remove("active"); });
-$("#mobile-button").addEventListener("click", () => { $("#canvas-frame").classList.add("mobile"); $("#mobile-button").classList.add("active"); $("#desktop-button").classList.remove("active"); });
+$("#desktop-button").addEventListener("click", () => { $("#canvas-frame").classList.remove("mobile"); $("#desktop-button").classList.add("active"); $("#mobile-button").classList.remove("active"); positionCanvasItems(); });
+$("#mobile-button").addEventListener("click", () => { $("#canvas-frame").classList.add("mobile"); $("#mobile-button").classList.add("active"); $("#desktop-button").classList.remove("active"); positionCanvasItems(); });
 $("#preview-button").addEventListener("click", () => { const url = URL.createObjectURL(new Blob([exportDocument(normalizeSite(site))], { type: "text/html" })); window.open(url, "_blank", "noopener"); setTimeout(() => URL.revokeObjectURL(url), 60000); });
 $("#design-preview-button").addEventListener("click", () => $("#preview-button").click());
 $("#design-export-button").addEventListener("click", () => $("#export-html-button").click());
@@ -1140,12 +1596,60 @@ $("#example-pack-button").addEventListener("click", async () => {
   } catch { pluginStatus("Could not load the example pack."); }
 });
 $("#export-html-button").addEventListener("click", () => download("index.html", exportDocument(normalizeSite(site)), "text/html"));
-$("#export-json-button").addEventListener("click", () => download("websiteforge-project.json", JSON.stringify(normalizeSite(site), null, 2), "application/json"));
+function showSaveProjectDialog() {
+  const checkbox = $("#save-project-include-addons");
+  checkbox.checked = installed.length > 0;
+  checkbox.disabled = installed.length === 0;
+  $("#save-project-addon-count").textContent = installed.length ? installed.length + " installed add-on" + (installed.length === 1 ? "" : "s") : "No add-ons installed";
+  $("#save-project-dialog").showModal();
+}
+function saveProjectZip() {
+  const entries = [{ name: "websiteforge-project.json", content: JSON.stringify(normalizeSite(site), null, 2) }];
+  const packs = $("#save-project-include-addons").checked ? installed : [];
+  packs.forEach(pack => entries.push({ name: "addons/" + pack.id + ".json", content: JSON.stringify(pack, null, 2) }));
+  download("websiteforge-project.zip", createStoredZip(entries), "application/zip");
+  $("#save-project-dialog").close();
+  toast(packs.length ? "Project ZIP saved with " + packs.length + " add-on" + (packs.length === 1 ? "" : "s") + "." : "Project ZIP saved.");
+}
+$("#export-json-button").addEventListener("click", showSaveProjectDialog);
+$("#close-save-project-dialog").addEventListener("click", () => $("#save-project-dialog").close());
+$("#cancel-save-project").addEventListener("click", () => $("#save-project-dialog").close());
+$("#download-project-zip").addEventListener("click", saveProjectZip);
 $("#import-button").addEventListener("click", () => $("#import-file").click());
-$("#import-file").addEventListener("change", async event => { const file = event.target.files[0]; if (!file) return; try { const loaded = normalizeSite(JSON.parse(await file.text())); site = loaded; selectedId = site.sections[0].id; update(); toast("Project imported."); } catch (error) { toast(error.message || "Could not import project."); } event.target.value = ""; });
+$("#import-file").addEventListener("change", async event => {
+  const file = event.target.files[0];
+  if (!file) return;
+  try {
+    let loaded, importedPacks = [];
+    if (file.name.toLowerCase().endsWith(".zip")) {
+      const archive = await readStoredZip(file);
+      const projectJson = archive.get("websiteforge-project.json");
+      if (!projectJson) throw new Error("This ZIP does not contain a WebsiteForge project backup.");
+      loaded = normalizeSite(JSON.parse(projectJson));
+      importedPacks = [...archive.entries()]
+        .filter(([name]) => /^addons\/[^/]+\.json$/i.test(name))
+        .map(([, content]) => normalizePluginPack(JSON.parse(content)));
+      const replacementIds = new Set(importedPacks.map(pack => pack.id));
+      const mergedPacks = [...installed.filter(pack => !replacementIds.has(pack.id)), ...importedPacks];
+      if (mergedPacks.length > 20) throw new Error("There are too many add-on packs installed to import this backup. Remove a pack first.");
+      installed = mergedPacks;
+      if (importedPacks.some(pack => pack.features.includes("template-studio"))) activeAddonTool = "template-studio";
+      if (importedPacks.some(pack => pack.features.includes("motion-controls"))) activeAddonTool = "motion-controls";
+      if (importedPacks.some(pack => pack.features.includes("3d-models")) && !importedPacks.some(pack => pack.features.includes("motion-controls"))) activeAddonTool = "3d-models";
+      savePlugins(); applyWorkspaceMode();
+    } else {
+      loaded = normalizeSite(JSON.parse(await file.text()));
+    }
+    site = loaded; selectedId = site.sections[0].id; selectedShapeId = ""; selectedShapeIds.clear(); selectedObjectId = ""; selectedContent = null;
+    update(); renderTemplateGallery(); setTab("build");
+    toast(importedPacks.length ? "Project and " + importedPacks.length + " add-on pack" + (importedPacks.length === 1 ? "" : "s") + " imported." : "Project imported.");
+  } catch (error) { toast(error.message || "Could not import project."); }
+  event.target.value = "";
+});
 $("#install-url-button").addEventListener("click", async () => { const button = $("#install-url-button"); button.disabled = true; try { installPack(await fetchPack($("#plugin-url").value.trim())); } catch (error) { pluginStatus(error.message || "Could not install pack. The host may need to allow browser access."); } finally { button.disabled = false; } });
 $("#install-file-button").addEventListener("click", () => $("#plugin-file").click());
 $("#plugin-file").addEventListener("change", async event => { const file = event.target.files[0]; if (!file) return; try { if (file.size > 1000000) throw new Error("Plugin pack is too large."); installPack(JSON.parse(await file.text())); } catch (error) { pluginStatus(error.message || "Could not install pack."); } event.target.value = ""; });
 $("#generate-site-button").addEventListener("click", () => ai("site"));
 $("#rewrite-section-button").addEventListener("click", () => ai("rewrite"));
 renderTemplateGallery(); renderShortcutSettings(); applyWorkspaceMode(); setRailPanel(activeRail); update(); renderCatalog(); checkAiAvailability();
+restoreLargeProject(Number(localStorage.getItem(storageKey + "-savedAt")) || 0);

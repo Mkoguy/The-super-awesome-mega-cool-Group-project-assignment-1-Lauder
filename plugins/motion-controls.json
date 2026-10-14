@@ -1,0 +1,9 @@
+{
+  "format": "websiteforge-plugin",
+  "version": 1,
+  "id": "websiteforge.motion-controls",
+  "name": "Motion Effects",
+  "author": "WebsiteForge",
+  "description": "Animate shapes, text, image frames, and 3D model frames based on their position on screen, with movement, independent X/Y size, hue, rotation, and fade controls.",
+  "features": ["motion-controls"]
+}

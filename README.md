@@ -24,7 +24,7 @@ No environment variables are required to start the builder. `OPENAI_API_KEY` is 
 
 After changing `builder.template.html`, CSS, JavaScript, or built-in plugins, maintainers can regenerate both browser-ready files with `node tools/build-offline.mjs`.
 
-Manual editing, local saving, and exports work without an API key. Project changes are saved in your browser. **Save project** downloads a JSON backup; **Export website** downloads a standalone `index.html` that can be hosted anywhere.
+Manual editing, local saving, and exports work without an API key. Project changes are saved in your browser. **Save project** downloads a `.websiteforge` backup to reopen with **Import project** (older `.json` backups still work); **Export website** downloads a standalone `index.html` that can be hosted anywhere.
 
 ## Customize your site
 
@@ -34,11 +34,11 @@ The left toolbar opens a separate panel for Templates, Elements, Text, Uploads, 
 
 The **Design** tab controls the full palette, font, content width, section spacing, corner radius, heading scale, and button style. Select any section for its text, images, alignment, spacing, and optional background and text-color overrides. The five templates can be browsed in a visual gallery. The Links section provides editable destination URLs for link hub pages. All site settings are included in the standalone HTML export. Older WebsiteForge project JSON files still import.
 
-The built-in **Drawing menu**, **Text tool**, and **Image frame tool** packs add draggable shapes, text, and images to the canvas. You can move, resize, and style them in the editor; they are included in project backups and website exports. **Template Studio** can save a section or the whole page as a shareable JSON template pack. Install these packs from the **Plugins** tab.
+The main editor includes draggable shapes, text, and image frames with move, resize, color, opacity, and blending controls. These tools are ready to use without installing a pack and are included in project backups and website exports. **Light Mode** remains an optional editor theme pack. **Motion Effects** adds screen-position movement, independent width and height scaling, hue, rotation, and fade to shapes, text, image frames, and 3D model frames. **3D Model Studio** imports Blockbench BBMODEL, OBJ, STL, and self-contained GLB files up to 20 MB total. Colored OBJ imports need the OBJ plus its companion MTL and referenced image textures selected together. GLB material colors, vertex colors, and embedded base-color textures are retained. Blockbench cubes, meshes, group rotations, and embedded texture colors are supported. Binary STL files retain colors stored in common VisCAM or Materialise metadata; ordinary STL has no standard color data. Each model has a **Crisp pixel-art textures** setting to switch between sharp nearest-pixel sampling and smooth texture sampling. Blockbench animation tracks are not imported. Model frames can be resized and moved, and the model view can be rotated by dragging. Models, material files, and textures are included in project backups and standalone website exports. Install both **3D Model Studio** and **Motion Effects** to animate a model frame as it moves through the viewport. **Template Studio** saves a section or the whole page as a shareable JSON template pack with a chosen creator name; saved templates appear in a dedicated gallery list for quick adding; JSON template packs can be uploaded there too. Starter layouts can also be appended to the current page or used to replace it. Install optional packs from the **Plugins** tab.
 
 ## Community plugins
 
-The **Plugins** tab lists packs from `plugins/catalog.json` and accepts a JSON file or HTTPS manifest URL. A community pack can contribute section layouts (`cards`, `faq`, `quote`, or `banner`) and color themes. The built-in **Light mode** pack adds an optional bright theme for the editor; it does not change the exported website. Installed packs are saved in this browser. Added sections are copied into the project, so uninstalling the pack does not break the site or its export. **Share JSON** downloads an installed pack for another creator.
+The **Plugins** tab lists packs from `plugins/catalog.json` and accepts a JSON file or HTTPS manifest URL. A community pack can contribute section layouts (`cards`, `faq`, `quote`, or `banner`) and color themes. Installed packs are saved in this browser. Added sections are copied into the project, so uninstalling the pack does not break the site or its export. **Share JSON** downloads an installed pack for another creator.
 
 Plugin packs are declarative JSON. They cannot run JavaScript, inject HTML, or include CSS. To publish one in the project catalog, add a manifest to `plugins/` and add its URL to `plugins/catalog.json` in a pull request. See [`plugins/artist-essentials.json`](plugins/artist-essentials.json) for a complete example. The core format is:
 
@@ -69,7 +69,7 @@ Plugin packs are declarative JSON. They cannot run JavaScript, inject HTML, or i
 }
 ```
 
-Community packs need at least one section or theme. Section and theme IDs must be unique within the pack. Image URLs must use HTTPS. Remote hosts must allow browser cross-origin requests for installation by URL. Built-in packs can also expose allowlisted workspace features such as Light mode.
+Community packs need at least one section or theme. Section and theme IDs must be unique within the pack. Image URLs must use HTTPS. Remote hosts must allow browser cross-origin requests for installation by URL. Built-in packs can also expose allowlisted editor features such as Light Mode.
 
 ## Enable AI tools
 

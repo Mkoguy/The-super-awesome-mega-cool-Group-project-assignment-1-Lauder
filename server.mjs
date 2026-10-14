@@ -37,7 +37,9 @@ const files = new Map([
   ["/plugins/drawing-menu.json", ["plugins/drawing-menu.json", "application/json; charset=utf-8"]],
   ["/plugins/text-tool.json", ["plugins/text-tool.json", "application/json; charset=utf-8"]],
   ["/plugins/image-tool.json", ["plugins/image-tool.json", "application/json; charset=utf-8"]],
-  ["/plugins/template-studio.json", ["plugins/template-studio.json", "application/json; charset=utf-8"]]
+  ["/plugins/3d-models.json", ["plugins/3d-models.json", "application/json; charset=utf-8"]],
+  ["/plugins/template-studio.json", ["plugins/template-studio.json", "application/json; charset=utf-8"]],
+  ["/plugins/motion-controls.json", ["plugins/motion-controls.json", "application/json; charset=utf-8"]]
 ]);
 const send = (res, status, value) => { res.writeHead(status, { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store" }); res.end(JSON.stringify(value)); };
 async function readJson(req) {

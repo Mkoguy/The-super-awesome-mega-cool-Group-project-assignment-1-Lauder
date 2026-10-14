@@ -36,6 +36,18 @@
       "name": "Template Studio",
       "description": "Save page sections and canvas designs as shareable templates, with their image and button URLs.",
       "manifest": "/plugins/template-studio.json"
+    },
+    {
+      "id": "websiteforge.3d-models",
+      "name": "3D Model Studio",
+      "description": "Import and edit 3D models with colors and textures.",
+      "manifest": "/plugins/3d-models.json"
+    },
+    {
+      "id": "websiteforge.motion-controls",
+      "name": "Motion Effects",
+      "description": "Animate canvas elements as they move through the viewport.",
+      "manifest": "/plugins/motion-controls.json"
     }
   ]
 }
