@@ -17,6 +17,8 @@ test("both browser entry files include the editor and built-in packs", async () 
   assert.match(index, /class="tool-rail"/);
   assert.match(index, /id="page-strip-list"/);
   assert.match(index, /id="settings-shortcuts"/);
+  assert.match(index, /rel="icon" type="image\/png" href="data:image\/png;base64,/);
+  assert.match(index, /class="brand-icon" src="data:image\/png;base64,/);
   assert.match(index, /function normalizeShortcuts\(/);
   const scripts = [...index.matchAll(/<script>([\s\S]*?)<\/script>/g)];
   assert.equal(scripts.length, 1);

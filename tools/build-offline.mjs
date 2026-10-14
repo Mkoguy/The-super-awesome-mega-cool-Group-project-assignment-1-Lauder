@@ -4,9 +4,10 @@ import { fileURLToPath } from "node:url";
 
 const root = dirname(dirname(fileURLToPath(import.meta.url)));
 const read = name => readFile(join(root, name), "utf8");
-const [html, css, siteModel, pluginModel, shortcutModel, editor, catalog] = await Promise.all([
+const [html, css, siteModel, pluginModel, shortcutModel, editor, catalog, logo] = await Promise.all([
   read("builder.template.html"), read("styles.css"), read("site-model.js"),
-  read("plugin-model.js"), read("shortcuts-model.js"), read("script.js"), read("plugins/catalog.json")
+  read("plugin-model.js"), read("shortcuts-model.js"), read("script.js"), read("plugins/catalog.json"),
+  readFile(join(root, "assets/websiteforge-logo.png"))
 ]);
 
 const manifestEntries = await Promise.all(JSON.parse(catalog).packs.map(async pack => [pack.manifest, JSON.parse(await read(pack.manifest.replace(/^\//, "")))]));
@@ -19,6 +20,7 @@ const javascript = [
 if (/<\/script/i.test(javascript) || /<\/style/i.test(css)) throw new Error("Inline assets contain an HTML closing tag.");
 
 const output = html
+  .replaceAll("assets/websiteforge-logo.png", `data:image/png;base64,${logo.toString("base64")}`)
   .replace('    <link rel="stylesheet" href="styles.css" />', `    <style>\n${css}\n    </style>`)
   .replace('    <script type="module" src="script.js"></script>', "")
   .replace("  </body>", `    <script>\n(() => {\n${javascript}\n})();\n    </script>\n  </body>`);

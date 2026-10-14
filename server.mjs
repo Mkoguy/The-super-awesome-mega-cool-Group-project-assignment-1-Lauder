@@ -29,6 +29,7 @@ const files = new Map([
   ["/plugin-model.js", ["plugin-model.js", "text/javascript; charset=utf-8"]],
   ["/settings.html", ["settings.html", "text/html; charset=utf-8"]],
   ["/settings.js", ["settings.js", "text/javascript; charset=utf-8"]],
+  ["/assets/websiteforge-logo.png", ["assets/websiteforge-logo.png", "image/png"]],
   ["/plugins/catalog.json", ["plugins/catalog.json", "application/json; charset=utf-8"]],
   ["/plugins/artist-essentials.json", ["plugins/artist-essentials.json", "application/json; charset=utf-8"]],
   ["/plugins/light-mode.json", ["plugins/light-mode.json", "application/json; charset=utf-8"]],
