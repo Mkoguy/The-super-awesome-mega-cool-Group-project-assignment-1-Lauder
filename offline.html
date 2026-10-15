@@ -59,6 +59,7 @@ body.workspace-light .rail-panel-heading h2{color:#25282d}body.workspace-light .
 .layer-group>summary{padding:9px 8px;border-radius:6px;background:#33343d;color:#eceaf3;font-size:11px;font-weight:800;cursor:pointer;list-style:none}.layer-group>summary::-webkit-details-marker{display:none}.layer-group>summary::after{content:'⌄';float:right;color:#bca6e9;transform:rotate(-90deg)}.layer-group[open]>summary::after{transform:none}.layer-group>.layer-entry,.layer-group>.layer-section{margin-top:4px}.layer-group>.layer-section{background:transparent;color:#bbb5cf;font-weight:600}.layer-group>.layer-section:hover{background:#4b3a5a}body.workspace-light .layer-group>summary{background:#e8e7e2;color:#25282d}
 .plugin-card{transform-origin:left center;transition:transform .42s cubic-bezier(.22,.8,.28,1),opacity .42s ease,filter .42s ease;will-change:transform,opacity}.plugin-card-departing{transform:translateX(-115%) rotate(-6deg) scale(.86);opacity:0;filter:blur(5px);pointer-events:none}.workspace-compact .sidebar{font-size:11px}.workspace-compact .rail-panel .drawer-section{margin-bottom:7px}.workspace-compact .rail-panel-heading{margin-bottom:10px}.workspace-compact .plugin-card{padding:8px}.workspace-compact .control-group{margin-bottom:9px}.workspace-reduced-motion .plugin-card,.workspace-reduced-motion .plugin-card-departing{transition:none!important;animation:none!important}@media(prefers-reduced-motion:reduce){.plugin-card,.plugin-card-departing{transition:none!important}}
 .model-help{margin:7px 0 13px;padding:9px 11px;border:1px solid #484a55;border-radius:8px;background:#292b33;color:#bfc0c9;font-size:11px;line-height:1.45}.model-help summary{cursor:pointer;color:#f3edf9;font-weight:700}.model-help p{margin:9px 0 0}body.workspace-light .model-help{background:#f8f8f5;border-color:#c9cbca;color:#62656a}body.workspace-light .model-help summary{color:#25282d}
+.model-move-heading{margin:15px 0 6px;padding-top:10px;border-top:1px solid #4a4c56;color:#f6f2ff;font-size:13px}.object-controls .model-move-heading+.helper{margin:0 0 10px}body.workspace-light .model-move-heading{border-color:#c9cbca;color:#25282d}
 
     </style>
 
@@ -404,6 +405,7 @@ function normalizeSite(input) {
     modelFormat: choice(item.modelFormat, ["bbmodel", "obj", "stl", "glb"], "bbmodel"),
     modelFileName: trim(item.modelFileName, 160), modelScale: number(item.modelScale, 1, .2, 3),
     modelRotateX: number(item.modelRotateX, -25, -360, 360), modelRotateY: number(item.modelRotateY, 35, -360, 360), modelPixelArt: item.modelPixelArt !== false,
+    modelMoveX: number(item.modelMoveX, 0, -2, 2), modelMoveY: number(item.modelMoveY, 0, -2, 2), modelMoveZ: number(item.modelMoveZ, 0, -2, 2),
     motion: normalizeMotion(item.motion)
   }));
   return { version: 2, name: trim(input.name, limits.name) || "My Artist Site", address: safeWebsiteAddress(input.address), logoUrl: safeUrl(input.logoUrl, true), tagline: trim(input.tagline, limits.tagline), footerNote: typeof input.footerNote === "string" ? trim(input.footerNote, 120) : "Made with care ✳", theme, accent, palette, design, font: ["editorial", "modern", "playful"].includes(input.font) ? input.font : "modern", sections, shapes, objects };
@@ -450,26 +452,6 @@ function renderSection(section, editable = false) {
   return `<section class="${classes}" style="${style}"${attrs}>${content}</section>`;
 }
 
-function renderModelPreview(object) {
-  let faces = {};
-  if (object.modelFormat === "bbmodel" && object.modelData) {
-    try {
-      const bytes = Uint8Array.from(atob(object.modelData.split(",")[1]), character => character.charCodeAt(0));
-      const model = JSON.parse(new TextDecoder().decode(bytes));
-      const cube = model.elements?.find(element => element.type === "cube") || model.elements?.[0];
-      for (const side of ["front", "back", "left", "right", "top", "bottom"]) {
-        const sourceSide = ({ front: "south", back: "north", left: "west", right: "east", top: "up", bottom: "down" })[side];
-        const textureIndex = cube?.faces?.[sourceSide]?.texture;
-        const source = model.textures?.[textureIndex]?.source;
-        faces[side] = safeUrl(source, true);
-      }
-    } catch { /* A model without usable textures still gets an editable preview. */ }
-  }
-  const colorValue = color(object.color, "#ff8b35");
-  const sides = ["front", "back", "left", "right", "top", "bottom"].map(side => `<span class="model3d-face model3d-${side}" style="${faces[side] ? `background-image:url('${escapeHtml(faces[side])}');` : `background-color:${colorValue};`}"></span>`).join("");
-  return `<div class="model3d-preview" style="--model-x:${number(object.modelRotateX,-25,-360,360)}deg;--model-y:${number(object.modelRotateY,35,-360,360)}deg;--model-scale:${number(object.modelScale,1,.2,3)}"><div class="model3d-cube">${sides}</div></div><span class="model3d-caption">${escapeHtml(object.modelFileName || "3D model")}</span>`;
-}
-
 function renderSite(site, editable = false, selectedShapeId = "", selectedObjectId = "") {
   const theme = THEMES[site.theme] || THEMES.clay;
   const palette = site.palette || theme;
@@ -492,10 +474,10 @@ function renderSite(site, editable = false, selectedShapeId = "", selectedObject
     const handles = selected ? `<span class="object-selection-box"></span>${["n","e","s","w","nw","ne","se","sw"].map(direction => `<span class="object-resize-handle" data-resize="${direction}" aria-label="Resize ${direction}"></span>`).join("")}` : "";
     const style = `left:${object.x}%;top:0px;width:${object.width}px;height:${object.height}px;transform:translate(-50%,-50%) rotate(${object.rotation}deg);color:${color(object.color,"#27272b")};opacity:${number(object.opacity,1,0,1)};mix-blend-mode:${choice(object.blend,BLEND_MODES,"normal")};z-index:${number(object.z,3,-20,20)};${motionStyle(motion, object.rotation, object.opacity)}${object.background ? `background:${color(object.background)};` : ""}`;
     const imageUrl = object.type === "image" ? safeUrl(object.url, true) : "";
-    const content = object.type === "model3d" ? renderModelPreview(object) : object.type === "image"
+    const content = object.type === "image"
       ? imageUrl ? `<img src="${escapeHtml(imageUrl)}" alt="${escapeHtml(object.alt)}" draggable="false">` : `<span class="image-object-empty">Add an HTTPS image URL</span>`
       : object.type === "model3d"
-        ? `<div class="model3d-viewer" data-model-format="${escapeHtml(object.modelFormat)}" data-model-data="${escapeHtml(object.modelData)}" data-model-resources="${escapeHtml(JSON.stringify(object.modelResources || {}))}" data-model-color="${color(object.color, "#ed7418")}" data-model-scale="${number(object.modelScale, 1, .2, 3)}" data-model-rotate-x="${number(object.modelRotateX, 18, -360, 360)}" data-model-rotate-y="${number(object.modelRotateY, -28, -360, 360)}" data-model-pixel-art="${object.modelPixelArt !== false}" role="img" aria-label="Interactive 3D model: ${escapeHtml(object.modelFileName || "model")}"><canvas class="model3d-canvas" aria-hidden="true"></canvas><span class="model3d-message">Loading 3D model…</span>${editable ? `<span class="model3d-editor-help">Drag to rotate · Shift-drag to move</span>` : ""}</div>`
+        ? `<div class="model3d-viewer" data-model-format="${escapeHtml(object.modelFormat)}" data-model-data="${escapeHtml(object.modelData)}" data-model-resources="${escapeHtml(JSON.stringify(object.modelResources || {}))}" data-model-color="${color(object.color, "#ed7418")}" data-model-scale="${number(object.modelScale, 1, .2, 3)}" data-model-rotate-x="${number(object.modelRotateX, 18, -360, 360)}" data-model-rotate-y="${number(object.modelRotateY, -28, -360, 360)}" data-model-move-x="${number(object.modelMoveX, 0, -2, 2)}" data-model-move-y="${number(object.modelMoveY, 0, -2, 2)}" data-model-move-z="${number(object.modelMoveZ, 0, -2, 2)}" data-model-pixel-art="${object.modelPixelArt !== false}" role="${editable ? "group" : "img"}" aria-label="Interactive 3D model: ${escapeHtml(object.modelFileName || "model")}"><canvas class="model3d-canvas" aria-hidden="true"></canvas><span class="model3d-message">Loading 3D model…</span>${editable ? `<div class="model3d-toolbar" role="toolbar" aria-label="3D Move controls"><button type="button" data-model-mode="orbit" aria-pressed="true">Orbit</button><button type="button" data-model-mode="move" aria-pressed="false">Move X/Y</button><button type="button" data-model-mode="depth" aria-pressed="false">Move Z</button></div><span class="model3d-editor-help">Drag to edit model · Shift-drag to move frame</span>` : ""}</div>`
         : `<span class="text-object-content preset-${object.preset}" style="font-size:${number(object.fontSize,42,10,180)}px">${escapeHtml(object.text || "Your text")}</span>`;
     return `<div class="site-canvas-object canvas-object-${object.type}${object.type === "text" ? ` preset-frame-${object.preset}` : ""}${editable ? " editor-canvas-object" : ""}${selected ? " canvas-object-selected" : ""}${motion.enabled ? motion.screen ? " motion-enabled motion-screen" : " site-motion" : ""}" ${editAttrs} data-canvas-y="${object.y}" style="${style}">${content}${handles}</div>`;
   }).join("");
@@ -513,8 +495,8 @@ const SITE_CSS = `
 .built-site .site-logo{display:block;width:32px;height:32px;object-fit:contain;flex:none}
 .built-site .link-grid{display:grid;gap:14px;max-width:760px;margin:auto}.built-site .link-card{display:grid;grid-template-columns:1fr auto;gap:4px 16px;padding:20px 24px;border:1px solid color-mix(in srgb,var(--site-ink) 20%,transparent);border-radius:var(--corner-radius);background:color-mix(in srgb,var(--site-paper) 85%,white)}.built-site .link-card:hover{border-color:var(--site-accent);transform:translateY(-2px)}.built-site .link-card strong{font-size:18px}.built-site .link-card span{grid-column:1;color:var(--site-muted);font-size:13px}.built-site .link-card b{grid-column:2;grid-row:1/3;align-self:center;color:var(--site-accent);font-size:20px}
 .site-decoration{position:absolute;z-index:1;overflow:visible;pointer-events:none}.site-canvas-object{position:absolute;z-index:2;display:flex;align-items:center;justify-content:center;overflow:visible;box-sizing:border-box}.canvas-object-text{padding:4px 8px}.canvas-object-text.preset-frame-badge{border-radius:999px}.text-object-content{display:block;width:100%;white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.2}.preset-heading{font-weight:800;letter-spacing:-.055em;line-height:1.02}.preset-subheading{font-weight:600;letter-spacing:-.025em}.preset-caption{font-weight:400;line-height:1.5}.preset-label{font-weight:800;letter-spacing:.18em;text-transform:uppercase}.preset-badge{width:auto;padding:8px 16px;border-radius:999px;font-weight:800;text-align:center}.canvas-object-image{overflow:hidden;background:#e3e3e3}.canvas-object-image img{display:block;width:100%;height:100%;object-fit:cover}.image-object-empty{display:grid;width:100%;height:100%;place-items:center;padding:14px;background:linear-gradient(135deg,#e9e9e9,#d3d3d3);color:#555;font-size:13px;text-align:center}
-.canvas-object-model3d{flex-direction:column;gap:8px;background:color-mix(in srgb,var(--site-paper) 85%,var(--site-ink) 15%);border-radius:8px;perspective:500px}.model3d-preview{position:relative;width:100%;height:75%;display:grid;place-items:center;transform-style:preserve-3d;pointer-events:none}.model3d-cube{position:relative;width:92px;height:92px;transform-style:preserve-3d;transform:rotateX(var(--model-x)) rotateY(var(--model-y)) scale(var(--model-scale))}.model3d-face{position:absolute;inset:0;background-size:cover;background-position:center;backface-visibility:hidden;border:1px solid #0002}.model3d-front{transform:translateZ(46px)}.model3d-back{transform:rotateY(180deg) translateZ(46px)}.model3d-left{transform:rotateY(-90deg) translateZ(46px)}.model3d-right{transform:rotateY(90deg) translateZ(46px)}.model3d-top{transform:rotateX(90deg) translateZ(46px)}.model3d-bottom{transform:rotateX(-90deg) translateZ(46px)}.model3d-caption{color:var(--site-muted);font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:90%;pointer-events:none}
 .canvas-object-model3d{overflow:visible;background:transparent}.model3d-viewer{position:relative;display:block;width:100%;height:100%;min-width:24px;min-height:24px;overflow:hidden;background:transparent}.model3d-canvas{display:block;width:100%;height:100%;touch-action:none;cursor:grab}.model3d-canvas:active{cursor:grabbing}.model3d-message{position:absolute;inset:0;display:grid;place-items:center;padding:10px;color:var(--site-muted);font:12px Arial,sans-serif;text-align:center;pointer-events:none}.model3d-viewer.model3d-ready .model3d-message{display:none}.model3d-editor-help{position:absolute;right:4px;bottom:4px;padding:2px 5px;border-radius:4px;background:#111b;color:#fff;font:9px Arial,sans-serif;pointer-events:none;opacity:0;transition:opacity .15s}.editor-canvas-object.canvas-object-model3d:hover .model3d-editor-help{opacity:1}
+.model3d-toolbar{position:absolute;top:6px;left:6px;z-index:4;display:flex;gap:3px;padding:3px;border:1px solid #ffffff55;border-radius:7px;background:#15151ad9;box-shadow:0 3px 12px #0005}.model3d-toolbar button{padding:5px 7px;border:0;border-radius:4px;background:transparent;color:#eee;font:700 10px Arial,sans-serif;cursor:pointer;white-space:nowrap}.model3d-toolbar button[aria-pressed=true]{background:#f47b20;color:#171717}.model3d-toolbar button:hover{background:#ffffff33}.model3d-toolbar button[aria-pressed=true]:hover{background:#ff943b}
 .built-site .motion-screen{transform-origin:center;will-change:transform,filter,opacity}.built-site .site-decoration.motion-enabled,.built-site .site-canvas-object.motion-enabled{pointer-events:auto}.built-site .motion-screen.motion-position-active{transform:translate(calc(-50% + var(--motion-current-x,0px)),calc(-50% + var(--motion-current-y,0px))) rotate(calc(var(--base-rotation,0deg) + var(--motion-current-rotation,0deg))) scale(var(--motion-current-scale-x,1),var(--motion-current-scale-y,1))!important;filter:hue-rotate(var(--motion-current-hue,0deg));opacity:var(--motion-current-opacity,1)!important}
 .built-site .site-motion{animation:wf-motion var(--motion-duration,2s) ease-in-out infinite alternate}@keyframes wf-motion{from{translate:0 0;scale:1 1;rotate:0deg;filter:hue-rotate(0deg);opacity:var(--motion-opacity-start,1)}to{translate:var(--motion-x,0px) var(--motion-y,0px);scale:var(--motion-scale-x,1) var(--motion-scale-y,1);rotate:var(--motion-rotation,0deg);filter:hue-rotate(var(--motion-hue,0deg));opacity:var(--motion-opacity-end,1)}}@media(prefers-reduced-motion:reduce){.built-site .site-motion{animation:none}}
 `;
@@ -854,6 +836,16 @@ function mountModelViewers(root = document) {
     stage.dataset.modelReady = "true"; stage.classList.add("model3d-ready");
     let yawDegrees = Number(stage.dataset.modelRotateY), pitchDegrees = Number(stage.dataset.modelRotateX);
     let yaw = (Number.isFinite(yawDegrees) ? yawDegrees : -28) * Math.PI / 180, pitch = (Number.isFinite(pitchDegrees) ? pitchDegrees : 18) * Math.PI / 180, dragging = null, frame = 0;
+    const clampMove = value => Math.max(-2, Math.min(2, value));
+    let moveX = clampMove(Number(stage.dataset.modelMoveX) || 0), moveY = clampMove(Number(stage.dataset.modelMoveY) || 0), moveZ = clampMove(Number(stage.dataset.modelMoveZ) || 0);
+    let toolMode = "orbit";
+    stage.querySelectorAll("[data-model-mode]").forEach(button => {
+      button.addEventListener("pointerdown", event => event.stopPropagation());
+      button.addEventListener("click", event => {
+        event.stopPropagation(); toolMode = button.dataset.modelMode;
+        stage.querySelectorAll("[data-model-mode]").forEach(item => item.setAttribute("aria-pressed", String(item === button)));
+      });
+    });
     const textureImages = new Map();
     const textureDefinitions = new Map((mesh.textures || []).map(texture => [texture.id, texture]));
     const draw = () => {
@@ -864,7 +856,7 @@ function mountModelViewers(root = document) {
       context.setTransform(ratio, 0, 0, ratio, 0, 0); context.clearRect(0, 0, width, height);
       const factor = Math.min(width, height) * .44 * Math.max(.2, Math.min(3, Number(stage.dataset.modelScale) || 1));
       const cy = Math.cos(yaw), sy = Math.sin(yaw), cx = Math.cos(pitch), sx = Math.sin(pitch), camera = 3.6;
-      const projected = mesh.vertices.map(([x,y,z]) => { const rx = x * cy + z * sy, rz = -x * sy + z * cy, ry = y * cx - rz * sx, depth = y * sx + rz * cx, perspective = camera / Math.max(.7, camera - depth); return [width / 2 + rx * factor * perspective, height / 2 - ry * factor * perspective, depth]; });
+      const projected = mesh.vertices.map(([x,y,z]) => { const rotatedX = x * cy + z * sy, rz = -x * sy + z * cy, rotatedY = y * cx - rz * sx, rx = rotatedX + moveX, ry = rotatedY + moveY, depth = y * sx + rz * cx + moveZ, perspective = camera / Math.max(.7, camera - depth); return [width / 2 + rx * factor * perspective, height / 2 - ry * factor * perspective, depth]; });
       const faces = [];
       for (let i = 0; i + 2 < mesh.triangles.length; i += 3) { const a = projected[mesh.triangles[i]], b = projected[mesh.triangles[i + 1]], c = projected[mesh.triangles[i + 2]]; if (!a || !b || !c) continue; const ux = b[0]-a[0], uy = b[1]-a[1], vx = c[0]-a[0], vy = c[1]-a[1]; if (Math.abs(ux*vy-uy*vx) < .08) continue; faces.push({a,b,c,depth:(a[2]+b[2]+c[2])/3,material:mesh.triangleMaterials?.[i/3],area:ux*vy-uy*vx}); }
       faces.sort((a,b) => a.depth - b.depth);
@@ -874,44 +866,60 @@ function mountModelViewers(root = document) {
         context.beginPath(); context.moveTo(face.a[0],face.a[1]); context.lineTo(face.b[0],face.b[1]); context.lineTo(face.c[0],face.c[1]); context.closePath();
         const image = face.material ? textureImages.get(face.material.textureId) : null, texture = face.material ? textureDefinitions.get(face.material.textureId) : null, authoredColor = face.material?.color;
         let textured = false;
-        if (image?.complete && image.naturalWidth && texture && face.material.uvs?.length === 3) {
-          const uv = face.material.uvs.map(([u,v]) => [u * image.naturalWidth / Math.max(1, texture.uvWidth || image.naturalWidth), v * image.naturalHeight / Math.max(1, texture.uvHeight || image.naturalHeight)]);
+        const imageWidth = image?.naturalWidth || image?.width || 0, imageHeight = image?.naturalHeight || image?.height || 0;
+        if (image && image.complete !== false && imageWidth && imageHeight && texture && face.material.uvs?.length === 3) {
+          const uv = face.material.uvs.map(([u,v]) => [u * imageWidth / Math.max(1, texture.uvWidth || imageWidth), v * imageHeight / Math.max(1, texture.uvHeight || imageHeight)]);
           const [s0,s1,s2] = uv, [d0,d1,d2] = [face.a,face.b,face.c], determinant=(s1[0]-s0[0])*(s2[1]-s0[1])-(s2[0]-s0[0])*(s1[1]-s0[1]);
           if (Math.abs(determinant) > .0001) {
             const a=((d1[0]-d0[0])*(s2[1]-s0[1])-(d2[0]-d0[0])*(s1[1]-s0[1]))/determinant, c=((s1[0]-s0[0])*(d2[0]-d0[0])-(s2[0]-s0[0])*(d1[0]-d0[0]))/determinant;
             const b=((d1[1]-d0[1])*(s2[1]-s0[1])-(d2[1]-d0[1])*(s1[1]-s0[1]))/determinant, d=((s1[0]-s0[0])*(d2[1]-d0[1])-(s2[0]-s0[0])*(d1[1]-d0[1]))/determinant;
             const e=d0[0]-a*s0[0]-c*s0[1], f=d0[1]-b*s0[0]-d*s0[1];
             context.save(); context.clip(); context.globalAlpha = Math.max(0, Math.min(1, authoredColor?.[3] ?? face.material.alpha ?? 1)); context.setTransform(ratio*a,ratio*b,ratio*c,ratio*d,ratio*e,ratio*f); context.imageSmoothingEnabled=stage.dataset.modelPixelArt !== "true"; context.drawImage(image,0,0);
-            if (authoredColor && authoredColor.slice(0, 3).some(value => Math.abs(value - 1) > .001)) { context.globalCompositeOperation = "multiply"; context.fillStyle = `rgb(${authoredColor.slice(0, 3).map(value => Math.round(Math.max(0, Math.min(1, value)) * 255)).join(" ")})`; context.fillRect(0, 0, image.naturalWidth, image.naturalHeight); }
+            if (authoredColor && authoredColor.slice(0, 3).some(value => Math.abs(value - 1) > .001)) { context.globalCompositeOperation = "multiply"; context.fillStyle = `rgb(${authoredColor.slice(0, 3).map(value => Math.round(Math.max(0, Math.min(1, value)) * 255)).join(" ")})`; context.fillRect(0, 0, imageWidth, imageHeight); }
             context.restore(); textured = true;
           }
         }
-        if (!textured) { const rgb = authoredColor?.length >= 3 ? authoredColor.slice(0, 3).map(value => Math.round(Math.max(0, Math.min(1, Number(value) || 0)) * 255)) : [red, green, blue]; context.fillStyle = `rgba(${shade(rgb[0])} ${shade(rgb[1])} ${shade(rgb[2])} / ${Math.max(0, Math.min(1, authoredColor?.[3] ?? face.material?.alpha ?? 1))})`; context.fill(); }
+        if (!textured) { const rgb = authoredColor?.length >= 3 ? authoredColor.slice(0, 3).map(value => Math.round(Math.max(0, Math.min(1, Number(value) || 0)) * 255)) : texture?.source ? [190, 190, 190] : [red, green, blue]; context.fillStyle = `rgba(${shade(rgb[0])} ${shade(rgb[1])} ${shade(rgb[2])} / ${Math.max(0, Math.min(1, authoredColor?.[3] ?? face.material?.alpha ?? 1))})`; context.fill(); }
       });
     };
     const schedule = () => { if (!frame) frame = requestAnimationFrame(draw); };
     (mesh.textures || []).forEach(texture => {
       if (!texture.source || textureImages.has(texture.id)) return;
-      const image = new Image(); image.onload = schedule; image.onerror = schedule; image.src = texture.source; textureImages.set(texture.id, image);
+      const fallback = () => { const image = new Image(); image.onload = schedule; image.onerror = schedule; image.src = texture.source; textureImages.set(texture.id, image); };
+      if (typeof createImageBitmap !== "function") { fallback(); return; }
+      try {
+        const comma = texture.source.indexOf(","), mime = texture.source.slice(5, texture.source.indexOf(";"));
+        const bytes = Uint8Array.from(atob(texture.source.slice(comma + 1)), character => character.charCodeAt(0));
+        createImageBitmap(new Blob([bytes], { type: mime })).then(bitmap => { textureImages.set(texture.id, bitmap); schedule(); }).catch(fallback);
+      } catch { fallback(); }
     });
     canvas.addEventListener("pointerdown", event => {
       if (event.button !== 0 || event.shiftKey) return;
       event.preventDefault(); event.stopPropagation();
       const objectId = stage.closest("[data-object-id]")?.dataset.objectId;
-      dragging = { x: event.clientX, y: event.clientY, yaw, pitch, moved: false, objectId, selected: Boolean(stage.closest(".canvas-object-selected")) };
+      dragging = { x: event.clientX, y: event.clientY, yaw, pitch, moveX, moveY, moveZ, mode: toolMode, moved: false, objectId, selected: Boolean(stage.closest(".canvas-object-selected")) };
       canvas.setPointerCapture(event.pointerId);
     });
-    canvas.addEventListener("pointermove", event => { if (!dragging) return; const dx=event.clientX-dragging.x, dy=event.clientY-dragging.y; if (Math.abs(dx)+Math.abs(dy)>2) dragging.moved=true; yaw=dragging.yaw+dx*.012; pitch=Math.max(-1.45,Math.min(1.45,dragging.pitch+dy*.012)); schedule(); });
+    canvas.addEventListener("pointermove", event => { if (!dragging) return; const dx=event.clientX-dragging.x, dy=event.clientY-dragging.y; if (Math.abs(dx)+Math.abs(dy)>2) dragging.moved=true; const pixelsPerUnit=Math.max(24,Math.min(canvas.clientWidth,canvas.clientHeight)*.44*(Number(stage.dataset.modelScale)||1)); if(dragging.mode==="move"){moveX=clampMove(dragging.moveX+dx/pixelsPerUnit);moveY=clampMove(dragging.moveY-dy/pixelsPerUnit);} else if(dragging.mode==="depth"){moveZ=clampMove(dragging.moveZ-dy/pixelsPerUnit);} else {yaw=dragging.yaw+dx*.012;pitch=dragging.pitch+dy*.012;} schedule(); });
     const finish = () => {
       if (!dragging) return;
       const state = dragging; dragging = null;
       if (state.moved) {
         stage.dataset.modelRotateX = String(pitch * 180 / Math.PI); stage.dataset.modelRotateY = String(yaw * 180 / Math.PI);
-        stage.dispatchEvent(new CustomEvent("modelviewchange", { bubbles: true, detail: { rotateX: Number(stage.dataset.modelRotateX), rotateY: Number(stage.dataset.modelRotateY) } }));
+        stage.dataset.modelMoveX = String(moveX); stage.dataset.modelMoveY = String(moveY); stage.dataset.modelMoveZ = String(moveZ);
+        stage.dispatchEvent(new CustomEvent("modelviewchange", { bubbles: true, detail: { rotateX: Number(stage.dataset.modelRotateX), rotateY: Number(stage.dataset.modelRotateY), moveX, moveY, moveZ } }));
       }
       if (!state.selected) stage.dispatchEvent(new CustomEvent("modelselect", { bubbles: true, detail: { objectId: state.objectId } }));
     };
     canvas.addEventListener("pointerup", finish); canvas.addEventListener("pointercancel", finish);
+    canvas.addEventListener("wheel", event => {
+      if (toolMode !== "depth") return;
+      event.preventDefault(); event.stopPropagation();
+      moveZ = clampMove(moveZ - event.deltaY * .003);
+      stage.dataset.modelMoveZ = String(moveZ);
+      stage.dispatchEvent(new CustomEvent("modelviewchange", { bubbles: true, detail: { rotateX: pitch * 180 / Math.PI, rotateY: yaw * 180 / Math.PI, moveX, moveY, moveZ } }));
+      schedule();
+    }, { passive: false });
     if (typeof ResizeObserver !== "undefined") new ResizeObserver(schedule).observe(stage); else window.addEventListener("resize", schedule, { passive:true });
     schedule();
   });
@@ -1711,7 +1719,9 @@ function renderCanvas() {
     stage.addEventListener("modelviewchange", event => {
       const object = site.objects.find(item => item.id === stage.closest("[data-object-id]")?.dataset.objectId);
       if (object?.type !== "model3d") return;
-      object.modelRotateX = event.detail.rotateX; object.modelRotateY = event.detail.rotateY; save();
+      object.modelRotateX = event.detail.rotateX; object.modelRotateY = event.detail.rotateY;
+      object.modelMoveX = event.detail.moveX; object.modelMoveY = event.detail.moveY; object.modelMoveZ = event.detail.moveZ;
+      save(); renderCanvasObjectTools();
     });
   });
   positionCanvasItems();
@@ -1914,7 +1924,7 @@ function addCanvasObject(type, x = 50, y = 50, preset = "plain") {
     color: type === "text" ? (preset === "badge" ? "#ffffff" : site.palette.ink) : site.accent,
     background: type === "text" && preset === "badge" ? site.accent : "", opacity: 1, blend: "normal", z: 3,
     text: definition.text, fontSize: definition.fontSize, preset: type === "text" ? preset : "plain", url: "", alt: "",
-    modelData: "", modelResources: {}, modelFormat: "obj", modelFileName: "", modelScale: 1, modelRotateX: 18, modelRotateY: -28, modelPixelArt: true
+    modelData: "", modelResources: {}, modelFormat: "obj", modelFileName: "", modelScale: 1, modelRotateX: 18, modelRotateY: -28, modelMoveX: 0, modelMoveY: 0, modelMoveZ: 0, modelPixelArt: true
   };
   site.objects.push(object); selectedObjectId = object.id; selectedShapeId = ""; selectedShapeIds.clear(); selectedContent = null;
   setRailPanel(type === "image" ? "uploads" : type === "model3d" ? "models" : "text");
@@ -2054,6 +2064,15 @@ function renderCanvasObjectTools() {
         pixelToggle.addEventListener("change", () => { object.modelPixelArt = pixelToggle.checked; save(); renderCanvas(); });
         pixelLabel.append(pixelToggle, pixelCaption); controls.append(pixelLabel);
         addControl("Model zoom", "number", object.modelScale, value => object.modelScale = Number(value), { min: .2, max: 3, step: .1 });
+        const moveHeading = document.createElement("h3"); moveHeading.className = "model-move-heading"; moveHeading.textContent = "3D Move add-on"; controls.append(moveHeading);
+        const moveHelp = document.createElement("p"); moveHelp.className = "helper"; moveHelp.textContent = "Use Move X/Y or Move Z above the model, or set an exact position here."; controls.append(moveHelp);
+        addControl("Orbit X (pitch)", "number", object.modelRotateX ?? 18, value => object.modelRotateX = Math.max(-360, Math.min(360, Number(value) || 0)), { min: -360, max: 360, step: 1 });
+        addControl("Orbit Y (yaw)", "number", object.modelRotateY ?? -28, value => object.modelRotateY = Math.max(-360, Math.min(360, Number(value) || 0)), { min: -360, max: 360, step: 1 });
+        addControl("Move X", "number", object.modelMoveX ?? 0, value => object.modelMoveX = Math.max(-2, Math.min(2, Number(value) || 0)), { min: -2, max: 2, step: .05 });
+        addControl("Move Y", "number", object.modelMoveY ?? 0, value => object.modelMoveY = Math.max(-2, Math.min(2, Number(value) || 0)), { min: -2, max: 2, step: .05 });
+        addControl("Move Z (depth)", "number", object.modelMoveZ ?? 0, value => object.modelMoveZ = Math.max(-2, Math.min(2, Number(value) || 0)), { min: -2, max: 2, step: .05 });
+        const resetMove = document.createElement("button"); resetMove.type = "button"; resetMove.className = "button ghost wide"; resetMove.textContent = "Center model in 3D";
+        resetMove.addEventListener("click", () => { object.modelMoveX = 0; object.modelMoveY = 0; object.modelMoveZ = 0; save(); renderCanvas(); renderCanvasObjectTools(); }); controls.append(resetMove);
         addControl("Frame width", "number", object.width, value => object.width = Number(value), { min: 24, max: 900 });
         addControl("Frame height", "number", object.height, value => object.height = Number(value), { min: 24, max: 600 });
       }

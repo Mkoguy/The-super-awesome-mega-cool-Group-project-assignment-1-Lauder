@@ -683,7 +683,9 @@ function renderCanvas() {
     stage.addEventListener("modelviewchange", event => {
       const object = site.objects.find(item => item.id === stage.closest("[data-object-id]")?.dataset.objectId);
       if (object?.type !== "model3d") return;
-      object.modelRotateX = event.detail.rotateX; object.modelRotateY = event.detail.rotateY; save();
+      object.modelRotateX = event.detail.rotateX; object.modelRotateY = event.detail.rotateY;
+      object.modelMoveX = event.detail.moveX; object.modelMoveY = event.detail.moveY; object.modelMoveZ = event.detail.moveZ;
+      save(); renderCanvasObjectTools();
     });
   });
   positionCanvasItems();
@@ -886,7 +888,7 @@ function addCanvasObject(type, x = 50, y = 50, preset = "plain") {
     color: type === "text" ? (preset === "badge" ? "#ffffff" : site.palette.ink) : site.accent,
     background: type === "text" && preset === "badge" ? site.accent : "", opacity: 1, blend: "normal", z: 3,
     text: definition.text, fontSize: definition.fontSize, preset: type === "text" ? preset : "plain", url: "", alt: "",
-    modelData: "", modelResources: {}, modelFormat: "obj", modelFileName: "", modelScale: 1, modelRotateX: 18, modelRotateY: -28, modelPixelArt: true
+    modelData: "", modelResources: {}, modelFormat: "obj", modelFileName: "", modelScale: 1, modelRotateX: 18, modelRotateY: -28, modelMoveX: 0, modelMoveY: 0, modelMoveZ: 0, modelPixelArt: true
   };
   site.objects.push(object); selectedObjectId = object.id; selectedShapeId = ""; selectedShapeIds.clear(); selectedContent = null;
   setRailPanel(type === "image" ? "uploads" : type === "model3d" ? "models" : "text");
@@ -1026,6 +1028,15 @@ function renderCanvasObjectTools() {
         pixelToggle.addEventListener("change", () => { object.modelPixelArt = pixelToggle.checked; save(); renderCanvas(); });
         pixelLabel.append(pixelToggle, pixelCaption); controls.append(pixelLabel);
         addControl("Model zoom", "number", object.modelScale, value => object.modelScale = Number(value), { min: .2, max: 3, step: .1 });
+        const moveHeading = document.createElement("h3"); moveHeading.className = "model-move-heading"; moveHeading.textContent = "3D Move add-on"; controls.append(moveHeading);
+        const moveHelp = document.createElement("p"); moveHelp.className = "helper"; moveHelp.textContent = "Use Move X/Y or Move Z above the model, or set an exact position here."; controls.append(moveHelp);
+        addControl("Orbit X (pitch)", "number", object.modelRotateX ?? 18, value => object.modelRotateX = Math.max(-360, Math.min(360, Number(value) || 0)), { min: -360, max: 360, step: 1 });
+        addControl("Orbit Y (yaw)", "number", object.modelRotateY ?? -28, value => object.modelRotateY = Math.max(-360, Math.min(360, Number(value) || 0)), { min: -360, max: 360, step: 1 });
+        addControl("Move X", "number", object.modelMoveX ?? 0, value => object.modelMoveX = Math.max(-2, Math.min(2, Number(value) || 0)), { min: -2, max: 2, step: .05 });
+        addControl("Move Y", "number", object.modelMoveY ?? 0, value => object.modelMoveY = Math.max(-2, Math.min(2, Number(value) || 0)), { min: -2, max: 2, step: .05 });
+        addControl("Move Z (depth)", "number", object.modelMoveZ ?? 0, value => object.modelMoveZ = Math.max(-2, Math.min(2, Number(value) || 0)), { min: -2, max: 2, step: .05 });
+        const resetMove = document.createElement("button"); resetMove.type = "button"; resetMove.className = "button ghost wide"; resetMove.textContent = "Center model in 3D";
+        resetMove.addEventListener("click", () => { object.modelMoveX = 0; object.modelMoveY = 0; object.modelMoveZ = 0; save(); renderCanvas(); renderCanvasObjectTools(); }); controls.append(resetMove);
         addControl("Frame width", "number", object.width, value => object.width = Number(value), { min: 24, max: 900 });
         addControl("Frame height", "number", object.height, value => object.height = Number(value), { min: 24, max: 600 });
       }
