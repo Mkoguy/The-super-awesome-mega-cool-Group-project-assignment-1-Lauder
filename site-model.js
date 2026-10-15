@@ -618,7 +618,10 @@ export function mountModelViewers(root = document) {
       context.setTransform(ratio, 0, 0, ratio, 0, 0); context.clearRect(0, 0, width, height);
       const factor = Math.min(width, height) * .44 * Math.max(.2, Math.min(3, Number(stage.dataset.modelScale) || 1));
       const cy = Math.cos(yaw), sy = Math.sin(yaw), cx = Math.cos(pitch), sx = Math.sin(pitch), camera = 3.6;
-      const projected = mesh.vertices.map(([x,y,z]) => { const rotatedX = x * cy + z * sy, rz = -x * sy + z * cy, rotatedY = y * cx - rz * sx, rx = rotatedX + moveX, ry = rotatedY + moveY, depth = y * sx + rz * cx + moveZ, perspective = camera / Math.max(.7, camera - depth); return [width / 2 + rx * factor * perspective, height / 2 - ry * factor * perspective, depth]; });
+      // A single depth scale keeps each face affine, matching the canvas texture transform.
+      // Per-vertex perspective bends the two triangles of a Blockbench quad differently.
+      const depthScale = camera / Math.max(2, camera - moveZ);
+      const projected = mesh.vertices.map(([x,y,z]) => { const rotatedX = x * cy + z * sy, rz = -x * sy + z * cy, rotatedY = y * cx - rz * sx, rx = rotatedX + moveX, ry = rotatedY + moveY, depth = y * sx + rz * cx + moveZ; return [width / 2 + rx * factor * depthScale, height / 2 - ry * factor * depthScale, depth]; });
       const faces = [];
       for (let i = 0; i + 2 < mesh.triangles.length; i += 3) { const a = projected[mesh.triangles[i]], b = projected[mesh.triangles[i + 1]], c = projected[mesh.triangles[i + 2]]; if (!a || !b || !c) continue; const ux = b[0]-a[0], uy = b[1]-a[1], vx = c[0]-a[0], vy = c[1]-a[1]; if (Math.abs(ux*vy-uy*vx) < .08) continue; faces.push({a,b,c,depth:(a[2]+b[2]+c[2])/3,material:mesh.triangleMaterials?.[i/3],area:ux*vy-uy*vx}); }
       faces.sort((a,b) => a.depth - b.depth);
