@@ -466,6 +466,39 @@ function selectionCheckbox(form, label, value, onChange) {
   wrap.append(input, caption); form.append(wrap);
   return input;
 }
+function selectionGroup(form, label, expanded = false) {
+  const group = document.createElement("details");
+  group.className = "selection-group";
+  group.open = expanded;
+  const summary = document.createElement("summary");
+  summary.textContent = label;
+  group.append(summary);
+  form.append(group);
+  return group;
+}
+function selectionDropdown(form, label, value, choices, onChange) {
+  const wrap = document.createElement("label");
+  wrap.className = "control-group selection-control";
+  wrap.textContent = label;
+  const input = document.createElement("select");
+  for (const choice of choices) input.add(new Option(choice.replaceAll("-", " "), choice));
+  input.value = value;
+  input.addEventListener("change", () => { onChange(input.value); save(); renderCanvas(); });
+  wrap.append(input);
+  form.append(wrap);
+  return input;
+}
+function motionControls(form, item) {
+  const group = selectionGroup(form, "Motion effects");
+  item.motion ||= { enabled: false, speed: 1, centerY: 50, moveX: 52, moveY: -34, scaleX: 1.3, scaleY: .72, hue: 90, rotation: 18, opacity: .6 };
+  selectionCheckbox(group, "Enable motion", item.motion.enabled, value => { item.motion.enabled = value; });
+  const edit = document.createElement("button");
+  edit.type = "button";
+  edit.className = "button subtle wide";
+  edit.textContent = "Edit motion effects";
+  edit.addEventListener("click", () => setRailPanel("motion"));
+  group.append(edit);
+}
 function renderSelectionToolbar() {
   const chosen = selectedContent || selectedObjectId || selectedShapeId;
   const bar = $("#selection-toolbar");
