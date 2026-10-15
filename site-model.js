@@ -18,6 +18,21 @@ const number = (value, fallback, min, max) => Number.isFinite(Number(value)) ? M
 const choice = (value, allowed, fallback) => allowed.includes(value) ? value : fallback;
 const BLEND_MODES = ["normal", "multiply", "screen", "overlay", "darken", "lighten", "color-dodge", "color-burn", "hard-light", "soft-light", "difference", "exclusion", "hue", "saturation", "color", "luminosity"];
 export const DEFAULT_MOTION = { enabled: false, speed: 1, x: 0, y: 0, fade: 0, scaleX: 100, scaleY: 100, hue: 0, rotation: 0 };
+export const DEFAULT_MODEL_MOTION = { enabled: false, mode: "sway", duration: 3, rotateX: 0, rotateY: 30, rotateZ: 0, moveX: 0, moveY: .2, moveZ: 0, scale: 1 };
+export function normalizeModelMotion(input) {
+  return {
+    enabled: input?.enabled === true,
+    mode: choice(input?.mode, ["sway", "spin"], "sway"),
+    duration: number(input?.duration, 3, .5, 20),
+    rotateX: number(input?.rotateX, 0, -360, 360),
+    rotateY: number(input?.rotateY, 30, -360, 360),
+    rotateZ: number(input?.rotateZ, 0, -360, 360),
+    moveX: number(input?.moveX, 0, -2, 2),
+    moveY: number(input?.moveY, .2, -2, 2),
+    moveZ: number(input?.moveZ, 0, -2, 2),
+    scale: number(input?.scale, 1, .25, 3)
+  };
+}
 export function normalizeMotion(input) {
   const screen = input?.trigger === "screen" || (input?.trigger == null && (input?.moveX != null || input?.centerY != null));
   const scaleX = input?.scaleX != null && Number(input.scaleX) <= 3 ? Number(input.scaleX) * 100 : input?.scaleX;
@@ -38,6 +53,10 @@ const motionStyle = (raw, baseRotation, baseOpacity = 1) => {
   const motion = normalizeMotion(raw);
   const opacity = number(baseOpacity, 1, 0, 1);
   return `--motion-speed:${motion.speed};--motion-center-y:${motion.centerY}%;--motion-duration:${motion.screen ? Math.round(700 / motion.speed) + "ms" : 2 / motion.speed + "s"};--motion-x:${motion.x}px;--motion-y:${motion.y}px;--motion-scale-x:${motion.scaleX / 100};--motion-scale-y:${motion.scaleY / 100};--motion-hue:${motion.hue}deg;--motion-rotation:${motion.rotation}deg;--motion-opacity:${motion.opacity};--motion-opacity-start:${opacity};--motion-opacity-end:${Math.max(0, opacity * (1 - motion.fade / 100))};--base-rotation:${number(baseRotation, 0, -360, 360)}deg;--base-opacity:${opacity};--motion-current-x:0px;--motion-current-y:0px;--motion-current-scale-x:1;--motion-current-scale-y:1;--motion-current-hue:0deg;--motion-current-rotation:0deg;--motion-current-opacity:${opacity};`;
+};
+const modelMotionAttributes = raw => {
+  const motion = normalizeModelMotion(raw);
+  return `data-model-motion-enabled="${motion.enabled}" data-model-motion-mode="${motion.mode}" data-model-motion-duration="${motion.duration}" data-model-motion-rotate-x="${motion.rotateX}" data-model-motion-rotate-y="${motion.rotateY}" data-model-motion-rotate-z="${motion.rotateZ}" data-model-motion-move-x="${motion.moveX}" data-model-motion-move-y="${motion.moveY}" data-model-motion-move-z="${motion.moveZ}" data-model-motion-scale="${motion.scale}"`;
 };
 export const makeId = () => globalThis.crypto?.randomUUID?.() || `section-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 export function shapeSvgMarkup(type, fillColor = "#ed7418") {
@@ -168,7 +187,7 @@ export function normalizeSite(input) {
     modelFileName: trim(item.modelFileName, 160), modelScale: number(item.modelScale, 1, .2, 3),
     modelRotateX: number(item.modelRotateX, -25, -360, 360), modelRotateY: number(item.modelRotateY, 35, -360, 360), modelPixelArt: item.modelPixelArt !== false, modelTintTextures: item.modelTintTextures === true,
     modelMoveX: number(item.modelMoveX, 0, -2, 2), modelMoveY: number(item.modelMoveY, 0, -2, 2), modelMoveZ: number(item.modelMoveZ, 0, -2, 2),
-    motion: normalizeMotion(item.motion)
+    motion: normalizeMotion(item.motion), modelMotion: normalizeModelMotion(item.modelMotion)
   }));
   return { version: 2, name: trim(input.name, limits.name) || "My Artist Site", address: safeWebsiteAddress(input.address), logoUrl: safeUrl(input.logoUrl, true), tagline: trim(input.tagline, limits.tagline), footerNote: typeof input.footerNote === "string" ? trim(input.footerNote, 120) : "Made with care ✳", theme, accent, palette, design, font: ["editorial", "modern", "playful"].includes(input.font) ? input.font : "modern", sections, shapes, objects };
 }
@@ -239,7 +258,7 @@ export function renderSite(site, editable = false, selectedShapeId = "", selecte
     const content = object.type === "image"
       ? imageUrl ? `<img src="${escapeHtml(imageUrl)}" alt="${escapeHtml(object.alt)}" draggable="false">` : `<span class="image-object-empty">Add an HTTPS image URL</span>`
       : object.type === "model3d"
-        ? `<div class="model3d-viewer" data-model-format="${escapeHtml(object.modelFormat)}" data-model-data="${escapeHtml(object.modelData)}" data-model-resources="${escapeHtml(JSON.stringify(object.modelResources || {}))}" data-model-color="${color(object.color, "#ed7418")}" data-model-tint-textures="${object.modelTintTextures === true}" data-model-scale="${number(object.modelScale, 1, .2, 3)}" data-model-rotate-x="${number(object.modelRotateX, 18, -360, 360)}" data-model-rotate-y="${number(object.modelRotateY, -28, -360, 360)}" data-model-move-x="${number(object.modelMoveX, 0, -2, 2)}" data-model-move-y="${number(object.modelMoveY, 0, -2, 2)}" data-model-move-z="${number(object.modelMoveZ, 0, -2, 2)}" data-model-pixel-art="${object.modelPixelArt !== false}" role="${editable ? "group" : "img"}" aria-label="Interactive 3D model: ${escapeHtml(object.modelFileName || "model")}"><canvas class="model3d-canvas" aria-hidden="true"></canvas><span class="model3d-message">Loading 3D model…</span>${editable ? `<div class="model3d-toolbar" role="toolbar" aria-label="3D Move controls"><button type="button" data-model-mode="orbit" aria-pressed="true">Orbit</button><button type="button" data-model-mode="move" aria-pressed="false">Move X/Y</button><button type="button" data-model-mode="depth" aria-pressed="false">Move Z</button></div><span class="model3d-editor-help">Drag to edit model · Shift-drag to move frame</span>` : ""}</div>`
+        ? `<div class="model3d-viewer" data-model-format="${escapeHtml(object.modelFormat)}" data-model-data="${escapeHtml(object.modelData)}" data-model-resources="${escapeHtml(JSON.stringify(object.modelResources || {}))}" data-model-color="${color(object.color, "#ed7418")}" data-model-tint-textures="${object.modelTintTextures === true}" data-model-scale="${number(object.modelScale, 1, .2, 3)}" data-model-rotate-x="${number(object.modelRotateX, 18, -360, 360)}" data-model-rotate-y="${number(object.modelRotateY, -28, -360, 360)}" data-model-move-x="${number(object.modelMoveX, 0, -2, 2)}" data-model-move-y="${number(object.modelMoveY, 0, -2, 2)}" data-model-move-z="${number(object.modelMoveZ, 0, -2, 2)}" data-model-pixel-art="${object.modelPixelArt !== false}" ${modelMotionAttributes(object.modelMotion)} role="${editable ? "group" : "img"}" aria-label="Interactive 3D model: ${escapeHtml(object.modelFileName || "model")}"><canvas class="model3d-canvas" aria-hidden="true"></canvas><span class="model3d-message">Loading 3D model…</span>${editable ? `<div class="model3d-toolbar" role="toolbar" aria-label="3D Move controls"><button type="button" data-model-mode="orbit" aria-pressed="true">Orbit</button><button type="button" data-model-mode="move" aria-pressed="false">Move X/Y</button><button type="button" data-model-mode="depth" aria-pressed="false">Move Z</button></div><span class="model3d-editor-help">Drag to edit model · Shift-drag to move frame</span>` : ""}</div>`
         : `<span class="text-object-content preset-${object.preset}" style="font-size:${number(object.fontSize,42,10,180)}px">${escapeHtml(object.text || "Your text")}</span>`;
     return `<div class="site-canvas-object canvas-object-${object.type}${object.type === "text" ? ` preset-frame-${object.preset}` : ""}${editable ? " editor-canvas-object" : ""}${selected ? " canvas-object-selected" : ""}${motion.enabled ? motion.screen ? " motion-enabled motion-screen" : " site-motion" : ""}" ${editAttrs} data-canvas-y="${object.y}" style="${style}">${content}${handles}</div>`;
   }).join("");
@@ -600,6 +619,22 @@ export function mountModelViewers(root = document) {
     let yaw = (Number.isFinite(yawDegrees) ? yawDegrees : -28) * Math.PI / 180, pitch = (Number.isFinite(pitchDegrees) ? pitchDegrees : 18) * Math.PI / 180, dragging = null, frame = 0;
     const clampMove = value => Math.max(-2, Math.min(2, value));
     let moveX = clampMove(Number(stage.dataset.modelMoveX) || 0), moveY = clampMove(Number(stage.dataset.modelMoveY) || 0), moveZ = clampMove(Number(stage.dataset.modelMoveZ) || 0);
+    const animation = {
+      enabled: stage.dataset.modelMotionEnabled === "true",
+      mode: stage.dataset.modelMotionMode === "spin" ? "spin" : "sway",
+      duration: Math.max(.5, Math.min(20, Number(stage.dataset.modelMotionDuration) || 3)),
+      rotateX: Number(stage.dataset.modelMotionRotateX) || 0,
+      rotateY: Number(stage.dataset.modelMotionRotateY) || 0,
+      rotateZ: Number(stage.dataset.modelMotionRotateZ) || 0,
+      moveX: Number(stage.dataset.modelMotionMoveX) || 0,
+      moveY: Number(stage.dataset.modelMotionMoveY) || 0,
+      moveZ: Number(stage.dataset.modelMotionMoveZ) || 0,
+      scale: Math.max(.25, Math.min(3, Number(stage.dataset.modelMotionScale) || 1))
+    };
+    const reducedMotion = typeof window.matchMedia === "function" ? window.matchMedia("(prefers-reduced-motion: reduce)") : null;
+    const canAnimate = () => animation.enabled && !reducedMotion?.matches && !(typeof document !== "undefined" && document.body?.classList?.contains("workspace-reduced-motion"));
+    let animationStart = null;
+    const motionListener = new AbortController();
     let toolMode = "orbit";
     stage.querySelectorAll("[data-model-mode]").forEach(button => {
       button.addEventListener("pointerdown", event => event.stopPropagation());
@@ -610,18 +645,30 @@ export function mountModelViewers(root = document) {
     });
     const textureImages = new Map();
     const textureDefinitions = new Map((mesh.textures || []).map(texture => [texture.id, texture]));
-    const draw = () => {
+    const draw = timestamp => {
       frame = 0;
+      if (stage.isConnected === false) { motionListener.abort(); return; }
+      const active = canAnimate();
+      if (active && animationStart === null) animationStart = Number.isFinite(timestamp) ? timestamp : performance.now();
+      const elapsed = active ? Math.max(0, ((Number.isFinite(timestamp) ? timestamp : performance.now()) - animationStart) / 1000) : 0;
+      const cycle = elapsed / animation.duration;
+      const wave = Math.sin(cycle * Math.PI * 2);
+      const rotationPhase = animation.mode === "spin" ? cycle : wave;
+      const animatedYaw = yaw + animation.rotateY * rotationPhase * Math.PI / 180;
+      const animatedPitch = pitch + animation.rotateX * rotationPhase * Math.PI / 180;
+      const roll = animation.rotateZ * rotationPhase * Math.PI / 180;
+      const animatedX = moveX + animation.moveX * wave, animatedY = moveY + animation.moveY * wave, animatedZ = moveZ + animation.moveZ * wave;
+      const animatedScale = 1 + (animation.scale - 1) * ((1 - Math.cos(cycle * Math.PI * 2)) / 2);
       const ratio = Math.min(window.devicePixelRatio || 1, 2), width = Math.max(1, canvas.clientWidth), height = Math.max(1, canvas.clientHeight);
       const pixelWidth = Math.round(width * ratio), pixelHeight = Math.round(height * ratio);
       if (canvas.width !== pixelWidth || canvas.height !== pixelHeight) { canvas.width = pixelWidth; canvas.height = pixelHeight; }
       context.setTransform(ratio, 0, 0, ratio, 0, 0); context.clearRect(0, 0, width, height);
-      const factor = Math.min(width, height) * .44 * Math.max(.2, Math.min(3, Number(stage.dataset.modelScale) || 1));
-      const cy = Math.cos(yaw), sy = Math.sin(yaw), cx = Math.cos(pitch), sx = Math.sin(pitch), camera = 3.6;
+      const factor = Math.min(width, height) * .44 * Math.max(.2, Math.min(3, Number(stage.dataset.modelScale) || 1)) * animatedScale;
+      const cy = Math.cos(animatedYaw), sy = Math.sin(animatedYaw), cx = Math.cos(animatedPitch), sx = Math.sin(animatedPitch), cr = Math.cos(roll), sr = Math.sin(roll), camera = 3.6;
       // A single depth scale keeps each face affine, matching the canvas texture transform.
       // Per-vertex perspective bends the two triangles of a Blockbench quad differently.
-      const depthScale = camera / Math.max(2, camera - moveZ);
-      const projected = mesh.vertices.map(([x,y,z]) => { const rotatedX = x * cy + z * sy, rz = -x * sy + z * cy, rotatedY = y * cx - rz * sx, rx = rotatedX + moveX, ry = rotatedY + moveY, depth = y * sx + rz * cx + moveZ; return [width / 2 + rx * factor * depthScale, height / 2 - ry * factor * depthScale, depth]; });
+      const depthScale = camera / Math.max(2, camera - animatedZ);
+      const projected = mesh.vertices.map(([x,y,z]) => { const yawX = x * cy + z * sy, rz = -x * sy + z * cy, pitchY = y * cx - rz * sx, rolledX = yawX * cr - pitchY * sr, rolledY = yawX * sr + pitchY * cr, rx = rolledX + animatedX, ry = rolledY + animatedY, depth = y * sx + rz * cx + animatedZ; return [width / 2 + rx * factor * depthScale, height / 2 - ry * factor * depthScale, depth]; });
       const faces = [];
       for (let i = 0; i + 2 < mesh.triangles.length; i += 3) { const a = projected[mesh.triangles[i]], b = projected[mesh.triangles[i + 1]], c = projected[mesh.triangles[i + 2]]; if (!a || !b || !c) continue; const ux = b[0]-a[0], uy = b[1]-a[1], vx = c[0]-a[0], vy = c[1]-a[1]; if (Math.abs(ux*vy-uy*vx) < .08) continue; faces.push({a,b,c,depth:(a[2]+b[2]+c[2])/3,material:mesh.triangleMaterials?.[i/3],area:ux*vy-uy*vx}); }
       faces.sort((a,b) => a.depth - b.depth);
@@ -650,8 +697,10 @@ export function mountModelViewers(root = document) {
         }
         if (!textured) { const rgb = authoredColor?.length >= 3 ? authoredColor.slice(0, 3).map(value => Math.round(Math.max(0, Math.min(1, Number(value) || 0)) * 255)) : texture?.source ? [190, 190, 190] : [red, green, blue]; context.fillStyle = `rgba(${shade(rgb[0])} ${shade(rgb[1])} ${shade(rgb[2])} / ${Math.max(0, Math.min(1, authoredColor?.[3] ?? face.material?.alpha ?? 1))})`; context.fill(); }
       });
+      if (active) schedule();
     };
     const schedule = () => { if (!frame) frame = requestAnimationFrame(draw); };
+    reducedMotion?.addEventListener?.("change", schedule, { signal: motionListener.signal });
     (mesh.textures || []).forEach(texture => {
       if (!texture.source || textureImages.has(texture.id)) return;
       const fallback = () => { const image = new Image(); image.onload = schedule; image.onerror = schedule; image.src = texture.source; textureImages.set(texture.id, image); };

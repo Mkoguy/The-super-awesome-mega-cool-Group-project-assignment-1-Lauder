@@ -1,6 +1,48 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { mountModelViewers, normalizeSite, renderSite, exportDocument, template } from "../site-model.js";
+import { mountModelViewers, normalizeModelMotion, normalizeSite, renderSite, exportDocument, template } from "../site-model.js";
+
+test("custom 3D motion animates the mesh and survives website export", () => {
+  const site = template("portfolio");
+  const source = "v 0 0 0\nv 1 0 0\nv 0 1 0\nf 1 2 3\n";
+  site.objects = [{ id: "animated-model", type: "model3d", modelFormat: "obj", modelFileName: "triangle.obj",
+    modelData: `data:model/obj;base64,${Buffer.from(source).toString("base64")}`,
+    modelRotateX: 0, modelRotateY: 0, modelMoveX: 0, modelMoveY: 0, modelMoveZ: 0,
+    modelMotion: { enabled: true, mode: "sway", duration: 3, rotateZ: 90, moveX: .5, moveY: 0, moveZ: 0, scale: 1.5 } }];
+  const normalized = normalizeSite(site);
+  assert.deepEqual(normalized.objects[0].modelMotion, normalizeModelMotion(site.objects[0].modelMotion));
+  assert.match(renderSite(normalized, true), /data-model-motion-rotate-z="90"/);
+  assert.match(exportDocument(normalized), /data-model-motion-enabled="true"/);
+  assert.match(exportDocument(normalized), /data-model-motion-move-x="0\.5"/);
+  const frames = [], firstPoints = [];
+  const context = new Proxy({ moveTo: (x, y) => firstPoints.push([x, y]) }, { get(target, key) { return target[key] ?? (() => {}); }, set(target, key, value) { target[key] = value; return true; } });
+  const canvas = { clientWidth: 300, clientHeight: 300, getContext: () => context, addEventListener() {} };
+  const stage = { isConnected: true,
+    dataset: { modelFormat: "obj", modelData: normalized.objects[0].modelData, modelResources: "{}", modelColor: "#ed7418",
+      modelScale: "1", modelRotateX: "0", modelRotateY: "0", modelMoveX: "0", modelMoveY: "0", modelMoveZ: "0",
+      modelMotionEnabled: "true", modelMotionMode: "sway", modelMotionDuration: "3", modelMotionRotateX: "0",
+      modelMotionRotateY: "0", modelMotionRotateZ: "90", modelMotionMoveX: ".5", modelMotionMoveY: "0",
+      modelMotionMoveZ: "0", modelMotionScale: "1.5" },
+    querySelector: selector => selector === ".model3d-canvas" ? canvas : { textContent: "" },
+    querySelectorAll: () => [], classList: { add() {} }, addEventListener() {} };
+  const previous = { window: globalThis.window, requestAnimationFrame: globalThis.requestAnimationFrame };
+  try {
+    globalThis.window = { devicePixelRatio: 1, addEventListener() {}, matchMedia: () => ({ matches: false, addEventListener() {} }) };
+    globalThis.requestAnimationFrame = callback => { frames.push(callback); return frames.length; };
+    mountModelViewers({ querySelectorAll: () => [stage] });
+    assert.equal(stage.dataset.modelReady, "true");
+    frames.shift()(1000);
+    frames.shift()(1750);
+    assert.equal(firstPoints.length, 2);
+    assert.notDeepEqual(firstPoints[0], firstPoints[1], "mesh coordinates should change over the animation cycle");
+    assert.equal(stage.dataset.modelMoveX, "0", "animation must not change the saved base position");
+    stage.isConnected = false;
+    frames.shift()(1800);
+  } finally {
+    globalThis.window = previous.window;
+    globalThis.requestAnimationFrame = previous.requestAnimationFrame;
+  }
+});
 
 test("Blockbench mesh textures render and 3D depth moves survive export", async () => {
   const model = {

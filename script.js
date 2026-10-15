@@ -3,6 +3,7 @@ import {
   makeSection,
   MAX_SECTIONS,
   mountModelViewers,
+  normalizeModelMotion,
   normalizeMotion,
   normalizeSite,
   renderSite,
@@ -924,7 +925,7 @@ function addCanvasObject(type, x = 50, y = 50, preset = "plain") {
     color: type === "text" ? (preset === "badge" ? "#ffffff" : site.palette.ink) : site.accent,
     background: type === "text" && preset === "badge" ? site.accent : "", opacity: 1, blend: "normal", z: 3,
     text: definition.text, fontSize: definition.fontSize, preset: type === "text" ? preset : "plain", url: "", alt: "",
-    modelData: "", modelResources: {}, modelFormat: "obj", modelFileName: "", modelScale: 1, modelRotateX: 18, modelRotateY: -28, modelMoveX: 0, modelMoveY: 0, modelMoveZ: 0, modelPixelArt: true, modelTintTextures: false
+    modelData: "", modelResources: {}, modelFormat: "obj", modelFileName: "", modelScale: 1, modelRotateX: 18, modelRotateY: -28, modelMoveX: 0, modelMoveY: 0, modelMoveZ: 0, modelPixelArt: true, modelTintTextures: false, modelMotion: normalizeModelMotion(null)
   };
   site.objects.push(object); selectedObjectId = object.id; selectedShapeId = ""; selectedShapeIds.clear(); selectedContent = null;
   setRailPanel(type === "image" ? "uploads" : type === "model3d" ? "models" : "text");
@@ -1099,6 +1100,7 @@ function renderCanvasObjectTools() {
         addControl("Move Z (depth)", "number", object.modelMoveZ ?? 0, value => object.modelMoveZ = Math.max(-2, Math.min(2, Number(value) || 0)), { min: -2, max: 2, step: .05 });
         const resetMove = document.createElement("button"); resetMove.type = "button"; resetMove.className = "button ghost wide"; resetMove.textContent = "Center model in 3D";
         resetMove.addEventListener("click", () => { object.modelMoveX = 0; object.modelMoveY = 0; object.modelMoveZ = 0; save(); renderCanvas(); renderCanvasObjectTools(); }); controls.append(resetMove);
+        renderModelMotionControls(controls, object);
         addControl("Frame width", "number", object.width, value => object.width = Number(value), { min: 24, max: 900 });
         addControl("Frame height", "number", object.height, value => object.height = Number(value), { min: 24, max: 600 });
       }
@@ -1112,6 +1114,51 @@ function renderCanvasObjectTools() {
   };
   renderList("text", "#text-object-list"); renderList("image", "#image-object-list"); renderList("model3d", "#model-object-list");
 }
+const openModelMotion = new Set();
+function renderModelMotionControls(parent, object, expanded = false) {
+  object.modelMotion = normalizeModelMotion(object.modelMotion);
+  const motion = object.modelMotion;
+  const panel = document.createElement("details"); panel.className = "model-motion-controls";
+  panel.open = expanded || openModelMotion.has(object.id);
+  panel.addEventListener("toggle", () => { if (panel.open) openModelMotion.add(object.id); else if (!expanded) openModelMotion.delete(object.id); });
+  const summary = document.createElement("summary"); summary.textContent = "3D object motion"; panel.append(summary);
+  const help = document.createElement("p"); help.className = "helper"; help.textContent = "Animate the model itself. Frame motion is controlled separately below."; panel.append(help);
+  const toggle = document.createElement("label"); toggle.className = "motion-toggle";
+  const enabled = document.createElement("input"); enabled.type = "checkbox"; enabled.checked = motion.enabled;
+  enabled.addEventListener("change", () => { motion.enabled = enabled.checked; save(); renderCanvas(); });
+  toggle.append(enabled, document.createTextNode("Animate 3D model")); panel.append(toggle);
+  const presets = document.createElement("div"); presets.className = "model-motion-presets";
+  const presetValues = {
+    Float: { mode: "sway", duration: 3, rotateX: 0, rotateY: 12, rotateZ: 0, moveX: 0, moveY: .25, moveZ: 0, scale: 1 },
+    Turntable: { mode: "spin", duration: 5, rotateX: 0, rotateY: 360, rotateZ: 0, moveX: 0, moveY: 0, moveZ: 0, scale: 1 },
+    Tumble: { mode: "spin", duration: 6, rotateX: 180, rotateY: 360, rotateZ: 0, moveX: 0, moveY: .12, moveZ: .1, scale: 1 }
+  };
+  Object.entries(presetValues).forEach(([name, values]) => {
+    const button = document.createElement("button"); button.type = "button"; button.className = "button subtle small"; button.textContent = name;
+    button.addEventListener("click", () => { object.modelMotion = normalizeModelMotion({ enabled: true, ...values }); save(); renderCanvas(); renderCanvasObjectTools(); renderMotionTools(); });
+    presets.append(button);
+  });
+  panel.append(presets);
+  const grid = document.createElement("div"); grid.className = "model-motion-grid";
+  const modeLabel = document.createElement("label"); modeLabel.textContent = "Rotation style";
+  const mode = document.createElement("select"); [["sway", "Sway back and forth"], ["spin", "Continuous spin"]].forEach(([value, label]) => mode.add(new Option(label, value))); mode.value = motion.mode;
+  mode.addEventListener("change", () => { motion.mode = mode.value; save(); renderCanvas(); }); modeLabel.append(mode); grid.append(modeLabel);
+  const field = (label, key, min, max, step) => {
+    const wrap = document.createElement("label"); wrap.textContent = label;
+    const input = document.createElement("input"); input.type = "number"; input.min = min; input.max = max; input.step = step; input.value = motion[key];
+    input.addEventListener("change", () => { const value = Number(input.value); if (!Number.isFinite(value)) return; motion[key] = Math.max(min, Math.min(max, value)); input.value = motion[key]; save(); renderCanvas(); });
+    wrap.append(input); grid.append(wrap);
+  };
+  field("Cycle duration (seconds)", "duration", .5, 20, .1);
+  field("Rotate X (degrees)", "rotateX", -360, 360, 1);
+  field("Rotate Y (degrees)", "rotateY", -360, 360, 1);
+  field("Rotate Z (degrees)", "rotateZ", -360, 360, 1);
+  field("Move X", "moveX", -2, 2, .05);
+  field("Move Y", "moveY", -2, 2, .05);
+  field("Move Z (depth)", "moveZ", -2, 2, .05);
+  field("Size multiplier", "scale", .25, 3, .05);
+  panel.append(grid); parent.append(panel);
+}
 function renderMotionTools() {
   const body = $("#motion-controls-body");
   if (!body || !site) return;
@@ -1123,6 +1170,7 @@ function renderMotionTools() {
     body.append(note, sample); return;
   }
   item.motion = normalizeMotion(item.motion);
+  if (item.type === "model3d") renderModelMotionControls(body, item, true);
   const motion = item.motion;
   const card = document.createElement("div"); card.className = "motion-card";
   const heading = document.createElement("strong"); heading.textContent = `${item.type === "image" || item.type === "model3d" ? `${item.type === "model3d" ? "3D model" : "Image"} frame` : item.type === "text" ? "Text" : item.type.replaceAll("-", " ")} motion`;
@@ -1603,7 +1651,7 @@ $("#setting-workspace-theme").addEventListener("change", event => {
   applyWorkspaceMode(); renderPlugins();
 });
 $("#setting-sidebar-density").addEventListener("change", event => { editorPreferences.density = event.target.value; saveEditorPreferences(); });
-$("#setting-interface-motion").addEventListener("change", event => { editorPreferences.motion = event.target.value; saveEditorPreferences(); });
+$("#setting-interface-motion").addEventListener("change", event => { editorPreferences.motion = event.target.value; saveEditorPreferences(); renderCanvas(); });
 $("#setting-start-panel").addEventListener("change", event => { editorPreferences.startPanel = event.target.value; saveEditorPreferences(); });
 $("#reset-all-shortcuts").addEventListener("click", () => { shortcuts = defaultShortcuts(); saveShortcuts(); renderShortcutSettings(); $("#shortcut-status").textContent = "All keyboard shortcuts restored."; });
 $("#undo-button").addEventListener("click", () => restoreHistory(-1));
