@@ -458,11 +458,11 @@ export function mountModelViewers(root = document) {
           }
           for (let i = 0; i + 2 < sourceLocalIndices.length; i += 3) {
             const localIndexes = sourceLocalIndices.slice(i, i + 3), meshVertexIndexes = localIndexes.map(index => meshIndices[index]), triangleIndexes = meshVertexIndexes;
-            const triangleColors = vertexColors ? meshVertexIndexes.map(index => vertexColors[index] || [1, 1, 1, 1]) : [];
+            const triangleColors = vertexColors ? localIndexes.map(index => vertexColors[index] || [1, 1, 1, 1]) : [];
             const vertexColor = triangleColors.length ? [0, 1, 2, 3].map(channel => triangleColors.reduce((sum, color) => sum + (color[channel] ?? 1), 0) / 3) : null;
             const color = baseColor ? baseColor.map((value, channel) => value * (vertexColor?.[channel] ?? 1)) : vertexColor;
             let material = null;
-            if ((textureId && uvs) || color) material = { ...(textureId && uvs ? { textureId, uvs: meshVertexIndexes.map(index => uvs[index] || [0, 0]) } : {}), ...(color ? { color } : {}) };
+            if ((textureId && uvs) || color) material = { ...(textureId && uvs ? { textureId, uvs: localIndexes.map(index => uvs[index] || [0, 0]) } : {}), ...(color ? { color } : {}) };
             addTriangle(triangleIndexes[0], triangleIndexes[1], triangleIndexes[2], material);
           }
         }
