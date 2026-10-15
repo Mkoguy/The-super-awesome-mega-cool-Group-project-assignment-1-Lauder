@@ -30,8 +30,7 @@ const panelDefinitions = [
   ["templates", "Templates", "Choose a starting point or add a saved design.", ["drawer-templates", "template-tools"]],
   ["elements", "Elements", "Add shapes and other canvas elements.", ["drawer-add", "shape-tools"]],
   ["text", "Text", "Add text, then double-click it on the canvas to type.", ["text-tools"]],
-  ["uploads", "Uploads", "Add an image frame or upload an image.", ["image-tools"]],
-  ["models", "3D Model Studio", "Add and edit OBJ, GLB, STL, or Blockbench models.", ["model-tools"]],
+  ["uploads", "Uploads", "Add images and 3D models to your canvas.", ["image-tools", "model-tools"]],
   ["motion", "Motion effects", "Animate selected elements as the page scrolls.", ["motion-tools"]],
   ["site", "Website settings", "Set the website name, address, and logo.", ["drawer-site"]],
   ["layers", "Layers", "Select and arrange what is on your page.", ["drawer-layers"]],
@@ -48,7 +47,7 @@ for (const [name, title, description, ids] of panelDefinitions) {
 $("#panel-text .rail-panel-heading").after($("#add-text-button"));
 $("#panel-uploads .rail-panel-heading").after($("#add-image-button"));
 $("#panel-uploads").append($("#canvas-image-file"));
-$("#panel-models").append($("#canvas-model-file"));
+$("#panel-uploads").append($("#canvas-model-file"));
 $("#panel-templates .rail-panel-heading").after($("#open-templates-button"));
 $("#panel-text").append($("#drawer-add .helper"));
 $("#addon-tool-tabs").hidden = true;
@@ -77,7 +76,7 @@ try {
   if (currentPacks.length !== savedPacks.length) { try { localStorage.setItem(pluginStorageKey, JSON.stringify(installed)); } catch { /* The installed list still works for this session. */ } }
 }
 catch { installed = []; }
-const coreFeatures = new Set(["drawing-menu", "text-tool", "image-tool"]);
+const coreFeatures = new Set(["drawing-menu", "text-tool", "image-tool", "3d-models"]);
 const hasInstalledFeature = feature => coreFeatures.has(feature) || installed.some(pack => pack.features.includes(feature));
 let lightModeEnabled = false;
 try { lightModeEnabled = localStorage.getItem(workspaceModeKey) === "light"; }
@@ -87,7 +86,8 @@ try {
   const saved = JSON.parse(localStorage.getItem(editorPreferencesKey) || "{}");
   if (["comfortable", "compact"].includes(saved.density)) editorPreferences.density = saved.density;
   if (["full", "reduced"].includes(saved.motion)) editorPreferences.motion = saved.motion;
-  if (["templates", "elements", "models", "layers", "pages", "plugins"].includes(saved.startPanel)) editorPreferences.startPanel = saved.startPanel;
+  if (["templates", "elements", "uploads", "layers", "pages", "plugins"].includes(saved.startPanel)) editorPreferences.startPanel = saved.startPanel;
+  if (saved.startPanel === "models") editorPreferences.startPanel = "uploads";
 } catch { /* Use defaults when browser storage is unavailable. */ }
 let selectedId = site.sections[0]?.id;
 let selectedShapeId = hasInstalledFeature("motion-controls") ? site.shapes[0]?.id || "" : "";
@@ -338,6 +338,7 @@ function setTab(name) {
   setRailPanel(name === "build" ? "pages" : name);
 }
 function setRailPanel(name) {
+  if (name === "models") name = "uploads";
   activeRail = name;
   activeTab = ["design", "plugins", "ai"].includes(name) ? name : "build";
   $("#header-context").textContent = ({ templates: "Templates", elements: "Elements", text: "Text", uploads: "Uploads", design: "Design studio", site: "Website settings", layers: "Layers", pages: "Pages", edit: "Edit selection", plugins: "Plugin library", models: "3D Model Studio", motion: "Motion effects", ai: "AI tools" })[name] || "Build workspace";
