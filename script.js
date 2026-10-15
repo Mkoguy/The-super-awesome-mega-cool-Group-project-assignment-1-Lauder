@@ -47,7 +47,7 @@ for (const [name, title, description, ids] of panelDefinitions) {
 $("#panel-text .rail-panel-heading").after($("#add-text-button"));
 $("#panel-uploads .rail-panel-heading").after($("#add-image-button"));
 $("#panel-uploads").append($("#canvas-image-file"));
-$("#panel-uploads").append($("#canvas-model-file"));
+$("#model-tools").append($("#canvas-model-file"));
 $("#panel-templates .rail-panel-heading").after($("#open-templates-button"));
 $("#panel-text").append($("#drawer-add .helper"));
 $("#addon-tool-tabs").hidden = true;
@@ -894,6 +894,12 @@ function addCanvasObject(type, x = 50, y = 50, preset = "plain") {
   setRailPanel(type === "image" ? "uploads" : type === "model3d" ? "models" : "text");
   save(); renderCanvas(); renderCanvasObjectTools(); renderInspector();
 }
+function modelUploadStatus(message, isError = false) {
+  const status = $("#model-upload-status");
+  status.textContent = message;
+  status.dataset.error = String(isError);
+  if (isError) toast(message);
+}
 async function uploadCanvasModel(file, selectedFiles = []) {
   const files = Array.from(selectedFiles || []).filter(Boolean);
   const isModelFile = candidate => candidate && ["obj", "stl", "glb", "bbmodel"].includes(candidate.name.split(".").pop().toLowerCase());
@@ -901,15 +907,20 @@ async function uploadCanvasModel(file, selectedFiles = []) {
   if (!primary) {
     const target = site.objects.find(item => item.id === pendingModelResourceId && item.type === "model3d");
     if (target && files.length) await uploadModelResources(target, files);
-    else if (files.length) toast("Select a model first, then choose its .mtl and texture files.");
+    else if (files.length) modelUploadStatus("Choose a .bbmodel, .obj, .stl, or .glb file first.", true);
     pendingModelResourceId = "";
     return;
   }
   const extension = primary.name.split(".").pop().toLowerCase();
-  if (!["obj", "stl", "glb", "bbmodel"].includes(extension)) { toast("Choose an OBJ, STL, GLB, or Blockbench BBMODEL file."); return; }
+  if (!["obj", "stl", "glb", "bbmodel"].includes(extension)) { modelUploadStatus("Choose an OBJ, STL, GLB, or Blockbench BBMODEL file.", true); return; }
   const selected = files.length ? files : [primary];
-  if (selected.some(candidate => candidate.size > 20000000) || selected.reduce((total, candidate) => total + candidate.size, 0) > 20000000) { toast("Keep the model and its companion materials and textures under 20 MB total."); return; }
+  if (selected.some(candidate => candidate.size > 20000000) || selected.reduce((total, candidate) => total + candidate.size, 0) > 20000000) { modelUploadStatus("Keep the model and its companion materials and textures under 20 MB total.", true); return; }
   try {
+    modelUploadStatus("Reading " + primary.name + "…");
+    if (extension === "bbmodel") {
+      const blockbench = JSON.parse(await primary.text());
+      if (!Array.isArray(blockbench.elements) || !blockbench.elements.length) throw new Error("This Blockbench file has no model elements.");
+    }
     const toDataUrl = async (candidate, asText = false) => {
       const bytes = new Uint8Array(await candidate.arrayBuffer()); let binary = "";
       for (let offset = 0; offset < bytes.length; offset += 0x8000) binary += String.fromCharCode(...bytes.subarray(offset, offset + 0x8000));
@@ -927,14 +938,16 @@ async function uploadCanvasModel(file, selectedFiles = []) {
       }
     }
     let object = site.objects.find(item => item.id === pendingModelReplacementId && item.type === "model3d");
+    if (!object) object = site.objects.find(item => item.id === selectedObjectId && item.type === "model3d" && !item.modelData);
     if (!object) { addCanvasObject("model3d"); object = site.objects.find(item => item.id === selectedObjectId); }
-    if (!object) return;
+    if (!object) throw new Error("Could not create a 3D frame. Check that the 3D Model Studio plugin is installed.");
     object.modelData = data; object.modelResources = resources; object.modelFormat = extension; object.modelFileName = primary.name.slice(0, 120); pendingModelReplacementId = "";
     pendingModelResourceId = "";
     save(); renderCanvas(); renderCanvasObjectTools(); renderInspector(); setRailPanel("models");
     const companionNote = extension === "obj" && !Object.keys(resources).some(name => name.toLowerCase().endsWith(".mtl")) ? " For OBJ color and textures, select its .mtl and image files at the same time." : "";
+    modelUploadStatus(primary.name + " loaded into the selected 3D frame.");
     toast(`${primary.name} added. Drag the model to rotate it; Shift-drag moves the frame.${companionNote}`);
-  } catch { toast("Could not read that 3D model file."); }
+  } catch (error) { modelUploadStatus("Could not load " + primary.name + ": " + (error?.message || "file read failed"), true); }
 }
 async function uploadModelResources(object, files) {
   const allowed = object.modelFormat === "obj"
@@ -979,10 +992,16 @@ function renderCanvasObjectTools() {
   });
   const addImage = $("#add-image-object"); addImage.onclick = () => addCanvasObject("image"); addImage.draggable = true;
   addImage.ondragstart = event => { event.dataTransfer?.setData("application/x-websiteforge-image", "image"); if (event.dataTransfer) event.dataTransfer.effectAllowed = "copy"; };
-  $("#add-model-button").onclick = () => { pendingModelReplacementId = ""; pendingModelResourceId = ""; $("#canvas-model-file").click(); };
   const selectedModel = site.objects.find(item => item.id === selectedObjectId && item.type === "model3d");
+  const addModelButton = $("#add-model-button");
+  addModelButton.textContent = selectedModel && !selectedModel.modelData ? "＋ Load file into selected 3D frame" : "＋ Add 3D model";
+  addModelButton.onclick = () => {
+    pendingModelReplacementId = selectedModel && !selectedModel.modelData ? selectedModel.id : "";
+    pendingModelResourceId = "";
+    $("#canvas-model-file").click();
+  };
   const resourcesButton = $("#add-model-resources-button");
-  resourcesButton.hidden = !selectedModel || !["obj", "glb"].includes(selectedModel.modelFormat);
+  resourcesButton.hidden = !selectedModel?.modelData || !["obj", "glb"].includes(selectedModel.modelFormat);
   resourcesButton.onclick = () => chooseModelResourceFiles(selectedModel);
   $("#model-count").textContent = String(site.objects.filter(object => object.type === "model3d").length);
   const renderList = (type, target) => {
@@ -1020,7 +1039,8 @@ function renderCanvasObjectTools() {
       } else {
         const fileNote = document.createElement("p"); fileNote.className = "helper"; fileNote.textContent = object.modelFileName ? `${object.modelFileName} · ${object.modelFormat.toUpperCase()}${Object.keys(object.modelResources || {}).length ? ` · ${Object.keys(object.modelResources).length} material/texture files` : ""}` : "No model file loaded."; controls.append(fileNote);
         const replace = document.createElement("button"); replace.type = "button"; replace.className = "button subtle wide"; replace.textContent = "Replace model file";
-        replace.addEventListener("click", () => { pendingModelReplacementId = object.id; $("#canvas-model-file").click(); }); controls.append(replace);
+        replace.textContent = object.modelData ? "Replace model file" : "Choose model file";
+        replace.addEventListener("click", () => { pendingModelReplacementId = object.id; pendingModelResourceId = ""; $("#canvas-model-file").click(); }); controls.append(replace);
         addControl("Model color", "color", object.color || site.accent, value => object.color = value);
         const pixelLabel = document.createElement("label"); pixelLabel.className = "pixel-texture-setting";
         const pixelToggle = document.createElement("input"); pixelToggle.type = "checkbox"; pixelToggle.checked = object.modelPixelArt !== false;

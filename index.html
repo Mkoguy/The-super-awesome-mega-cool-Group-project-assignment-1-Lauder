@@ -59,6 +59,7 @@ body.workspace-light .rail-panel-heading h2{color:#25282d}body.workspace-light .
 .layer-group>summary{padding:9px 8px;border-radius:6px;background:#33343d;color:#eceaf3;font-size:11px;font-weight:800;cursor:pointer;list-style:none}.layer-group>summary::-webkit-details-marker{display:none}.layer-group>summary::after{content:'⌄';float:right;color:#bca6e9;transform:rotate(-90deg)}.layer-group[open]>summary::after{transform:none}.layer-group>.layer-entry,.layer-group>.layer-section{margin-top:4px}.layer-group>.layer-section{background:transparent;color:#bbb5cf;font-weight:600}.layer-group>.layer-section:hover{background:#4b3a5a}body.workspace-light .layer-group>summary{background:#e8e7e2;color:#25282d}
 .plugin-card{transform-origin:left center;transition:transform .42s cubic-bezier(.22,.8,.28,1),opacity .42s ease,filter .42s ease;will-change:transform,opacity}.plugin-card-departing{transform:translateX(-115%) rotate(-6deg) scale(.86);opacity:0;filter:blur(5px);pointer-events:none}.workspace-compact .sidebar{font-size:11px}.workspace-compact .rail-panel .drawer-section{margin-bottom:7px}.workspace-compact .rail-panel-heading{margin-bottom:10px}.workspace-compact .plugin-card{padding:8px}.workspace-compact .control-group{margin-bottom:9px}.workspace-reduced-motion .plugin-card,.workspace-reduced-motion .plugin-card-departing{transition:none!important;animation:none!important}@media(prefers-reduced-motion:reduce){.plugin-card,.plugin-card-departing{transition:none!important}}
 .model-help{margin:7px 0 13px;padding:9px 11px;border:1px solid #484a55;border-radius:8px;background:#292b33;color:#bfc0c9;font-size:11px;line-height:1.45}.model-help summary{cursor:pointer;color:#f3edf9;font-weight:700}.model-help p{margin:9px 0 0}body.workspace-light .model-help{background:#f8f8f5;border-color:#c9cbca;color:#62656a}body.workspace-light .model-help summary{color:#25282d}
+#model-upload-status{margin:8px 0 12px}#model-upload-status[data-error="true"]{color:#ff9d75;font-weight:700}
 .model-move-heading{margin:15px 0 6px;padding-top:10px;border-top:1px solid #4a4c56;color:#f6f2ff;font-size:13px}.object-controls .model-move-heading+.helper{margin:0 0 10px}body.workspace-light .model-move-heading{border-color:#c9cbca;color:#25282d}
 
     </style>
@@ -207,7 +208,7 @@ body.workspace-light .rail-panel-heading h2{color:#25282d}body.workspace-light .
           <div class="page-strip"><div class="page-strip-heading"><span>Page sections</span><span id="page-strip-count">0</span></div><div id="page-strip-list" class="page-strip-list" aria-label="Page sections"></div><button type="button" class="page-strip-add" id="page-strip-add" aria-label="Add section" title="Add section">+</button></div>
           <div class="canvas-tip"><span>Drag an item to move it; arrow keys nudge it. Ctrl+S downloads a backup; use Import project to move it to another device.</span><label for="canvas-zoom">Zoom <input id="canvas-zoom" type="range" min="50" max="150" step="10" value="100" /><output id="zoom-value">100%</output></label></div>
         </main>
-        <aside class="inspector" aria-label="Selected section editor"><div class="inspector-header"><span class="eyebrow">SECTION EDITOR</span><h2 id="inspector-title">Select a section</h2><p id="inspector-description">Choose a section from the canvas or the list to edit its content.</p></div><form id="inspector-form" autocomplete="off"></form><div class="inspector-actions" id="inspector-actions" hidden><button type="button" class="button ghost" id="duplicate-section-button">Duplicate</button><button type="button" class="button danger" id="delete-section-button">Delete</button></div><nav id="addon-tool-tabs" class="addon-tool-tabs" aria-label="Editor tools" hidden></nav><section class="shape-tools" data-addon-panel="drawing-menu" id="shape-tools" aria-label="Shapes and blending"><div class="sidebar-divider"></div><div class="section-title"><h2>Drawing menu</h2><span class="count" id="shape-count">0</span></div><p class="helper">Drag a shape from the palette onto the preview, or click to place it. Drag a shape to move it, or use its corner handle to resize. Shapes stay with the page as you scroll.</p><div id="shape-palette" class="shape-palette"></div><div class="shape-list" id="shape-list"></div></section><section class="shape-tools" data-addon-panel="text-tool" id="text-tools" aria-label="Text tool" hidden><div class="sidebar-divider"></div><div class="section-title"><h2>Text tool</h2></div><p class="helper">Add a preset, then edit its words, color, and size. Drag it onto the page or click to place it.</p><div id="text-presets" class="object-presets"></div><div id="text-object-list" class="shape-list"></div></section><section class="shape-tools" data-addon-panel="image-tool" id="image-tools" aria-label="Image tool" hidden><div class="sidebar-divider"></div><div class="section-title"><h2>Image tool</h2></div><p class="helper">Place an image frame, paste an HTTPS image URL, then drag or resize it on the page.</p><button type="button" class="button subtle wide image-frame-pick" id="add-image-object">▧ Add image frame</button><div id="image-object-list" class="shape-list"></div></section><section class="shape-tools template-tools" data-addon-panel="template-studio" id="template-tools" aria-label="Template studio" hidden><div class="sidebar-divider"></div><div class="section-title"><h2>Template Studio</h2></div><p class="helper">Save the selected section or canvas item, or package your whole page. Image, button, and link URLs stay in the template.</p><div class="control-group"><label for="template-name">Template name</label><input id="template-name" type="text" maxlength="70" value="My reusable template" /></div><div class="control-group"><label for="template-author">Creator name</label><input id="template-author" type="text" maxlength="70" placeholder="Your name" /></div><div class="control-group"><label for="template-description">Description</label><textarea id="template-description" rows="3" maxlength="180" placeholder="What makes this template useful?"></textarea></div><div class="control-group"><label for="template-scope">Save</label><select id="template-scope"><option value="selection">Selected section or canvas item</option><option value="page">All sections and canvas items</option></select></div><button type="button" class="button primary wide" id="save-template-pack">Create &amp; download template pack</button><p id="template-status" class="helper" role="status">The JSON pack can be shared by email or installed from a file or HTTPS URL.</p></section><section class="shape-tools motion-tools" data-addon-panel="motion-controls" id="motion-tools" aria-label="Motion effects" hidden><div class="sidebar-divider"></div><div class="section-title"><h2>Motion effects</h2></div><p class="helper">Set movement, independent width and height scaling, color, rotation, and fade for shapes, text, image frames, and 3D model frames as they move through the viewport.</p><div id="motion-controls-body"></div></section><section class="shape-tools model-tools" data-addon-panel="3d-models" id="model-tools" aria-label="3D model studio" hidden><div class="sidebar-divider"></div><div class="section-title"><h2>3D model studio</h2><span class="count" id="model-count">0</span></div><p class="helper">Upload a Blockbench BBMODEL, OBJ, STL, or GLB file. Drag the model to rotate it; Shift-drag moves its frame.</p><details class="model-help"><summary>Format and texture tips</summary><p>For colored OBJ models, select the OBJ, matching MTL, and texture images together. GLB uses embedded materials and textures. Blockbench BBMODEL uses embedded textures. Models and materials are included in project backups and website exports. Animation tracks are not imported.</p></details><button type="button" class="button primary wide" id="add-model-button">＋ Add 3D model</button><button type="button" class="button subtle wide" id="add-model-resources-button" hidden>Add model materials / textures</button><div id="model-object-list" class="shape-list"></div></section></aside>
+        <aside class="inspector" aria-label="Selected section editor"><div class="inspector-header"><span class="eyebrow">SECTION EDITOR</span><h2 id="inspector-title">Select a section</h2><p id="inspector-description">Choose a section from the canvas or the list to edit its content.</p></div><form id="inspector-form" autocomplete="off"></form><div class="inspector-actions" id="inspector-actions" hidden><button type="button" class="button ghost" id="duplicate-section-button">Duplicate</button><button type="button" class="button danger" id="delete-section-button">Delete</button></div><nav id="addon-tool-tabs" class="addon-tool-tabs" aria-label="Editor tools" hidden></nav><section class="shape-tools" data-addon-panel="drawing-menu" id="shape-tools" aria-label="Shapes and blending"><div class="sidebar-divider"></div><div class="section-title"><h2>Drawing menu</h2><span class="count" id="shape-count">0</span></div><p class="helper">Drag a shape from the palette onto the preview, or click to place it. Drag a shape to move it, or use its corner handle to resize. Shapes stay with the page as you scroll.</p><div id="shape-palette" class="shape-palette"></div><div class="shape-list" id="shape-list"></div></section><section class="shape-tools" data-addon-panel="text-tool" id="text-tools" aria-label="Text tool" hidden><div class="sidebar-divider"></div><div class="section-title"><h2>Text tool</h2></div><p class="helper">Add a preset, then edit its words, color, and size. Drag it onto the page or click to place it.</p><div id="text-presets" class="object-presets"></div><div id="text-object-list" class="shape-list"></div></section><section class="shape-tools" data-addon-panel="image-tool" id="image-tools" aria-label="Image tool" hidden><div class="sidebar-divider"></div><div class="section-title"><h2>Image tool</h2></div><p class="helper">Place an image frame, paste an HTTPS image URL, then drag or resize it on the page.</p><button type="button" class="button subtle wide image-frame-pick" id="add-image-object">▧ Add image frame</button><div id="image-object-list" class="shape-list"></div></section><section class="shape-tools template-tools" data-addon-panel="template-studio" id="template-tools" aria-label="Template studio" hidden><div class="sidebar-divider"></div><div class="section-title"><h2>Template Studio</h2></div><p class="helper">Save the selected section or canvas item, or package your whole page. Image, button, and link URLs stay in the template.</p><div class="control-group"><label for="template-name">Template name</label><input id="template-name" type="text" maxlength="70" value="My reusable template" /></div><div class="control-group"><label for="template-author">Creator name</label><input id="template-author" type="text" maxlength="70" placeholder="Your name" /></div><div class="control-group"><label for="template-description">Description</label><textarea id="template-description" rows="3" maxlength="180" placeholder="What makes this template useful?"></textarea></div><div class="control-group"><label for="template-scope">Save</label><select id="template-scope"><option value="selection">Selected section or canvas item</option><option value="page">All sections and canvas items</option></select></div><button type="button" class="button primary wide" id="save-template-pack">Create &amp; download template pack</button><p id="template-status" class="helper" role="status">The JSON pack can be shared by email or installed from a file or HTTPS URL.</p></section><section class="shape-tools motion-tools" data-addon-panel="motion-controls" id="motion-tools" aria-label="Motion effects" hidden><div class="sidebar-divider"></div><div class="section-title"><h2>Motion effects</h2></div><p class="helper">Set movement, independent width and height scaling, color, rotation, and fade for shapes, text, image frames, and 3D model frames as they move through the viewport.</p><div id="motion-controls-body"></div></section><section class="shape-tools model-tools" data-addon-panel="3d-models" id="model-tools" aria-label="3D model studio" hidden><div class="sidebar-divider"></div><div class="section-title"><h2>3D model studio</h2><span class="count" id="model-count">0</span></div><p class="helper">Upload a Blockbench BBMODEL, OBJ, STL, or GLB file. Drag the model to rotate it; Shift-drag moves its frame.</p><details class="model-help"><summary>Format and texture tips</summary><p>For colored OBJ models, select the OBJ, matching MTL, and texture images together. GLB uses embedded materials and textures. Blockbench BBMODEL uses embedded textures. Models and materials are included in project backups and website exports. Animation tracks are not imported.</p></details><button type="button" class="button primary wide" id="add-model-button">＋ Add 3D model</button><p id="model-upload-status" class="helper" role="status">Choose a model file, or drop it on an empty 3D frame.</p><button type="button" class="button subtle wide" id="add-model-resources-button" hidden>Add model materials / textures</button><div id="model-object-list" class="shape-list"></div></section></aside>
       </div>
     </div>
     <dialog id="template-dialog" class="template-dialog" aria-labelledby="template-dialog-title">
@@ -1083,7 +1084,7 @@ for (const [name, title, description, ids] of panelDefinitions) {
 $("#panel-text .rail-panel-heading").after($("#add-text-button"));
 $("#panel-uploads .rail-panel-heading").after($("#add-image-button"));
 $("#panel-uploads").append($("#canvas-image-file"));
-$("#panel-uploads").append($("#canvas-model-file"));
+$("#model-tools").append($("#canvas-model-file"));
 $("#panel-templates .rail-panel-heading").after($("#open-templates-button"));
 $("#panel-text").append($("#drawer-add .helper"));
 $("#addon-tool-tabs").hidden = true;
@@ -1930,6 +1931,12 @@ function addCanvasObject(type, x = 50, y = 50, preset = "plain") {
   setRailPanel(type === "image" ? "uploads" : type === "model3d" ? "models" : "text");
   save(); renderCanvas(); renderCanvasObjectTools(); renderInspector();
 }
+function modelUploadStatus(message, isError = false) {
+  const status = $("#model-upload-status");
+  status.textContent = message;
+  status.dataset.error = String(isError);
+  if (isError) toast(message);
+}
 async function uploadCanvasModel(file, selectedFiles = []) {
   const files = Array.from(selectedFiles || []).filter(Boolean);
   const isModelFile = candidate => candidate && ["obj", "stl", "glb", "bbmodel"].includes(candidate.name.split(".").pop().toLowerCase());
@@ -1937,15 +1944,20 @@ async function uploadCanvasModel(file, selectedFiles = []) {
   if (!primary) {
     const target = site.objects.find(item => item.id === pendingModelResourceId && item.type === "model3d");
     if (target && files.length) await uploadModelResources(target, files);
-    else if (files.length) toast("Select a model first, then choose its .mtl and texture files.");
+    else if (files.length) modelUploadStatus("Choose a .bbmodel, .obj, .stl, or .glb file first.", true);
     pendingModelResourceId = "";
     return;
   }
   const extension = primary.name.split(".").pop().toLowerCase();
-  if (!["obj", "stl", "glb", "bbmodel"].includes(extension)) { toast("Choose an OBJ, STL, GLB, or Blockbench BBMODEL file."); return; }
+  if (!["obj", "stl", "glb", "bbmodel"].includes(extension)) { modelUploadStatus("Choose an OBJ, STL, GLB, or Blockbench BBMODEL file.", true); return; }
   const selected = files.length ? files : [primary];
-  if (selected.some(candidate => candidate.size > 20000000) || selected.reduce((total, candidate) => total + candidate.size, 0) > 20000000) { toast("Keep the model and its companion materials and textures under 20 MB total."); return; }
+  if (selected.some(candidate => candidate.size > 20000000) || selected.reduce((total, candidate) => total + candidate.size, 0) > 20000000) { modelUploadStatus("Keep the model and its companion materials and textures under 20 MB total.", true); return; }
   try {
+    modelUploadStatus("Reading " + primary.name + "…");
+    if (extension === "bbmodel") {
+      const blockbench = JSON.parse(await primary.text());
+      if (!Array.isArray(blockbench.elements) || !blockbench.elements.length) throw new Error("This Blockbench file has no model elements.");
+    }
     const toDataUrl = async (candidate, asText = false) => {
       const bytes = new Uint8Array(await candidate.arrayBuffer()); let binary = "";
       for (let offset = 0; offset < bytes.length; offset += 0x8000) binary += String.fromCharCode(...bytes.subarray(offset, offset + 0x8000));
@@ -1963,14 +1975,16 @@ async function uploadCanvasModel(file, selectedFiles = []) {
       }
     }
     let object = site.objects.find(item => item.id === pendingModelReplacementId && item.type === "model3d");
+    if (!object) object = site.objects.find(item => item.id === selectedObjectId && item.type === "model3d" && !item.modelData);
     if (!object) { addCanvasObject("model3d"); object = site.objects.find(item => item.id === selectedObjectId); }
-    if (!object) return;
+    if (!object) throw new Error("Could not create a 3D frame. Check that the 3D Model Studio plugin is installed.");
     object.modelData = data; object.modelResources = resources; object.modelFormat = extension; object.modelFileName = primary.name.slice(0, 120); pendingModelReplacementId = "";
     pendingModelResourceId = "";
     save(); renderCanvas(); renderCanvasObjectTools(); renderInspector(); setRailPanel("models");
     const companionNote = extension === "obj" && !Object.keys(resources).some(name => name.toLowerCase().endsWith(".mtl")) ? " For OBJ color and textures, select its .mtl and image files at the same time." : "";
+    modelUploadStatus(primary.name + " loaded into the selected 3D frame.");
     toast(`${primary.name} added. Drag the model to rotate it; Shift-drag moves the frame.${companionNote}`);
-  } catch { toast("Could not read that 3D model file."); }
+  } catch (error) { modelUploadStatus("Could not load " + primary.name + ": " + (error?.message || "file read failed"), true); }
 }
 async function uploadModelResources(object, files) {
   const allowed = object.modelFormat === "obj"
@@ -2015,10 +2029,16 @@ function renderCanvasObjectTools() {
   });
   const addImage = $("#add-image-object"); addImage.onclick = () => addCanvasObject("image"); addImage.draggable = true;
   addImage.ondragstart = event => { event.dataTransfer?.setData("application/x-websiteforge-image", "image"); if (event.dataTransfer) event.dataTransfer.effectAllowed = "copy"; };
-  $("#add-model-button").onclick = () => { pendingModelReplacementId = ""; pendingModelResourceId = ""; $("#canvas-model-file").click(); };
   const selectedModel = site.objects.find(item => item.id === selectedObjectId && item.type === "model3d");
+  const addModelButton = $("#add-model-button");
+  addModelButton.textContent = selectedModel && !selectedModel.modelData ? "＋ Load file into selected 3D frame" : "＋ Add 3D model";
+  addModelButton.onclick = () => {
+    pendingModelReplacementId = selectedModel && !selectedModel.modelData ? selectedModel.id : "";
+    pendingModelResourceId = "";
+    $("#canvas-model-file").click();
+  };
   const resourcesButton = $("#add-model-resources-button");
-  resourcesButton.hidden = !selectedModel || !["obj", "glb"].includes(selectedModel.modelFormat);
+  resourcesButton.hidden = !selectedModel?.modelData || !["obj", "glb"].includes(selectedModel.modelFormat);
   resourcesButton.onclick = () => chooseModelResourceFiles(selectedModel);
   $("#model-count").textContent = String(site.objects.filter(object => object.type === "model3d").length);
   const renderList = (type, target) => {
@@ -2056,7 +2076,8 @@ function renderCanvasObjectTools() {
       } else {
         const fileNote = document.createElement("p"); fileNote.className = "helper"; fileNote.textContent = object.modelFileName ? `${object.modelFileName} · ${object.modelFormat.toUpperCase()}${Object.keys(object.modelResources || {}).length ? ` · ${Object.keys(object.modelResources).length} material/texture files` : ""}` : "No model file loaded."; controls.append(fileNote);
         const replace = document.createElement("button"); replace.type = "button"; replace.className = "button subtle wide"; replace.textContent = "Replace model file";
-        replace.addEventListener("click", () => { pendingModelReplacementId = object.id; $("#canvas-model-file").click(); }); controls.append(replace);
+        replace.textContent = object.modelData ? "Replace model file" : "Choose model file";
+        replace.addEventListener("click", () => { pendingModelReplacementId = object.id; pendingModelResourceId = ""; $("#canvas-model-file").click(); }); controls.append(replace);
         addControl("Model color", "color", object.color || site.accent, value => object.color = value);
         const pixelLabel = document.createElement("label"); pixelLabel.className = "pixel-texture-setting";
         const pixelToggle = document.createElement("input"); pixelToggle.type = "checkbox"; pixelToggle.checked = object.modelPixelArt !== false;
