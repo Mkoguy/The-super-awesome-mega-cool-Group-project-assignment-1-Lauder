@@ -61,6 +61,7 @@ $("#add-image-object").after(uploadToolButton);
 const storageKey = "websiteforge-project-v1";
 const pluginStorageKey = "websiteforge-plugins-v1";
 const workspaceModeKey = "websiteforge-workspace-mode-v1";
+const editorPreferencesKey = "websiteforge-editor-preferences-v1";
 const templateAuthorKey = "websiteforge-template-author-v1";
 const shortcutStorageKey = "websiteforge-shortcuts-v1";
 const bundledCatalog = globalThis.websiteForgeBuiltins || null;
@@ -76,11 +77,18 @@ try {
   if (currentPacks.length !== savedPacks.length) { try { localStorage.setItem(pluginStorageKey, JSON.stringify(installed)); } catch { /* The installed list still works for this session. */ } }
 }
 catch { installed = []; }
-const coreFeatures = new Set(["drawing-menu", "text-tool", "image-tool", "3d-models", "motion-controls"]);
+const coreFeatures = new Set(["drawing-menu", "text-tool", "image-tool"]);
 const hasInstalledFeature = feature => coreFeatures.has(feature) || installed.some(pack => pack.features.includes(feature));
 let lightModeEnabled = false;
 try { lightModeEnabled = localStorage.getItem(workspaceModeKey) === "light"; }
 catch { /* Browser storage may be unavailable for local files. */ }
+const editorPreferences = { density: "comfortable", motion: "full", startPanel: "templates" };
+try {
+  const saved = JSON.parse(localStorage.getItem(editorPreferencesKey) || "{}");
+  if (["comfortable", "compact"].includes(saved.density)) editorPreferences.density = saved.density;
+  if (["full", "reduced"].includes(saved.motion)) editorPreferences.motion = saved.motion;
+  if (["templates", "elements", "models", "layers", "pages", "plugins"].includes(saved.startPanel)) editorPreferences.startPanel = saved.startPanel;
+} catch { /* Use defaults when browser storage is unavailable. */ }
 let selectedId = site.sections[0]?.id;
 let selectedShapeId = hasInstalledFeature("motion-controls") ? site.shapes[0]?.id || "" : "";
 let selectedShapeIds = new Set(selectedShapeId ? [selectedShapeId] : []);
@@ -91,7 +99,7 @@ let suppressPaletteClickUntil = 0;
 let pendingModelReplacementId = "";
 let pendingModelResourceId = "";
 let activeTab = "build";
-let activeRail = hasInstalledFeature("motion-controls") ? "motion" : "templates";
+let activeRail = editorPreferences.startPanel;
 let toastTimer;
 let zoom = 1;
 let history = [JSON.stringify(site)];
@@ -322,8 +330,9 @@ function renderTemplateGallery() {
   $("#template-gallery-empty").hidden = shared.length > 0;
 }
 function applyWorkspaceMode() {
-  const installedLightMode = installed.some(pack => pack.id === "websiteforge.light-mode" && pack.features.includes("workspace-light-mode"));
-  document.body.classList.toggle("workspace-light", installedLightMode && lightModeEnabled);
+  document.body.classList.toggle("workspace-light", lightModeEnabled);
+  document.body.classList.toggle("workspace-compact", editorPreferences.density === "compact");
+  document.body.classList.toggle("workspace-reduced-motion", editorPreferences.motion === "reduced");
 }
 function setTab(name) {
   setRailPanel(name === "build" ? "pages" : name);
@@ -1188,13 +1197,19 @@ function renderPlugins() {
     if (pack.features.includes("workspace-light-mode")) {
       const toggle = document.createElement("button"); toggle.type = "button"; toggle.className = "button subtle";
       toggle.textContent = lightModeEnabled ? "Use dark workspace" : "Enable light mode";
-      toggle.addEventListener("click", () => { lightModeEnabled = !lightModeEnabled; try { localStorage.setItem(workspaceModeKey, lightModeEnabled ? "light" : "dark"); } catch { /* Keep the choice for this session. */ } applyWorkspaceMode(); renderPlugins(); pluginStatus(lightModeEnabled ? "Light mode is on for this editor." : "Dark mode is on for this editor."); });
+      toggle.addEventListener("click", () => { lightModeEnabled = !lightModeEnabled; try { localStorage.setItem(workspaceModeKey, lightModeEnabled ? "light" : "dark"); } catch { /* Keep the choice for this session. */ } applyWorkspaceMode(); renderAppearanceSettings(); renderPlugins(); pluginStatus(lightModeEnabled ? "Light mode is on for this editor." : "Dark mode is on for this editor."); });
       actions.append(toggle);
+    }
+    const toolPanel = pack.features.includes("3d-models") ? "models" : pack.features.includes("motion-controls") ? "motion" : null;
+    if (toolPanel) {
+      const open = document.createElement("button"); open.type = "button"; open.className = "button primary";
+      open.textContent = toolPanel === "models" ? "Open 3D studio" : "Open motion tools";
+      open.addEventListener("click", () => setRailPanel(toolPanel)); actions.append(open);
     }
     const exportButton = document.createElement("button"); exportButton.type = "button"; exportButton.className = "button ghost"; exportButton.textContent = "Share JSON";
     exportButton.addEventListener("click", () => download(`${pack.id}.json`, JSON.stringify(pack, null, 2), "application/json")); actions.append(exportButton);
     const remove = document.createElement("button"); remove.type = "button"; remove.className = "button danger"; remove.textContent = "Uninstall";
-    remove.addEventListener("click", () => { installed = installed.filter(item => item.id !== pack.id); savePlugins(); applyWorkspaceMode(); renderPlugins(); renderShapeTools(); renderCanvasObjectTools(); renderTemplateGallery(); renderCanvas(); renderLayerList(); if (pack.features.includes("motion-controls")) { if (activeRail === "motion") setRailPanel("plugins"); } pluginStatus(`${pack.name} uninstalled. Existing sections stay on this website.`); }); actions.append(remove);
+    remove.addEventListener("click", () => { installed = installed.filter(item => item.id !== pack.id); savePlugins(); applyWorkspaceMode(); renderPlugins(); renderCatalog(); renderShapeTools(); renderCanvasObjectTools(); renderTemplateGallery(); renderCanvas(); renderLayerList(); if (pack.features.includes("motion-controls")) { if (activeRail === "motion") setRailPanel("plugins"); } pluginStatus(`${pack.name} uninstalled. Existing sections stay on this website.`); }); actions.append(remove);
     card.append(actions); list.append(card);
   });
 }
@@ -1211,7 +1226,7 @@ function installPack(raw) {
       selectedContent = null;
     }
   }
-  savePlugins(); applyWorkspaceMode(); renderPlugins(); renderShapeTools(); renderCanvasObjectTools(); renderTemplateGallery(); renderCanvas(); renderLayerList(); pluginStatus(`${pack.name} installed. Choose its options below.`); if (pack.features.includes("motion-controls")) setRailPanel("motion"); else if (pack.features.includes("3d-models")) { activeAddonTool = "3d-models"; setRailPanel("models"); renderAddonToolTabs(); }
+  savePlugins(); applyWorkspaceMode(); renderPlugins(); renderCatalog(); renderShapeTools(); renderCanvasObjectTools(); renderTemplateGallery(); renderCanvas(); renderLayerList(); pluginStatus(`${pack.name} installed. Choose its options below.`); if (pack.features.includes("motion-controls")) setRailPanel("motion"); else if (pack.features.includes("3d-models")) { activeAddonTool = "3d-models"; setRailPanel("models"); renderAddonToolTabs(); }
   if (pack.features.includes("motion-controls")) { renderCanvas(); renderInspector(); }
 }
 async function fetchPack(rawUrl) {
@@ -1235,10 +1250,20 @@ async function renderCatalog() {
     }
     for (const entry of catalog.packs || []) {
       if (typeof entry.name !== "string" || typeof entry.manifest !== "string") continue;
+      if (installed.some(pack => pack.id === entry.id)) continue;
       const card = pluginCard(entry.name, String(entry.description || ""));
       const install = document.createElement("button"); install.type = "button"; install.className = "button subtle";
       install.textContent = "Install pack";
-      install.addEventListener("click", async () => { install.disabled = true; try { installPack(bundledCatalog?.manifests[entry.manifest] || await fetchPack(entry.manifest)); } catch (error) { pluginStatus(error.message || "Could not install pack."); } finally { install.disabled = false; } });
+      install.addEventListener("click", async () => {
+        install.disabled = true;
+        try {
+          const pack = bundledCatalog?.manifests[entry.manifest] || await fetchPack(entry.manifest);
+          card.classList.add("plugin-card-departing");
+          await new Promise(resolve => setTimeout(resolve, editorPreferences.motion === "reduced" ? 0 : 420));
+          installPack(pack);
+        } catch (error) { card.classList.remove("plugin-card-departing"); pluginStatus(error.message || "Could not install pack."); }
+        finally { install.disabled = false; }
+      });
       card.append(install); list.append(card);
     }
   } catch { const note = document.createElement("p"); note.className = "helper"; note.textContent = "Catalog unavailable. You can still install a JSON file or URL."; list.append(note); }
@@ -1435,6 +1460,17 @@ function showSettingsTab(name) {
   document.querySelectorAll(".settings-tab").forEach(button => button.classList.toggle("active", button.dataset.settingsTab === name));
   document.querySelectorAll(".settings-panel").forEach(panel => panel.hidden = panel.id !== `settings-${name}`);
 }
+function renderAppearanceSettings() {
+  $("#setting-workspace-theme").value = lightModeEnabled ? "light" : "dark";
+  $("#setting-sidebar-density").value = editorPreferences.density;
+  $("#setting-interface-motion").value = editorPreferences.motion;
+  $("#setting-start-panel").value = editorPreferences.startPanel;
+}
+function saveEditorPreferences() {
+  try { localStorage.setItem(editorPreferencesKey, JSON.stringify(editorPreferences)); }
+  catch { toast("These preferences could not be saved on this device."); }
+  applyWorkspaceMode();
+}
 async function uploadSelectedImage(file) {
   if (!file || !/^image\/(png|jpeg|webp|gif)$/.test(file.type) || file.size > 15000000) { toast("Choose a PNG, JPG, WebP, or GIF under 15 MB."); return; }
   try {
@@ -1475,6 +1511,14 @@ $("#page-strip-add").addEventListener("click", () => { setRailPanel("pages"); $(
 $("#settings-button").addEventListener("click", () => { showSettingsTab("general"); $("#settings-dialog").showModal(); });
 $("#close-settings-dialog").addEventListener("click", () => $("#settings-dialog").close());
 document.querySelectorAll(".settings-tab").forEach(button => button.addEventListener("click", () => showSettingsTab(button.dataset.settingsTab)));
+$("#setting-workspace-theme").addEventListener("change", event => {
+  lightModeEnabled = event.target.value === "light";
+  try { localStorage.setItem(workspaceModeKey, lightModeEnabled ? "light" : "dark"); } catch { /* Keep this session's choice. */ }
+  applyWorkspaceMode(); renderPlugins();
+});
+$("#setting-sidebar-density").addEventListener("change", event => { editorPreferences.density = event.target.value; saveEditorPreferences(); });
+$("#setting-interface-motion").addEventListener("change", event => { editorPreferences.motion = event.target.value; saveEditorPreferences(); });
+$("#setting-start-panel").addEventListener("change", event => { editorPreferences.startPanel = event.target.value; saveEditorPreferences(); });
 $("#reset-all-shortcuts").addEventListener("click", () => { shortcuts = defaultShortcuts(); saveShortcuts(); renderShortcutSettings(); $("#shortcut-status").textContent = "All keyboard shortcuts restored."; });
 $("#undo-button").addEventListener("click", () => restoreHistory(-1));
 $("#redo-button").addEventListener("click", () => restoreHistory(1));
@@ -1651,5 +1695,5 @@ $("#install-file-button").addEventListener("click", () => $("#plugin-file").clic
 $("#plugin-file").addEventListener("change", async event => { const file = event.target.files[0]; if (!file) return; try { if (file.size > 1000000) throw new Error("Plugin pack is too large."); installPack(JSON.parse(await file.text())); } catch (error) { pluginStatus(error.message || "Could not install pack."); } event.target.value = ""; });
 $("#generate-site-button").addEventListener("click", () => ai("site"));
 $("#rewrite-section-button").addEventListener("click", () => ai("rewrite"));
-renderTemplateGallery(); renderShortcutSettings(); applyWorkspaceMode(); setRailPanel(activeRail); update(); renderCatalog(); checkAiAvailability();
+renderTemplateGallery(); renderShortcutSettings(); renderAppearanceSettings(); applyWorkspaceMode(); setRailPanel(activeRail); update(); renderCatalog(); checkAiAvailability();
 restoreLargeProject(Number(localStorage.getItem(storageKey + "-savedAt")) || 0);
