@@ -22,8 +22,8 @@ export function normalizeMotion(input) {
   const screen = input?.trigger === "screen" || (input?.trigger == null && (input?.moveX != null || input?.centerY != null));
   const scaleX = input?.scaleX != null && Number(input.scaleX) <= 3 ? Number(input.scaleX) * 100 : input?.scaleX;
   const scaleY = input?.scaleY != null && Number(input.scaleY) <= 3 ? Number(input.scaleY) * 100 : input?.scaleY;
-  const x = number(input?.x ?? input?.moveX, 0, -500, 500);
-  const y = number(input?.y ?? input?.moveY, 0, -500, 500);
+  const x = number(screen ? input?.moveX ?? input?.x : input?.x ?? input?.moveX, 0, -500, 500);
+  const y = number(screen ? input?.moveY ?? input?.y : input?.y ?? input?.moveY, 0, -500, 500);
   const fade = number(input?.fade ?? (input?.opacity != null ? (1 - Number(input.opacity)) * 100 : 0), 0, 0, 100);
   return {
     enabled: input?.enabled === true,
@@ -166,7 +166,7 @@ export function normalizeSite(input) {
     modelResources: item.type === "model3d" && item.modelResources && typeof item.modelResources === "object" ? Object.fromEntries(Object.entries(item.modelResources).slice(0, 40).filter(([name, source]) => /^[^\\/:*?"<>|]{1,180}$/.test(name) && typeof source === "string" && source.length <= 28000000 && /^data:(?:text\/plain|image\/(?:png|jpeg|webp|gif|bmp|avif));base64,[A-Za-z0-9+/]+={0,2}$/i.test(source)).map(([name, source]) => [name, source])) : {},
     modelFormat: choice(item.modelFormat, ["bbmodel", "obj", "stl", "glb"], "bbmodel"),
     modelFileName: trim(item.modelFileName, 160), modelScale: number(item.modelScale, 1, .2, 3),
-    modelRotateX: number(item.modelRotateX, -25, -360, 360), modelRotateY: number(item.modelRotateY, 35, -360, 360), modelPixelArt: item.modelPixelArt !== false,
+    modelRotateX: number(item.modelRotateX, -25, -360, 360), modelRotateY: number(item.modelRotateY, 35, -360, 360), modelPixelArt: item.modelPixelArt !== false, modelTintTextures: item.modelTintTextures === true,
     modelMoveX: number(item.modelMoveX, 0, -2, 2), modelMoveY: number(item.modelMoveY, 0, -2, 2), modelMoveZ: number(item.modelMoveZ, 0, -2, 2),
     motion: normalizeMotion(item.motion)
   }));
@@ -239,7 +239,7 @@ export function renderSite(site, editable = false, selectedShapeId = "", selecte
     const content = object.type === "image"
       ? imageUrl ? `<img src="${escapeHtml(imageUrl)}" alt="${escapeHtml(object.alt)}" draggable="false">` : `<span class="image-object-empty">Add an HTTPS image URL</span>`
       : object.type === "model3d"
-        ? `<div class="model3d-viewer" data-model-format="${escapeHtml(object.modelFormat)}" data-model-data="${escapeHtml(object.modelData)}" data-model-resources="${escapeHtml(JSON.stringify(object.modelResources || {}))}" data-model-color="${color(object.color, "#ed7418")}" data-model-scale="${number(object.modelScale, 1, .2, 3)}" data-model-rotate-x="${number(object.modelRotateX, 18, -360, 360)}" data-model-rotate-y="${number(object.modelRotateY, -28, -360, 360)}" data-model-move-x="${number(object.modelMoveX, 0, -2, 2)}" data-model-move-y="${number(object.modelMoveY, 0, -2, 2)}" data-model-move-z="${number(object.modelMoveZ, 0, -2, 2)}" data-model-pixel-art="${object.modelPixelArt !== false}" role="${editable ? "group" : "img"}" aria-label="Interactive 3D model: ${escapeHtml(object.modelFileName || "model")}"><canvas class="model3d-canvas" aria-hidden="true"></canvas><span class="model3d-message">Loading 3D model…</span>${editable ? `<div class="model3d-toolbar" role="toolbar" aria-label="3D Move controls"><button type="button" data-model-mode="orbit" aria-pressed="true">Orbit</button><button type="button" data-model-mode="move" aria-pressed="false">Move X/Y</button><button type="button" data-model-mode="depth" aria-pressed="false">Move Z</button></div><span class="model3d-editor-help">Drag to edit model · Shift-drag to move frame</span>` : ""}</div>`
+        ? `<div class="model3d-viewer" data-model-format="${escapeHtml(object.modelFormat)}" data-model-data="${escapeHtml(object.modelData)}" data-model-resources="${escapeHtml(JSON.stringify(object.modelResources || {}))}" data-model-color="${color(object.color, "#ed7418")}" data-model-tint-textures="${object.modelTintTextures === true}" data-model-scale="${number(object.modelScale, 1, .2, 3)}" data-model-rotate-x="${number(object.modelRotateX, 18, -360, 360)}" data-model-rotate-y="${number(object.modelRotateY, -28, -360, 360)}" data-model-move-x="${number(object.modelMoveX, 0, -2, 2)}" data-model-move-y="${number(object.modelMoveY, 0, -2, 2)}" data-model-move-z="${number(object.modelMoveZ, 0, -2, 2)}" data-model-pixel-art="${object.modelPixelArt !== false}" role="${editable ? "group" : "img"}" aria-label="Interactive 3D model: ${escapeHtml(object.modelFileName || "model")}"><canvas class="model3d-canvas" aria-hidden="true"></canvas><span class="model3d-message">Loading 3D model…</span>${editable ? `<div class="model3d-toolbar" role="toolbar" aria-label="3D Move controls"><button type="button" data-model-mode="orbit" aria-pressed="true">Orbit</button><button type="button" data-model-mode="move" aria-pressed="false">Move X/Y</button><button type="button" data-model-mode="depth" aria-pressed="false">Move Z</button></div><span class="model3d-editor-help">Drag to edit model · Shift-drag to move frame</span>` : ""}</div>`
         : `<span class="text-object-content preset-${object.preset}" style="font-size:${number(object.fontSize,42,10,180)}px">${escapeHtml(object.text || "Your text")}</span>`;
     return `<div class="site-canvas-object canvas-object-${object.type}${object.type === "text" ? ` preset-frame-${object.preset}` : ""}${editable ? " editor-canvas-object" : ""}${selected ? " canvas-object-selected" : ""}${motion.enabled ? motion.screen ? " motion-enabled motion-screen" : " site-motion" : ""}" ${editAttrs} data-canvas-y="${object.y}" style="${style}">${content}${handles}</div>`;
   }).join("");
@@ -260,7 +260,7 @@ export const SITE_CSS = `
 .canvas-object-model3d{overflow:visible;background:transparent}.model3d-viewer{position:relative;display:block;width:100%;height:100%;min-width:24px;min-height:24px;overflow:hidden;background:transparent}.model3d-canvas{display:block;width:100%;height:100%;touch-action:none;cursor:grab}.model3d-canvas:active{cursor:grabbing}.model3d-message{position:absolute;inset:0;display:grid;place-items:center;padding:10px;color:var(--site-muted);font:12px Arial,sans-serif;text-align:center;pointer-events:none}.model3d-viewer.model3d-ready .model3d-message{display:none}.model3d-editor-help{position:absolute;right:4px;bottom:4px;padding:2px 5px;border-radius:4px;background:#111b;color:#fff;font:9px Arial,sans-serif;pointer-events:none;opacity:0;transition:opacity .15s}.editor-canvas-object.canvas-object-model3d:hover .model3d-editor-help{opacity:1}
 .model3d-toolbar{position:absolute;top:6px;left:6px;z-index:4;display:flex;gap:3px;padding:3px;border:1px solid #ffffff55;border-radius:7px;background:#15151ad9;box-shadow:0 3px 12px #0005}.model3d-toolbar button{padding:5px 7px;border:0;border-radius:4px;background:transparent;color:#eee;font:700 10px Arial,sans-serif;cursor:pointer;white-space:nowrap}.model3d-toolbar button[aria-pressed=true]{background:#f47b20;color:#171717}.model3d-toolbar button:hover{background:#ffffff33}.model3d-toolbar button[aria-pressed=true]:hover{background:#ff943b}
 .built-site .motion-screen{transform-origin:center;will-change:transform,filter,opacity}.built-site .site-decoration.motion-enabled,.built-site .site-canvas-object.motion-enabled{pointer-events:auto}.built-site .motion-screen.motion-position-active{transform:translate(calc(-50% + var(--motion-current-x,0px)),calc(-50% + var(--motion-current-y,0px))) rotate(calc(var(--base-rotation,0deg) + var(--motion-current-rotation,0deg))) scale(var(--motion-current-scale-x,1),var(--motion-current-scale-y,1))!important;filter:hue-rotate(var(--motion-current-hue,0deg));opacity:var(--motion-current-opacity,1)!important}
-.built-site .site-motion{animation:wf-motion var(--motion-duration,2s) ease-in-out infinite alternate}@keyframes wf-motion{from{translate:0 0;scale:1 1;rotate:0deg;filter:hue-rotate(0deg);opacity:var(--motion-opacity-start,1)}to{translate:var(--motion-x,0px) var(--motion-y,0px);scale:var(--motion-scale-x,1) var(--motion-scale-y,1);rotate:var(--motion-rotation,0deg);filter:hue-rotate(var(--motion-hue,0deg));opacity:var(--motion-opacity-end,1)}}@media(prefers-reduced-motion:reduce){.built-site .site-motion{animation:none}}
+.built-site .site-motion{animation:wf-motion var(--motion-duration,2s) ease-in-out infinite alternate}@keyframes wf-motion{from{translate:0 0;scale:1 1;rotate:0deg;filter:hue-rotate(0deg);opacity:var(--motion-opacity-start,1)}to{translate:var(--motion-x,0px) var(--motion-y,0px);scale:var(--motion-scale-x,1) var(--motion-scale-y,1);rotate:var(--motion-rotation,0deg);filter:hue-rotate(var(--motion-hue,0deg));opacity:var(--motion-opacity-end,1)}}.workspace-reduced-motion .built-site .site-motion{animation:none}.workspace-reduced-motion .built-site .motion-screen.motion-position-active{transform:translate(-50%,-50%) rotate(var(--base-rotation,0deg))!important;filter:none!important;opacity:var(--base-opacity,1)!important}@media(prefers-reduced-motion:reduce){.built-site .site-motion{animation:none}.built-site .motion-screen.motion-position-active{transform:translate(-50%,-50%) rotate(var(--base-rotation,0deg))!important;filter:none!important;opacity:var(--base-opacity,1)!important}}
 `;
 
 export function mountModelViewers(root = document) {
@@ -482,7 +482,7 @@ export function mountModelViewers(root = document) {
       textures = projectTextures.map((texture, index) => {
         const id = String(texture?.uuid || texture?.id || index);
         const source = typeof texture?.source === "string" && /^data:image\/(?:png|jpeg|webp|gif|bmp|avif);base64,/i.test(texture.source) ? texture.source : "";
-        const entry = { id, source, uvWidth: Number(texture?.uv_width) || Number(project.texture_width) || Number(project.resolution?.width) || 16, uvHeight: Number(texture?.uv_height) || Number(project.texture_height) || Number(project.resolution?.height) || 16 };
+        const entry = { id, source, uvWidth: Number(texture?.uv_width) || Number(project.texture_width) || Number(project.resolution?.width) || 16, uvHeight: Number(texture?.uv_height) || Number(project.texture_height) || Number(project.resolution?.height) || 16, pixelUvs: true };
         [texture?.uuid, texture?.id, index].filter(value => value !== undefined && value !== null).forEach(value => textureIdByReference.set(String(value), id));
         return entry;
       });
@@ -633,14 +633,18 @@ export function mountModelViewers(root = document) {
         let textured = false;
         const imageWidth = image?.naturalWidth || image?.width || 0, imageHeight = image?.naturalHeight || image?.height || 0;
         if (image && image.complete !== false && imageWidth && imageHeight && texture && face.material.uvs?.length === 3) {
-          const uv = face.material.uvs.map(([u,v]) => [u * imageWidth / Math.max(1, texture.uvWidth || imageWidth), v * imageHeight / Math.max(1, texture.uvHeight || imageHeight)]);
+          const uScale = imageWidth / Math.max(1, texture.uvWidth || imageWidth);
+          const vScale = texture.pixelUvs ? uScale : imageHeight / Math.max(1, texture.uvHeight || imageHeight);
+          const uv = face.material.uvs.map(([u,v]) => [u * uScale, v * vScale]);
           const [s0,s1,s2] = uv, [d0,d1,d2] = [face.a,face.b,face.c], determinant=(s1[0]-s0[0])*(s2[1]-s0[1])-(s2[0]-s0[0])*(s1[1]-s0[1]);
           if (Math.abs(determinant) > .0001) {
             const a=((d1[0]-d0[0])*(s2[1]-s0[1])-(d2[0]-d0[0])*(s1[1]-s0[1]))/determinant, c=((s1[0]-s0[0])*(d2[0]-d0[0])-(s2[0]-s0[0])*(d1[0]-d0[0]))/determinant;
             const b=((d1[1]-d0[1])*(s2[1]-s0[1])-(d2[1]-d0[1])*(s1[1]-s0[1]))/determinant, d=((s1[0]-s0[0])*(d2[1]-d0[1])-(s2[0]-s0[0])*(d1[1]-d0[1]))/determinant;
             const e=d0[0]-a*s0[0]-c*s0[1], f=d0[1]-b*s0[0]-d*s0[1];
             context.save(); context.clip(); context.globalAlpha = Math.max(0, Math.min(1, authoredColor?.[3] ?? face.material.alpha ?? 1)); context.setTransform(ratio*a,ratio*b,ratio*c,ratio*d,ratio*e,ratio*f); context.imageSmoothingEnabled=stage.dataset.modelPixelArt !== "true"; context.drawImage(image,0,0);
-            if (authoredColor && authoredColor.slice(0, 3).some(value => Math.abs(value - 1) > .001)) { context.globalCompositeOperation = "multiply"; context.fillStyle = `rgb(${authoredColor.slice(0, 3).map(value => Math.round(Math.max(0, Math.min(1, value)) * 255)).join(" ")})`; context.fillRect(0, 0, imageWidth, imageHeight); }
+            const tint = stage.dataset.modelTintTextures === "true" ? [red / 255, green / 255, blue / 255] : [1, 1, 1];
+            const multiplier = tint.map((value, index) => value * (authoredColor?.[index] ?? 1));
+            if (multiplier.some(value => Math.abs(value - 1) > .001)) { context.globalCompositeOperation = "multiply"; context.fillStyle = `rgb(${multiplier.map(value => Math.round(Math.max(0, Math.min(1, value)) * 255)).join(" ")})`; context.fillRect(0, 0, imageWidth, imageHeight); }
             context.restore(); textured = true;
           }
         }

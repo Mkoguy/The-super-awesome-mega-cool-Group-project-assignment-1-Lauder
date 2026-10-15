@@ -368,6 +368,7 @@ function setRailPanel(name) {
     if (drawer) drawer.open = true;
   }
   sidebar.scrollTop = 0;
+  if (name === "motion") renderMotionTools();
 }
 function renderList() {
   const list = $("#section-list");
@@ -489,6 +490,7 @@ function selectionDropdown(form, label, value, choices, onChange) {
   return input;
 }
 function motionControls(form, item) {
+  if (!hasInstalledFeature("motion-controls")) return;
   const group = selectionGroup(form, "Motion effects");
   item.motion ||= { enabled: false, speed: 1, centerY: 50, moveX: 52, moveY: -34, scaleX: 1.3, scaleY: .72, hue: 90, rotation: 18, opacity: .6 };
   selectionCheckbox(group, "Enable motion", item.motion.enabled, value => { item.motion.enabled = value; });
@@ -618,7 +620,7 @@ function renderInspector() {
     $("#inspector-description").textContent = "Drag to move, use edge handles to resize, or drag the round handle above to rotate.";
     if (object?.type === "text") { selectionControl(form, "Text", "textarea", object.text, value => { object.text = value; }, { maxLength: 500 }); selectionControl(form, "Font size (px)", "number", object.fontSize, value => { object.fontSize = Number(value); }, { min: 10, max: 180 }); }
     if (object?.type === "image") { selectionControl(form, "Image URL (HTTPS)", "url", object.url, value => { object.url = value; }, { maxLength: 500 }); selectionControl(form, "Alt text", "text", object.alt, value => { object.alt = value; }, { maxLength: 160 }); const upload = document.createElement("button"); upload.type = "button"; upload.className = "button subtle wide"; upload.textContent = "Upload image"; upload.addEventListener("click", () => $("#canvas-image-file").click()); form.append(upload); }
-    if (object?.type === "model3d") { selectionControl(form, "Model name", "text", object.modelFileName, value => { object.modelFileName = value; }, { maxLength: 160 }); selectionControl(form, "Model scale", "number", object.modelScale, value => { object.modelScale = Number(value) || 1; }, { min: .2, max: 3, step: .1 }); selectionControl(form, "Rotate model X (degrees)", "number", object.modelRotateX, value => { object.modelRotateX = Number(value) || 0; }, { min: -360, max: 360 }); selectionControl(form, "Rotate model Y (degrees)", "number", object.modelRotateY, value => { object.modelRotateY = Number(value) || 0; }, { min: -360, max: 360 }); }
+    if (object?.type === "model3d") { selectionControl(form, "Model name", "text", object.modelFileName, value => { object.modelFileName = value; }, { maxLength: 160 }); selectionControl(form, "Model scale", "number", object.modelScale, value => { object.modelScale = Number(value) || 1; }, { min: .2, max: 3, step: .1 }); selectionControl(form, "Rotate model X (degrees)", "number", object.modelRotateX, value => { object.modelRotateX = Number(value) || 0; }, { min: -360, max: 360 }); selectionControl(form, "Rotate model Y (degrees)", "number", object.modelRotateY, value => { object.modelRotateY = Number(value) || 0; }, { min: -360, max: 360 }); selectionCheckbox(form, "Tint model textures with the selected color", object.modelTintTextures, value => { object.modelTintTextures = value; }); }
     const transform = selectionGroup(form, "Position & size", true);
     selectionControl(transform, "X position (%)", "number", item.x, value => { item.x = Number(value) || 0; }, { min: 0, max: 100, step: .1 });
     selectionControl(transform, "Y position (%)", "number", item.y, value => { item.y = Number(value) || 0; }, { min: 0, max: 100, step: .1 });
@@ -672,6 +674,7 @@ function updateScreenPositionMotion() {
     const viewportTop = viewportRect?.top || 0;
     const viewportHeight = viewport?.clientHeight || window.innerHeight || 1;
     document.querySelectorAll("#site-preview .motion-screen").forEach(item => {
+      if (item.dataset.motionPreviewing === "true") return;
       const root = item.closest(".built-site");
       if (!root) return;
       const rootRect = root.getBoundingClientRect();
@@ -895,7 +898,7 @@ function renderCanvas() {
 }
 const shapeOptions=SHAPE_TYPES;
 const blendOptions=["normal","multiply","screen","overlay","darken","lighten","color-dodge","color-burn","hard-light","soft-light","difference","exclusion","hue","saturation","color","luminosity"];
-function addShape(type,x=50,y=50){activeAddonTool=hasInstalledFeature("motion-controls")?"motion-controls":"drawing-menu";const shape={id:globalThis.crypto?.randomUUID?.()||`shape-${Date.now()}`,type,x,y,size:120,width:120,height:120,color:site.accent,opacity:.8,blend:"normal",rotation:0,z:2,motion:{enabled:false,speed:1,centerY:50,moveX:52,moveY:-34,scaleX:1.3,scaleY:.72,hue:90,rotation:18,opacity:.6}};site.shapes.push(shape);selectedShapeId=shape.id;selectedShapeIds=new Set([shape.id]);selectedObjectId="";selectedContent=null;setRailPanel(hasInstalledFeature("motion-controls")?"motion":"elements");save();renderCanvas();renderShapeTools();renderInspector();}
+function addShape(type,x=50,y=50){activeAddonTool=hasInstalledFeature("motion-controls")?"motion-controls":"drawing-menu";const shape={id:globalThis.crypto?.randomUUID?.()||`shape-${Date.now()}`,type,x,y,size:120,width:120,height:120,color:site.accent,opacity:.8,blend:"normal",rotation:0,z:2,motion:normalizeMotion({enabled:false,speed:1,centerY:50,moveX:52,moveY:-34,scaleX:130,scaleY:72,hue:90,rotation:18,opacity:.6})};site.shapes.push(shape);selectedShapeId=shape.id;selectedShapeIds=new Set([shape.id]);selectedObjectId="";selectedContent=null;setRailPanel(hasInstalledFeature("motion-controls")?"motion":"elements");save();renderCanvas();renderShapeTools();renderInspector();}
 function hexToHsv(hex){const value=hex.replace("#","");let r=parseInt(value.slice(0,2),16)/255,g=parseInt(value.slice(2,4),16)/255,b=parseInt(value.slice(4,6),16)/255;const max=Math.max(r,g,b),min=Math.min(r,g,b),delta=max-min;let h=0;if(delta){if(max===r)h=((g-b)/delta)%6;else if(max===g)h=(b-r)/delta+2;else h=(r-g)/delta+4;h=(h*60+360)%360;}return{h,s:max?delta/max:0,v:max};}
 function hsvToHex(h,s,v){const c=v*s,x=c*(1-Math.abs((h/60)%2-1)),m=v-c;let rgb=h<60?[c,x,0]:h<120?[x,c,0]:h<180?[0,c,x]:h<240?[0,x,c]:h<300?[x,0,c]:[c,0,x];return"#"+rgb.map(channel=>Math.round((channel+m)*255).toString(16).padStart(2,"0")).join("");}
 function appendShapeColorPicker(parent,shape){const state=hexToHsv(shape.color),wrap=document.createElement("div"),label=document.createElement("label"),hue=document.createElement("input"),field=document.createElement("div"),thumb=document.createElement("span");wrap.className="shape-color-picker";label.textContent="Color";hue.type="range";hue.min=0;hue.max=360;hue.value=state.h;hue.setAttribute("aria-label","Color hue");field.className="shape-color-field";field.tabIndex=0;field.setAttribute("role","slider");field.setAttribute("aria-label","Color saturation and brightness");thumb.className="shape-color-thumb";field.append(thumb);const paint=()=>{field.style.backgroundImage=`linear-gradient(to top,#000,transparent),linear-gradient(to right,#fff,hsl(${state.h} 100% 50%))`;thumb.style.left=`${state.s*100}%`;thumb.style.top=`${(1-state.v)*100}%`;field.setAttribute("aria-valuetext",shape.color);};const updateColor=()=>{shape.color=hsvToHex(state.h,state.s,state.v);paint();save();renderCanvas();};const pickPoint=event=>{const rect=field.getBoundingClientRect();state.s=Math.max(0,Math.min(1,(event.clientX-rect.left)/rect.width));state.v=1-Math.max(0,Math.min(1,(event.clientY-rect.top)/rect.height));updateColor();};hue.addEventListener("input",()=>{state.h=Number(hue.value);updateColor();});field.addEventListener("pointerdown",event=>{event.preventDefault();field.setPointerCapture(event.pointerId);pickPoint(event);const move=e=>pickPoint(e),stop=()=>{field.removeEventListener("pointermove",move);field.removeEventListener("pointerup",stop);field.removeEventListener("pointercancel",stop);};field.addEventListener("pointermove",move);field.addEventListener("pointerup",stop);field.addEventListener("pointercancel",stop);});field.addEventListener("keydown",event=>{const step=event.shiftKey ? 0.1 : 0.02;if(event.key==="ArrowLeft")state.s=Math.max(0,state.s-step);else if(event.key==="ArrowRight")state.s=Math.min(1,state.s+step);else if(event.key==="ArrowUp")state.v=Math.min(1,state.v+step);else if(event.key==="ArrowDown")state.v=Math.max(0,state.v-step);else return;event.preventDefault();updateColor();});paint();wrap.append(label,hue,field);parent.append(wrap);}
@@ -917,11 +920,11 @@ function addCanvasObject(type, x = 50, y = 50, preset = "plain") {
     id: globalThis.crypto?.randomUUID?.() || `object-${Date.now()}`, type, x, y,
     width: type === "image" ? 300 : type === "model3d" ? 300 : preset === "badge" ? 140 : 320,
     height: type === "image" ? 190 : type === "model3d" ? 280 : preset === "badge" ? 54 : 100,
-    rotation: 0, motion: { enabled: false, speed: 1, centerY: 50, moveX: 52, moveY: -34, scaleX: 1.3, scaleY: .72, hue: 90, rotation: 18, opacity: .6 },
+    rotation: 0, motion: normalizeMotion({ enabled: false, speed: 1, centerY: 50, moveX: 52, moveY: -34, scaleX: 130, scaleY: 72, hue: 90, rotation: 18, opacity: .6 }),
     color: type === "text" ? (preset === "badge" ? "#ffffff" : site.palette.ink) : site.accent,
     background: type === "text" && preset === "badge" ? site.accent : "", opacity: 1, blend: "normal", z: 3,
     text: definition.text, fontSize: definition.fontSize, preset: type === "text" ? preset : "plain", url: "", alt: "",
-    modelData: "", modelResources: {}, modelFormat: "obj", modelFileName: "", modelScale: 1, modelRotateX: 18, modelRotateY: -28, modelMoveX: 0, modelMoveY: 0, modelMoveZ: 0, modelPixelArt: true
+    modelData: "", modelResources: {}, modelFormat: "obj", modelFileName: "", modelScale: 1, modelRotateX: 18, modelRotateY: -28, modelMoveX: 0, modelMoveY: 0, modelMoveZ: 0, modelPixelArt: true, modelTintTextures: false
   };
   site.objects.push(object); selectedObjectId = object.id; selectedShapeId = ""; selectedShapeIds.clear(); selectedContent = null;
   setRailPanel(type === "image" ? "uploads" : type === "model3d" ? "models" : "text");
@@ -1075,6 +1078,12 @@ function renderCanvasObjectTools() {
         replace.textContent = object.modelData ? "Replace model file" : "Choose model file";
         replace.addEventListener("click", () => { pendingModelReplacementId = object.id; pendingModelResourceId = ""; $("#canvas-model-file").click(); }); controls.append(replace);
         addControl("Model color", "color", object.color || site.accent, value => object.color = value);
+        const colorHelp = document.createElement("p"); colorHelp.className = "helper"; colorHelp.textContent = "Colors untextured faces. Turn on tint to recolor textured faces too."; controls.append(colorHelp);
+        const tintLabel = document.createElement("label"); tintLabel.className = "pixel-texture-setting";
+        const tintToggle = document.createElement("input"); tintToggle.type = "checkbox"; tintToggle.checked = object.modelTintTextures === true;
+        const tintCaption = document.createElement("span"); tintCaption.textContent = "Tint model textures";
+        tintToggle.addEventListener("change", () => { object.modelTintTextures = tintToggle.checked; save(); renderCanvas(); });
+        tintLabel.append(tintToggle, tintCaption); controls.append(tintLabel);
         const pixelLabel = document.createElement("label"); pixelLabel.className = "pixel-texture-setting";
         const pixelToggle = document.createElement("input"); pixelToggle.type = "checkbox"; pixelToggle.checked = object.modelPixelArt !== false;
         const pixelCaption = document.createElement("span"); pixelCaption.textContent = "Crisp pixel-art textures";
@@ -1113,7 +1122,7 @@ function renderMotionTools() {
     const sample = document.createElement("button"); sample.type = "button"; sample.className = "button subtle wide"; sample.textContent = "Add a sample shape"; sample.addEventListener("click", () => addShape("circle"));
     body.append(note, sample); return;
   }
-  item.motion ||= { enabled: false, speed: 1, centerY: 50, moveX: 52, moveY: -34, scaleX: 1.3, scaleY: .72, hue: 90, rotation: 18, opacity: .6 };
+  item.motion = normalizeMotion(item.motion);
   const motion = item.motion;
   const card = document.createElement("div"); card.className = "motion-card";
   const heading = document.createElement("strong"); heading.textContent = `${item.type === "image" || item.type === "model3d" ? `${item.type === "model3d" ? "3D model" : "Image"} frame` : item.type === "text" ? "Text" : item.type.replaceAll("-", " ")} motion`;
@@ -1145,8 +1154,8 @@ function renderMotionTools() {
   addNumber(move, "Movement · Y (px)", "moveY", -500, 500);
   card.append(move);
   const size = document.createElement("div"); size.className = "motion-pair";
-  addRange(size, "Size · X", "scaleX", 10, 300, 1, motion.scaleX * 100, value => `${Math.round(value)}%`, value => value / 100);
-  addRange(size, "Size · Y", "scaleY", 10, 300, 1, motion.scaleY * 100, value => `${Math.round(value)}%`, value => value / 100);
+  addRange(size, "Size · X", "scaleX", 25, 300, 1, motion.scaleX, value => `${Math.round(value)}%`);
+  addRange(size, "Size · Y", "scaleY", 25, 300, 1, motion.scaleY, value => `${Math.round(value)}%`);
   card.append(size);
   addRange(card, "Color hue", "hue", -180, 180, 1, motion.hue, value => `${Math.round(value)}°`);
   addRange(card, "Rotation", "rotation", -360, 360, 1, motion.rotation, value => `${Math.round(value)}°`);
@@ -1156,8 +1165,19 @@ function renderMotionTools() {
     const selector = selectedShapeId ? `[data-shape-id="${CSS.escape(selectedShapeId)}"]` : `[data-object-id="${CSS.escape(selectedObjectId)}"]`;
     const canvasItem = document.querySelector(`#site-preview ${selector}`);
     if (!canvasItem) return;
-    canvasItem.classList.remove("motion-preview"); void canvasItem.offsetWidth; canvasItem.classList.add("motion-preview");
-    window.setTimeout(() => canvasItem.classList.remove("motion-preview"), Math.round(700 / motion.speed) + 100);
+    canvasItem.getAnimations().forEach(animation => animation.cancel());
+    canvasItem.dataset.motionPreviewing = "true";
+    canvasItem.classList.remove("motion-position-active");
+    const baseOpacity = Number(item.opacity ?? 1);
+    const baseRotation = Number(item.rotation ?? 0);
+    const animation = canvasItem.animate([
+      { transform: `translate(-50%, -50%) rotate(${baseRotation}deg)`, filter: "none", opacity: baseOpacity },
+      { transform: `translate(calc(-50% + ${motion.moveX}px), calc(-50% + ${motion.moveY}px)) rotate(${baseRotation + motion.rotation}deg) scale(${motion.scaleX / 100}, ${motion.scaleY / 100})`, filter: `hue-rotate(${motion.hue}deg)`, opacity: motion.opacity }
+    ], { duration: Math.round(700 / motion.speed), iterations: 2, direction: "alternate", easing: "ease-in-out" });
+    animation.finished.catch(() => {}).finally(() => {
+      delete canvasItem.dataset.motionPreviewing;
+      updateScreenPositionMotion();
+    });
   });
   card.append(preview); body.append(card);
 }
@@ -1241,6 +1261,7 @@ function pluginCard(name, description) {
   card.append(title, copy); return card;
 }
 function renderPlugins() {
+  document.querySelector('[data-rail="motion"]').hidden = !hasInstalledFeature("motion-controls");
   const list = $("#plugin-installed"); list.replaceChildren();
   $("#plugin-count").textContent = String(installed.length);
   if (!installed.length) { const empty = document.createElement("p"); empty.className = "helper"; empty.textContent = "No packs installed yet."; list.append(empty); return; }

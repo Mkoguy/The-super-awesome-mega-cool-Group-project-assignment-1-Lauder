@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import { Script } from "node:vm";
-import { exportDocument, normalizeSite, renderSite, template } from "../site-model.js";
+import { exportDocument, normalizeMotion, normalizeSite, renderSite, template } from "../site-model.js";
 
 test("both browser entry files include the editor and built-in packs", async () => {
   const [index, offline, editor, source] = await Promise.all([
@@ -73,6 +73,16 @@ test("shape motion and transform controls survive export", () => {
   assert.match(exported, /--motion-opacity-end:0\.48/);
   assert.match(exported, /@keyframes wf-motion/);
   assert.doesNotMatch(exported, /shape-rotate-handle/);
+});
+
+test("screen motion movement edits override cached normalized positions", () => {
+  const motion = normalizeMotion({ enabled: true, centerY: 50, moveX: 52, moveY: -34, scaleX: 130, scaleY: 72 });
+  const edited = normalizeMotion({ ...motion, moveX: 100, moveY: 20 });
+  assert.equal(edited.x, 100);
+  assert.equal(edited.y, 20);
+  const site = template("portfolio");
+  site.shapes = [{ id: "moving-shape", type: "square", x: 50, y: 50, motion: edited }];
+  assert.match(renderSite(normalizeSite(site), true), /--motion-x:100px;--motion-y:20px/);
 });
 
 test("website settings survive project normalization and standalone export", () => {

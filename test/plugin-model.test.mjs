@@ -84,10 +84,12 @@ test("website links accept pasted domains and remain clickable in the editor and
 test("new built-in tool packs are valid and template packs preserve safe content", async () => {
   for (const [file, feature] of [
     ["drawing-menu", "drawing-menu"], ["text-tool", "text-tool"],
-    ["image-tool", "image-tool"], ["template-studio", "template-studio"]
+    ["image-tool", "image-tool"], ["template-studio", "template-studio"],
+    ["3d-models", "3d-models"], ["motion-controls", "motion-controls"]
   ]) {
     const raw = JSON.parse(await readFile(new URL(`../plugins/${file}.json`, import.meta.url), "utf8"));
     assert.deepEqual(normalizePluginPack(raw).features, [feature]);
+    assert.throws(() => normalizePluginPack({ ...raw, id: "artist.other-tool" }));
   }
   const pack = normalizePluginPack({
     format: "websiteforge-plugin", version: 1, id: "artist.saved-template", name: "Saved design",

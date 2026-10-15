@@ -4,7 +4,16 @@ const text = (value, max) => typeof value === "string" ? value.trim().slice(0, m
 const slug = value => typeof value === "string" && /^[a-z0-9][a-z0-9._-]{2,79}$/.test(value);
 const hex = value => typeof value === "string" && /^#[0-9a-fA-F]{6}$/.test(value);
 const layouts = ["cards", "faq", "quote", "banner"];
-const builtInFeatures = ["workspace-light-mode", "drawing-menu", "text-tool", "image-tool", "template-studio"];
+const builtInFeatureIds = {
+  "websiteforge.light-mode": "workspace-light-mode",
+  "websiteforge.drawing-menu": "drawing-menu",
+  "websiteforge.text-tool": "text-tool",
+  "websiteforge.image-tool": "image-tool",
+  "websiteforge.template-studio": "template-studio",
+  "websiteforge.3d-models": "3d-models",
+  "websiteforge.motion-controls": "motion-controls"
+};
+const builtInFeatures = Object.values(builtInFeatureIds);
 
 export function normalizePluginPack(input) {
   if (!input || input.format !== "websiteforge-plugin" || input.version !== 1 || !slug(input.id)) throw new Error("This is not a WebsiteForge plugin pack.");
@@ -19,7 +28,7 @@ export function normalizePluginPack(input) {
   if (rawSections.length > 10 || rawThemes.length > 10) throw new Error("A plugin pack can have up to 10 sections and 10 themes.");
   if (rawTemplates.length > 20) throw new Error("A plugin pack can have up to 20 templates.");
   if (rawFeatures.length > 3 || rawFeatures.some(feature => !builtInFeatures.includes(feature)) || new Set(rawFeatures).size !== rawFeatures.length) throw new Error("Unknown or duplicate plugin feature.");
-  if (rawFeatures.length && !["websiteforge.light-mode", "websiteforge.drawing-menu", "websiteforge.text-tool", "websiteforge.image-tool", "websiteforge.template-studio"].includes(input.id)) throw new Error("Workspace features are reserved for built-in packs.");
+  if (rawFeatures.some(feature => feature !== builtInFeatureIds[input.id])) throw new Error("Workspace features are reserved for their matching built-in packs.");
   const seen = new Set();
   const sections = rawSections.map(entry => {
     if (!entry || !slug(entry.id) || seen.has(entry.id) || !layouts.includes(entry.layout)) throw new Error("Invalid or duplicate plugin section.");
